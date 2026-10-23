@@ -238,7 +238,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; frame-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 		w.Header().Set("Cache-Control", "no-store")
 		defer func() {
 			if p := recover(); p != nil {
@@ -282,7 +282,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		if host != s.Config.Host() {
 			if !s.Config.Production() && (host == "localhost" || host == "127.0.0.1") {
 			} else {
-				if !strings.HasPrefix(r.URL.Path, "/a/") && !strings.HasPrefix(r.URL.Path, "/d/") {
+				if !strings.HasPrefix(r.URL.Path, "/a/") && !strings.HasPrefix(r.URL.Path, "/d/") && !strings.HasPrefix(r.URL.Path, "/r/") {
 					http.NotFound(w, r)
 					return
 				}
@@ -382,7 +382,7 @@ func (s *Server) publicConfig(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	jsonOut(w, 200, map[string]any{"currency": "USD", "site_name": x.SiteName, "registration_open": x.RegistrationOpen, "turnstile_site_key": s.Config.TurnstileSiteKey, "development": !s.Config.Production(), "public_url": s.Config.PublicURL, "download_domain_mode": x.DownloadDomainMode, "download_base_url": downloadBase, "cname_target": s.Config.CNAMEHost, "download_price_micros": x.DownloadPriceMicros, "max_upload_bytes": x.MaxUploadBytes, "domain_limit": x.DomainLimit, "plans": plans, "payment_methods": methods, "support_email": x.SupportEmail, "usdt_rate_micros": x.USDTRateMicros, "recharge_bonus_enabled": x.RechargeBonusEnabled, "recharge_bonus_tiers": x.RechargeBonusTiers})
+	jsonOut(w, 200, map[string]any{"currency": "USD", "site_name": x.SiteName, "registration_open": x.RegistrationOpen, "turnstile_site_key": "", "development": !s.Config.Production(), "public_url": s.Config.PublicURL, "download_domain_mode": x.DownloadDomainMode, "download_base_url": downloadBase, "cname_target": s.Config.CNAMEHost, "download_price_micros": x.DownloadPriceMicros, "max_upload_bytes": x.MaxUploadBytes, "domain_limit": x.DomainLimit, "plans": plans, "payment_methods": methods, "support_email": x.SupportEmail, "usdt_rate_micros": x.USDTRateMicros, "recharge_bonus_enabled": x.RechargeBonusEnabled, "recharge_bonus_tiers": x.RechargeBonusTiers})
 }
 func pageParams(r *http.Request) (int, int) {
 	p, _ := strconv.Atoi(r.URL.Query().Get("page"))

@@ -284,19 +284,11 @@ func TestBotVerificationAndSingleUseCaptcha(t *testing.T) {
 	if e := s.verifyBot(r, in, "register"); e == nil {
 		t.Fatal("captcha reused")
 	}
-	s.Config.TurnstileSecret = "secret"
-	in.Token = "test-token"
-	response := `{"success":true,"hostname":"evil.example.com","action":"register"}`
-	s.HTTP = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) { return jsonResponse(200, response), nil })}
-	if e := s.verifyBot(r, in, "register"); e == nil {
-		t.Fatal("wrong Turnstile hostname accepted")
-	}
-	response = `{"success":true,"hostname":"localhost","action":"login"}`
-	if e := s.verifyBot(r, in, "register"); e == nil {
-		t.Fatal("wrong Turnstile action accepted")
-	}
-	response = `{"success":true,"hostname":"localhost","action":"register"}`
-	if e := s.verifyBot(r, in, "register"); e != nil {
+	s.Config.Env = "production"
+	id = randomHex(16)
+	s.DB.Create(&Challenge{ID: id, Hash: s.mac(id + ":12345"), ExpiresAt: s.Now().Add(time.Minute)})
+	in.CaptchaID = id
+	if e := s.verifyBot(r, in, "login"); e != nil {
 		t.Fatal(e)
 	}
 }

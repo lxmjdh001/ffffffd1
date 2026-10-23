@@ -46,6 +46,11 @@ func (s *Server) getTrafficPool(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
+	base := s.Config.PublicURL
+	var domain Domain
+	if err := s.DB.Where("user_id = ? AND verified_at > ? AND ssl_status = ?", userOf(r).ID, s.Now().Add(-48*time.Hour), "ready").Order("created_at, id").First(&domain).Error; err == nil {
+		base = "https://" + domain.Hostname
+	}
 	data := []map[string]any{}
 	for _, p := range pools {
 		links := []TrafficLink{}
@@ -53,7 +58,7 @@ func (s *Server) getTrafficPool(w http.ResponseWriter, r *http.Request) {
 			fail(w, err)
 			return
 		}
-		data = append(data, map[string]any{"pool": p, "links": links, "entry_url": s.Config.PublicURL + "/r/" + p.Slug})
+		data = append(data, map[string]any{"pool": p, "links": links, "entry_url": base + "/r/" + p.Slug})
 	}
 	jsonOut(w, 200, map[string]any{"data": data, "paid": userOf(r).PlanID(s.Now()) == "pro", "configured": os.Getenv("GOOGLE_WEB_RISK_API_KEY") != ""})
 }
@@ -250,6 +255,10 @@ func (s *Server) routeTraffic(w http.ResponseWriter, r *http.Request) {
 	var p TrafficPool
 	var u User
 	if s.DB.First(&p, "slug = ? AND enabled = ?", r.PathValue("slug"), true).Error != nil || s.DB.First(&u, "id = ?", p.UserID).Error != nil || u.Disabled {
+		http.NotFound(w, r)
+		return
+	}
+	if owner, ok := r.Context().Value(domainOwnerKey).(string); ok && owner != p.UserID {
 		http.NotFound(w, r)
 		return
 	}

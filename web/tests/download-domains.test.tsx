@@ -33,7 +33,7 @@ beforeEach(() => {
     if (path === '/api/me') return json({ user: { id: 'test-customer', name: '测试用户', role }, csrf_token: 'test-csrf' });
     if (path === '/api/download-domain') return json({ mode: 'separate', plan_id: 'free', download_base_url: assignedBase });
     if (path === '/api/apps/test-app') return json(app);
-    if (path === '/api/domains') return json({ data: customDomain ? [{ id: 'custom', hostname: 'customer.example.com', verified_at: new Date().toISOString() }] : [], total: customDomain ? 1 : 0 });
+    if (path === '/api/domains') return json({ data: customDomain ? [{ id: 'custom', hostname: 'customer.example.com', ssl_status: 'ready', verified_at: new Date().toISOString() }] : [], total: customDomain ? 1 : 0 });
     if (path === '/api/admin/settings' && options?.method === 'PUT') { saved = JSON.parse(String(options.body)); return json({ ...settings, ...saved }); }
     if (path === '/api/admin/settings') return json(settings);
     throw new Error(`Unexpected request: ${input}`);

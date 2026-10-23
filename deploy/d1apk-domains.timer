@@ -1,0 +1,10 @@
+[Unit]
+Description=Check D1 domain certificate queue every minute
+
+[Timer]
+OnBootSec=60
+OnUnitInactiveSec=60
+Persistent=true
+
+[Install]
+WantedBy=timers.target

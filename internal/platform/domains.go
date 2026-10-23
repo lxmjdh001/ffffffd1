@@ -95,9 +95,11 @@ func (s *Server) verifyDomain(w http.ResponseWriter, r *http.Request) {
 	}
 	e := s.checkDNS(r.Context(), d)
 	updates := map[string]any{"last_error": "", "verified_at": s.Now()}
+	updates["ssl_retry_at"] = nil
 	if e != nil {
 		updates["last_error"] = e.Error()
 		updates["verified_at"] = nil
+		updates["ssl_status"] = "pending"
 	}
 	res := s.DB.Model(&Domain{}).Where("id = ? AND token = ?", d.ID, d.Token).Updates(updates)
 	if res.Error != nil {

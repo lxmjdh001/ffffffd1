@@ -6,12 +6,10 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"math/big"
 	"net/http"
 	"net/mail"
-	"net/url"
 	"strings"
 	"time"
 
@@ -33,16 +31,11 @@ type authInput struct {
 	Email       string `json:"email"`
 	Name        string `json:"name"`
 	Password    string `json:"password"`
-	Token       string `json:"turnstile_token"`
 	CaptchaID   string `json:"captcha_id"`
 	CaptchaCode string `json:"captcha_code"`
 }
 
 func (s *Server) captcha(w http.ResponseWriter, r *http.Request) {
-	if s.Config.TurnstileSiteKey != "" {
-		fail(w, problem(400, "请使用 Turnstile 验证"))
-		return
-	}
 	if e := s.rate("captcha:"+s.clientIP(r), 30, time.Minute); e != nil {
 		fail(w, e)
 		return
@@ -71,34 +64,6 @@ func (s *Server) captcha(w http.ResponseWriter, r *http.Request) {
 	jsonOut(w, 200, map[string]string{"id": id, "image": "data:image/png;base64," + base64.StdEncoding.EncodeToString(b.Bytes())})
 }
 func (s *Server) verifyBot(r *http.Request, in authInput, action string) error {
-	if s.Config.TurnstileSecret != "" {
-		if len(in.Token) == 0 || len(in.Token) > 2048 {
-			return problem(400, "请先完成人机验证")
-		}
-		v := url.Values{"secret": {s.Config.TurnstileSecret}, "response": {in.Token}, "remoteip": {s.clientIP(r)}}
-		req, e := http.NewRequestWithContext(r.Context(), "POST", "https://challenges.cloudflare.com/turnstile/v0/siteverify", strings.NewReader(v.Encode()))
-		if e != nil {
-			return e
-		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		resp, e := s.HTTP.Do(req)
-		if e != nil {
-			return problem(503, "人机验证服务暂时不可用")
-		}
-		defer resp.Body.Close()
-		var result struct {
-			Success  bool   `json:"success"`
-			Hostname string `json:"hostname"`
-			Action   string `json:"action"`
-		}
-		if resp.StatusCode != 200 || json.NewDecoder(http.MaxBytesReader(nil, resp.Body, 65536)).Decode(&result) != nil || !result.Success || result.Hostname != s.Config.Host() || result.Action != action {
-			return problem(400, "人机验证失败或已过期，请重试")
-		}
-		return nil
-	}
-	if s.Config.Production() {
-		return problem(503, "人机验证未配置")
-	}
 	var ch Challenge
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
 		if e := tx.First(&ch, "id = ?", in.CaptchaID).Error; e != nil {

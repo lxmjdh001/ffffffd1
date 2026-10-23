@@ -106,6 +106,9 @@ type Application struct {
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 }
 type Domain struct {
+	SSLStatus  string     `json:"ssl_status" gorm:"not null;default:pending"`
+	SSLError   string     `json:"ssl_error"`
+	SSLRetryAt *time.Time `json:"-"`
 	Remark     string     `json:"remark" gorm:"size:120"`
 	ID         string     `json:"id" gorm:"primaryKey;size:32"`
 	UserID     string     `json:"user_id" gorm:"index;size:32"`

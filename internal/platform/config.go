@@ -17,7 +17,6 @@ type Config struct {
 	Env, Addr, DatabaseURL, DataDir, WebDir, PublicURL, Secret            string
 	CNAMEHost                                                             string
 	AdminEmail, AdminPassword                                             string
-	TurnstileSiteKey, TurnstileSecret                                     string
 	ClamAVAddr                                                            string
 	FutoonURL, FutoonPID, FutoonKey                                       string
 	USDTMonitorURL, USDTMonitorSecret, USDTWallet, TronAPIURL, TronAPIKey string
@@ -31,7 +30,7 @@ func env(key, fallback string) string {
 	return fallback
 }
 func LoadConfig() (Config, error) {
-	c := Config{Env: env("APP_ENV", "development"), Addr: env("HTTP_ADDR", "127.0.0.1:8088"), DatabaseURL: os.Getenv("DATABASE_URL"), DataDir: env("DATA_DIR", "data"), WebDir: env("WEB_DIR", "web/dist"), PublicURL: strings.TrimRight(env("APP_URL", "http://localhost:8088"), "/"), Secret: os.Getenv("APP_SECRET"), AdminEmail: os.Getenv("ADMIN_EMAIL"), AdminPassword: os.Getenv("ADMIN_PASSWORD"), TurnstileSiteKey: os.Getenv("TURNSTILE_SITE_KEY"), TurnstileSecret: os.Getenv("TURNSTILE_SECRET_KEY"), ClamAVAddr: os.Getenv("CLAMAV_ADDR"), FutoonURL: os.Getenv("FUTOON_API_URL"), FutoonPID: os.Getenv("FUTOON_PID"), FutoonKey: os.Getenv("FUTOON_KEY"), USDTMonitorURL: os.Getenv("USDT_MONITOR_URL"), USDTMonitorSecret: os.Getenv("USDT_MONITOR_SECRET"), USDTWallet: os.Getenv("USDT_WALLET"), TronAPIURL: env("TRON_API_URL", "https://api.trongrid.io"), TronAPIKey: os.Getenv("TRON_API_KEY")}
+	c := Config{Env: env("APP_ENV", "development"), Addr: env("HTTP_ADDR", "127.0.0.1:8088"), DatabaseURL: os.Getenv("DATABASE_URL"), DataDir: env("DATA_DIR", "data"), WebDir: env("WEB_DIR", "web/dist"), PublicURL: strings.TrimRight(env("APP_URL", "http://localhost:8088"), "/"), Secret: os.Getenv("APP_SECRET"), AdminEmail: os.Getenv("ADMIN_EMAIL"), AdminPassword: os.Getenv("ADMIN_PASSWORD"), ClamAVAddr: os.Getenv("CLAMAV_ADDR"), FutoonURL: os.Getenv("FUTOON_API_URL"), FutoonPID: os.Getenv("FUTOON_PID"), FutoonKey: os.Getenv("FUTOON_KEY"), USDTMonitorURL: os.Getenv("USDT_MONITOR_URL"), USDTMonitorSecret: os.Getenv("USDT_MONITOR_SECRET"), USDTWallet: os.Getenv("USDT_WALLET"), TronAPIURL: env("TRON_API_URL", "https://api.trongrid.io"), TronAPIKey: os.Getenv("TRON_API_KEY")}
 	c.Role = env("SERVER_ROLE", "all")
 	c.RemoteStorageURL = os.Getenv("REMOTE_STORAGE_URL")
 	c.S3Endpoint = os.Getenv("S3_ENDPOINT")
@@ -102,11 +101,8 @@ func (c Config) Validate() error {
 	if c.S3Endpoint != "" && (c.S3AccessKey == "" || c.S3SecretKey == "" || c.S3Bucket == "") {
 		return errors.New("incomplete S3 configuration")
 	}
-	if c.Production() && (u.Scheme != "https" || c.DatabaseURL == "" || (c.Role != "download" && (c.TurnstileSecret == "" || c.TurnstileSiteKey == "" || c.ClamAVAddr == ""))) {
-		return errors.New("production requires HTTPS APP_URL, PostgreSQL DATABASE_URL, Turnstile keys and CLAMAV_ADDR")
-	}
-	if c.Production() && (strings.HasPrefix(c.TurnstileSiteKey, "1x") || strings.HasPrefix(c.TurnstileSiteKey, "2x") || strings.HasPrefix(c.TurnstileSiteKey, "3x")) {
-		return errors.New("Turnstile test keys are forbidden in production")
+	if c.Production() && (u.Scheme != "https" || c.DatabaseURL == "" || (c.Role != "download" && c.ClamAVAddr == "")) {
+		return errors.New("production requires HTTPS APP_URL, PostgreSQL DATABASE_URL and CLAMAV_ADDR")
 	}
 	if (c.FutoonURL != "" || c.FutoonPID != "" || c.FutoonKey != "") && (c.FutoonURL == "" || c.FutoonPID == "" || c.FutoonKey == "") {
 		return errors.New("all FUTOON settings are required together")

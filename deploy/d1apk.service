@@ -1,0 +1,24 @@
+[Unit]
+Description=D1 APK distribution platform
+After=network-online.target postgresql.service clamav-daemon.service
+Wants=network-online.target
+
+[Service]
+User=d1apk
+Group=d1apk
+WorkingDirectory=/opt/d1apk/current
+EnvironmentFile=/etc/d1apk/app.env
+ExecStart=/opt/d1apk/current/bin/d1apk
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=60
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/d1apk
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

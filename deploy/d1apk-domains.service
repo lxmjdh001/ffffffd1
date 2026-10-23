@@ -1,0 +1,8 @@
+[Unit]
+Description=D1 customer domain certificates
+After=d1apk.service nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/d1apk/current/deploy/domain-manager.py
+TimeoutStartSec=15min
