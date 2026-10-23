@@ -1,0 +1,11 @@
+.git
+.env*
+data
+bin
+web/node_modules
+web/dist
+**/._*
+**/.DS_Store
+docs
+examples
+*.log

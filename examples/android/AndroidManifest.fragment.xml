@@ -1,0 +1,14 @@
+<!-- Merge into the customer's manifest; use verified HTTPS App Links for production when available. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application android:usesCleartextTraffic="false">
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="customerapp" android:host="open" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -1,0 +1,54 @@
+# A server. Run from repo: docker compose --env-file .env -f deploy/compose.control.yml up -d --build
+# PostgreSQL must be provisioned privately/reachably for BOTH A and B.
+name: d1apk-control
+services:
+  app:
+    build: ..
+    image: d1apk:local
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      SERVER_ROLE: control
+      DATABASE_URL: ${DATABASE_URL:?Set private shared PostgreSQL URL}
+      TRUSTED_PROXY_CIDRS: 172.30.88.0/24
+      CLAMAV_ADDR: clamav:3310
+    volumes: [control-data:/app/data]
+    depends_on:
+      clamav: {condition: service_healthy}
+    stop_grace_period: 45s
+    networks: [private]
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    volumes:
+      - clamav-data:/var/lib/clamav
+      - ./clamd.conf:/etc/clamav/clamd.conf:ro
+    healthcheck:
+      test: [CMD, clamdscan, --ping=5]
+      interval: 30s
+      timeout: 10s
+      start_period: 300s
+      retries: 10
+    networks: [private]
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile.control:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app: {condition: service_healthy}
+    networks: [private]
+networks:
+  private:
+    ipam:
+      config: [{subnet: 172.30.88.0/24}]
+volumes:
+  control-data:
+  clamav-data:
+  caddy-data:
+  caddy-config:

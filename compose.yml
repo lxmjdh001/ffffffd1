@@ -1,0 +1,72 @@
+name: d1apk
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: d1apk
+      POSTGRES_USER: d1apk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U d1apk -d d1apk']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [private]
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    volumes:
+      - clamav-data:/var/lib/clamav
+      - ./deploy/clamd.conf:/etc/clamav/clamd.conf:ro
+    healthcheck:
+      test: [CMD, clamdscan, --ping=5]
+      interval: 30s
+      timeout: 10s
+      start_period: 300s
+      retries: 10
+    networks: [private]
+  app:
+    build: .
+    image: d1apk:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://d1apk:${POSTGRES_PASSWORD}@postgres:5432/d1apk?sslmode=disable
+      SERVER_ROLE: all
+      CLAMAV_ADDR: clamav:3310
+      TRUSTED_PROXY_CIDRS: 172.30.88.0/24
+    depends_on:
+      postgres: {condition: service_healthy}
+      clamav: {condition: service_healthy}
+    volumes:
+      - app-data:/app/data
+    stop_grace_period: 45s
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
+    networks: [private]
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app: {condition: service_healthy}
+    networks: [private]
+networks:
+  private:
+    ipam:
+      config: [{subnet: 172.30.88.0/24}]
+volumes:
+  postgres-data:
+  app-data:
+  clamav-data:
+  caddy-data:
+  caddy-config:
