@@ -22,7 +22,7 @@ export function UsdtWalletSettings({ data, saved }: { data: SettingsResponse; sa
   };
   return <section className="panel padded settings-panel">
     <h2><Wallet size={19} />USDT 收款配置</h2>
-    <p className="small muted">仅 TRON / TRC20 主网。填写你自己的 OKX USDT 充值地址，不需要钱包私钥。新地址仅用于新订单，已有订单保持原地址。</p>
+    <p className="small muted">仅 TRON / TRC20 主网。填写你现有 UZF 实际监控账户的收款地址，不需要钱包私钥。新地址仅用于新订单，已有订单保持原地址。</p>
     <p><Badge tone={data.runtime.usdt_provider === 'uzf' ? 'violet' : 'gray'}>{data.runtime.usdt_provider === 'uzf' ? 'UZF / OKX 到账监控' : 'TRON 链上核对'}</Badge></p>
     <form onSubmit={submit}>
       <Field label="USDT 收款地址（TRC20）" hint="留空并保存会关闭新 USDT 充值订单。填写后请核对完整地址，勿仅核对首尾字符。">
@@ -35,6 +35,6 @@ export function UsdtWalletSettings({ data, saved }: { data: SettingsResponse; sa
       <FormError>{error}</FormError>
       <div className="settings-save-row"><button className="btn primary" disabled={busy || !secured}>{busy ? '验证并保存中…' : '验证二级密码并保存地址'}</button><span role="status" className="settings-feedback success">{success ? '收款地址已保存，仅对新订单生效' : ''}</span></div>
     </form>
-    <p className="small muted">OKX 只读 API 在独立 UZF 服务配置。监控未配置、离线或数据过期时，不会允许新付款订单，也不会凭“已找到”标记直接入账。</p>
+    <p className="small muted">D1 只连接现有 UZF 查询接口，不部署或修改 UZF。查询地址和密钥通过服务器环境配置；未配置时暂停 USDT 新订单。到账按原接口返回的账单编号、完整金额和付款时间核对，同一账单不能重复入账。</p>
   </section>;
 }

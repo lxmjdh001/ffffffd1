@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -26,23 +25,17 @@ func migrateUSDTPayment(tx *gorm.DB) error {
 }
 
 type uzfReceipt struct {
-	BillID        string `json:"bill_id"`
-	Amount        string `json:"amount"`
-	Currency      string `json:"currency"`
-	Source        string `json:"source"`
-	Chain         string `json:"chain"`
-	To            string `json:"to"`
-	State         string `json:"state"`
-	TransactionID string `json:"tx_id"`
-	BillTimestamp int64  `json:"bill_timestamp"`
+	BillID        string      `json:"bill_id"`
+	Amount        json.Number `json:"amount"`
+	Currency      string      `json:"currency"`
+	BillTimestamp int64       `json:"bill_timestamp"`
 }
 
 type uzfResult struct {
 	Success bool `json:"success"`
 	Data    struct {
-		Found       bool        `json:"found"`
-		LastUpdated int64       `json:"last_update_timestamp"`
-		Transfer    *uzfReceipt `json:"transfer"`
+		Found    bool        `json:"found"`
+		Transfer *uzfReceipt `json:"transfer"`
 	} `json:"data"`
 }
 
@@ -51,8 +44,9 @@ func (s *Server) queryUZF(ctx context.Context, o Order) (uzfResult, error) {
 	if s.Config.USDTMonitorURL == "" || s.Config.USDTMonitorSecret == "" {
 		return result, problem(503, "USDT 到账监控尚未配置")
 	}
-	params := map[string]string{"amount": formatMoney(o.USDTUnits), "currency": "USDT", "wallet": o.Wallet,
-		"min_timestamp": strconv.FormatInt(o.CreatedAt.UnixMilli(), 10), "max_timestamp": strconv.FormatInt(o.ExpiresAt.UnixMilli(), 10)}
+	// Match go7 and the existing UZF API exactly; no new server parameters,
+	// endpoints, OKX credentials or deposit-record schema are required.
+	params := map[string]string{"amount": formatMoney(o.USDTUnits), "currency": "USDT"}
 	ts := strconv.FormatInt(s.Now().Unix(), 10)
 	q := url.Values{}
 	for key, value := range params {
@@ -64,26 +58,23 @@ func (s *Server) queryUZF(ctx context.Context, o Order) (uzfResult, error) {
 	if err != nil {
 		return result, problem(503, "USDT 到账监控配置无效")
 	}
-	resp, err := s.HTTP.Do(req)
+	client := *s.HTTP
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	resp, err := client.Do(req)
 	if err != nil {
 		return result, problem(503, "USDT 到账监控暂时不可用，请稍后重试")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&result) != nil || !result.Success {
-		return result, problem(503, "USDT 到账监控未就绪，请先配置并检查 OKX 账户")
-	}
-	if delta := s.Now().Unix() - result.Data.LastUpdated; delta < -30 || delta > 120 {
-		return result, problem(503, "USDT 到账监控数据已过期，请联系管理员")
+		return result, problem(503, "USDT 查询服务暂时不可用，请检查现有 UZF 查询地址和密钥")
 	}
 	return result, nil
 }
 
 func validUZFReceipt(o Order, receipt uzfReceipt) bool {
-	units, err := ParseMoney(receipt.Amount)
-	return err == nil && units == o.USDTUnits && receipt.Currency == "USDT" && receipt.Source == "okx_deposit" &&
-		receipt.Chain == "USDT-TRC20" && receipt.State == "2" && receipt.To == o.Wallet &&
+	units, err := ParseMoney(receipt.Amount.String())
+	return err == nil && units == o.USDTUnits && receipt.Currency == "USDT" &&
 		receipt.BillID != "" && len(receipt.BillID) <= 100 &&
-		len(receipt.TransactionID) == 64 && hexKey.MatchString(receipt.TransactionID) &&
 		receipt.BillTimestamp >= o.CreatedAt.UnixMilli() && receipt.BillTimestamp <= o.ExpiresAt.UnixMilli()
 }
 
@@ -95,9 +86,10 @@ func (s *Server) reconcileUZF(ctx context.Context, o Order) error {
 	if result.Data.Transfer == nil || !validUZFReceipt(o, *result.Data.Transfer) {
 		return problem(502, "USDT 付款凭证不匹配，未自动入账，请联系管理员")
 	}
-	// Use the same transaction namespace as direct TRON verification. Changing
-	// the provider can never credit the same blockchain transfer a second time.
-	return s.settle(o.ID, "tron:"+strings.ToLower(result.Data.Transfer.TransactionID), "usdt", o.AmountMicros)
+	// Original UZF returns an OKX bill ID, not a blockchain transaction ID.
+	// The existing globally unique trade ID prevents the same bill being used
+	// by another user/order, even after the administrator changes the wallet.
+	return s.settle(o.ID, "uzf:"+result.Data.Transfer.BillID, "usdt", o.AmountMicros)
 }
 
 func (s *Server) updateUSDTWallet(w http.ResponseWriter, r *http.Request) {

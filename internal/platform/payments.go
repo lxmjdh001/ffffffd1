@@ -138,8 +138,8 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if s.Config.usdtProvider() == "uzf" {
-			// Do not present payment instructions before the new OKX account
-			// has produced a successful, fresh monitor snapshot.
+			// Check the existing signed query service before displaying a new
+			// payment order. Do not require changes to UZF or its OKX account.
 			if _, err := s.queryUZF(r.Context(), Order{Wallet: wallet, USDTUnits: 1, CreatedAt: s.Now(), ExpiresAt: s.Now()}); err != nil {
 				fail(w, err)
 				return

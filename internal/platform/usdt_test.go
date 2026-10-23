@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -103,28 +104,26 @@ func TestUZFReceiptAndReplayProtection(t *testing.T) {
 	u := seedUser(t, s, 0)
 	o := Order{ID: randomHex(16), UserID: u.ID, IdempotencyKey: randomHex(16), Method: "usdt", USDTProvider: "uzf", AmountMicros: 100 * Dollar, BonusMicros: 15 * Dollar, Status: "pending", USDTUnits: 100001234, Wallet: usdtContract, CreatedAt: s.Now().Add(-time.Minute), ExpiresAt: s.Now().Add(time.Minute)}
 	s.DB.Create(&o)
-	valid := uzfReceipt{BillID: "deposit-123", Amount: "100.001234", Currency: "USDT", Source: "okx_deposit", Chain: "USDT-TRC20", To: o.Wallet, State: "2", TransactionID: strings.Repeat("b", 64), BillTimestamp: s.Now().UnixMilli()}
-	proof := valid
-	found, stale, unavailable := false, false, false
+	valid := uzfReceipt{BillID: "3020596814559830016", Amount: "100.001234", Currency: "USDT", BillTimestamp: s.Now().UnixMilli()}
+	var proof atomic.Value
+	proof.Store(valid)
+	var found, unavailable, omitProof atomic.Bool
 	s.Config.USDTMonitorSecret = strings.Repeat("test", 8)
 	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if unavailable {
+		if unavailable.Load() {
 			w.WriteHeader(503)
 			return
 		}
 		q := r.URL.Query()
-		params := map[string]string{}
-		for _, key := range []string{"amount", "currency", "wallet", "min_timestamp", "max_timestamp"} {
-			params[key] = q.Get(key)
+		params := map[string]string{"amount": q.Get("amount"), "currency": q.Get("currency")}
+		if r.URL.Path != "/api/check" || len(q) != 4 || q.Get("signature") != MonitorSign(params, q.Get("timestamp"), s.Config.USDTMonitorSecret) || q.Get("amount") != "100.001234" || q.Get("currency") != "USDT" {
+			t.Error("request does not match original go7/UZF protocol")
 		}
-		if q.Get("signature") != MonitorSign(params, q.Get("timestamp"), s.Config.USDTMonitorSecret) || q.Get("amount") != "100.001234" || q.Get("wallet") != o.Wallet {
-			t.Error("incorrect signed UZF query")
+		var transfer any = proof.Load()
+		if omitProof.Load() {
+			transfer = nil
 		}
-		updated := s.Now().Unix()
-		if stale {
-			updated -= 121
-		}
-		jsonOut(w, 200, map[string]any{"success": true, "data": map[string]any{"found": found, "last_update_timestamp": updated, "transfer": proof}})
+		jsonOut(w, 200, map[string]any{"success": true, "data": map[string]any{"found": found.Load(), "transfer": transfer}})
 	}))
 	defer provider.Close()
 	s.Config.USDTMonitorURL = provider.URL + "/api/check"
@@ -135,36 +134,35 @@ func TestUZFReceiptAndReplayProtection(t *testing.T) {
 	if countRows(t, s, &Ledger{}) != 0 {
 		t.Fatal("missing payment credited")
 	}
-	found = true
+	found.Store(true)
 	for name, mutate := range map[string]func(*uzfReceipt){
-		"amount":        func(p *uzfReceipt) { p.Amount = "100.001235" },
-		"wallet":        func(p *uzfReceipt) { p.To = "other-wallet" },
-		"chain":         func(p *uzfReceipt) { p.Chain = "USDT-ERC20" },
-		"currency":      func(p *uzfReceipt) { p.Currency = "USDC" },
-		"pending":       func(p *uzfReceipt) { p.State = "1" },
-		"history":       func(p *uzfReceipt) { p.BillTimestamp = o.CreatedAt.Add(-time.Second).UnixMilli() },
-		"late":          func(p *uzfReceipt) { p.BillTimestamp = o.ExpiresAt.Add(time.Second).UnixMilli() },
-		"internal-bill": func(p *uzfReceipt) { p.Source = "account_bills" },
-		"missing-tx":    func(p *uzfReceipt) { p.TransactionID = "" },
+		"amount":       func(p *uzfReceipt) { p.Amount = "100.001235" },
+		"currency":     func(p *uzfReceipt) { p.Currency = "USDC" },
+		"history":      func(p *uzfReceipt) { p.BillTimestamp = o.CreatedAt.Add(-time.Second).UnixMilli() },
+		"late":         func(p *uzfReceipt) { p.BillTimestamp = o.ExpiresAt.Add(time.Second).UnixMilli() },
+		"missing-bill": func(p *uzfReceipt) { p.BillID = "" },
+		"missing-time": func(p *uzfReceipt) { p.BillTimestamp = 0 },
 	} {
 		t.Run(name, func(t *testing.T) {
-			proof = valid
-			mutate(&proof)
+			bad := valid
+			mutate(&bad)
+			proof.Store(bad)
 			if s.reconcileUSDT(t.Context(), o) == nil || countRows(t, s, &Ledger{}) != 0 {
 				t.Fatal("invalid receipt was accepted")
 			}
 		})
 	}
-	proof = valid
-	stale = true
+	proof.Store(valid)
+	omitProof.Store(true)
 	if s.reconcileUSDT(t.Context(), o) == nil {
-		t.Fatal("stale snapshot accepted")
+		t.Fatal("bare found=true without a bill was credited")
 	}
-	stale, unavailable = false, true
+	omitProof.Store(false)
+	unavailable.Store(true)
 	if s.reconcileUSDT(t.Context(), o) == nil {
 		t.Fatal("offline monitor accepted")
 	}
-	unavailable = false
+	unavailable.Store(false)
 	for range 2 {
 		if err := s.reconcileUSDT(t.Context(), o); err != nil {
 			t.Fatal(err)
@@ -180,9 +178,18 @@ func TestUZFReceiptAndReplayProtection(t *testing.T) {
 	if s.reconcileUSDT(t.Context(), other) == nil || countRows(t, s, &Ledger{}) != 2 {
 		t.Fatal("same receipt funded another order")
 	}
-	// Also prevent replay through the direct-chain provider.
-	if s.settle(other.ID, "tron:"+valid.TransactionID, "usdt", other.AmountMicros) == nil {
-		t.Fatal("transaction replayed across providers")
+}
+
+func TestOriginalUZFAmountNumberAndStringCompatibility(t *testing.T) {
+	o := Order{USDTUnits: 12340000, CreatedAt: time.UnixMilli(1000), ExpiresAt: time.UnixMilli(3000)}
+	for _, amount := range []string{`12.34`, `"12.34"`} {
+		var result uzfResult
+		if err := json.Unmarshal([]byte(`{"success":true,"data":{"found":true,"transfer":{"bill_id":"bill-123","amount":`+amount+`,"currency":"USDT","bill_timestamp":2000}}}`), &result); err != nil {
+			t.Fatal(err)
+		}
+		if result.Data.Transfer == nil || !validUZFReceipt(o, *result.Data.Transfer) {
+			t.Fatal("original numeric/string UZF amount rejected")
+		}
 	}
 }
 

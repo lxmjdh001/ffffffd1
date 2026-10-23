@@ -73,7 +73,7 @@ func LoadConfig() (Config, error) {
 
 func (c Config) paymentMethods() []string {
 	methods := []string{}
-	if c.USDTWallet != "" {
+	if c.USDTWallet != "" && (c.usdtProvider() != "uzf" || (c.USDTMonitorURL != "" && c.USDTMonitorSecret != "")) {
 		methods = append(methods, "usdt")
 	}
 	return append(methods, "manual")
@@ -136,9 +136,6 @@ func (c Config) Validate() error {
 		if _, err := bcrypt.Cost([]byte(c.USDTAddressPasswordHash)); err != nil {
 			return errors.New("USDT_ADDRESS_PASSWORD_HASH must be a valid bcrypt hash")
 		}
-	}
-	if c.usdtProvider() == "uzf" && (c.USDTMonitorURL == "" || len(c.USDTMonitorSecret) < 32) {
-		return errors.New("uzf requires USDT_MONITOR_URL and a USDT_MONITOR_SECRET of at least 32 characters")
 	}
 	for _, raw := range []string{c.FutoonURL, c.USDTMonitorURL, c.TronAPIURL} {
 		if raw == "" {
