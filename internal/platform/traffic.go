@@ -84,6 +84,7 @@ func (s *Server) deleteTrafficPool(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) saveTrafficPool(w http.ResponseWriter, r *http.Request) {
 	var in struct {
+		Slug        *string  `json:"slug"`
 		Enabled     bool     `json:"enabled"`
 		RiskEnabled bool     `json:"risk_enabled"`
 		Name        string   `json:"name"`
@@ -93,6 +94,14 @@ func (s *Server) saveTrafficPool(w http.ResponseWriter, r *http.Request) {
 	if err := decode(w, r, &in); err != nil {
 		fail(w, err)
 		return
+	}
+	if in.Slug != nil {
+		slug, err := normalizeAppSlug(*in.Slug)
+		if err != nil {
+			fail(w, problem(400, "分流标识须为 1–32 位字母、数字、短横线或下划线，且以字母或数字开头"))
+			return
+		}
+		in.Slug = &slug
 	}
 	if in.Mode == "" {
 		in.Mode = "random"
@@ -137,12 +146,32 @@ func (s *Server) saveTrafficPool(w http.ResponseWriter, r *http.Request) {
 			return problem(503, "管理员尚未配置 Google Web Risk API")
 		}
 		var p TrafficPool
+		oldSlug := r.PathValue("slug")
 		if slug := r.PathValue("slug"); slug != "" {
 			if err := tx.First(&p, "slug = ? AND user_id = ?", slug, u.ID).Error; err != nil {
 				return err
 			}
 		} else {
-			p = TrafficPool{UserID: u.ID, Slug: randomHex(16)}
+			p = TrafficPool{UserID: u.ID}
+			if in.Slug == nil {
+				for attempt := 0; attempt < 8; attempt++ {
+					candidate := randomHex(4)
+					var count int64
+					if err := tx.Model(&TrafficPool{}).Where("slug = ?", candidate).Count(&count).Error; err != nil {
+						return err
+					}
+					if count == 0 {
+						p.Slug = candidate
+						break
+					}
+				}
+				if p.Slug == "" {
+					return problem(503, "暂时无法生成分流标识，请重试")
+				}
+			}
+		}
+		if in.Slug != nil {
+			p.Slug = *in.Slug
 		}
 		p.Name = in.Name
 		if p.Name == "" {
@@ -152,15 +181,26 @@ func (s *Server) saveTrafficPool(w http.ResponseWriter, r *http.Request) {
 		p.Cursor = 0
 		p.Enabled = in.Enabled
 		p.RiskEnabled = in.RiskEnabled
-		if err := tx.Save(&p).Error; err != nil {
-			return err
+		var saveErr error
+		if oldSlug == "" {
+			saveErr = tx.Create(&p).Error
+		} else {
+			saveErr = tx.Model(&TrafficPool{}).Where("slug = ? AND user_id = ?", oldSlug, u.ID).Updates(map[string]any{"slug": p.Slug, "name": p.Name, "mode": p.Mode, "cursor": p.Cursor, "enabled": p.Enabled, "risk_enabled": p.RiskEnabled}).Error
+		}
+		if errors.Is(saveErr, gorm.ErrDuplicatedKey) {
+			return problem(409, "分流标识已被使用，请换一个")
+		}
+		if saveErr != nil {
+			return saveErr
 		}
 		var previous []TrafficLink
-		if err := tx.Where("user_id = ? AND pool_slug = ?", u.ID, p.Slug).Find(&previous).Error; err != nil {
-			return err
-		}
-		if err := tx.Where("user_id = ? AND pool_slug = ?", u.ID, p.Slug).Delete(&TrafficLink{}).Error; err != nil {
-			return err
+		if oldSlug != "" {
+			if err := tx.Where("user_id = ? AND pool_slug = ?", u.ID, oldSlug).Find(&previous).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("user_id = ? AND pool_slug = ?", u.ID, oldSlug).Delete(&TrafficLink{}).Error; err != nil {
+				return err
+			}
 		}
 		for position, raw := range in.URLs {
 			link := TrafficLink{ID: randomHex(16), UserID: u.ID, URL: raw, Status: "pending"}

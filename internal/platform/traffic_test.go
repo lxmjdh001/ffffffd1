@@ -9,6 +9,57 @@ import (
 	"time"
 )
 
+func TestTrafficShortSlugsAndAtomicRename(t *testing.T) {
+	s := testServer(t)
+	u := seedUser(t, s, 0)
+	cookie, csrf := sessionFor(t, s, u)
+	body := map[string]any{"name": "短标识测试", "enabled": true, "mode": "sequential", "urls": []string{"https://one.example.com/app.apk", "https://two.example.com/app.apk"}}
+	requireCode(t, call(t, s, "POST", "/api/traffic-pools", body, cookie, csrf), 200)
+	var p TrafficPool
+	if err := s.DB.First(&p, "user_id = ?", u.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Slug) != 8 {
+		t.Fatalf("expected 8 random characters: %s", p.Slug)
+	}
+	original := p.Slug
+	body["slug"] = " My-Route "
+	requireCode(t, call(t, s, "PUT", "/api/traffic-pools/"+original, body, cookie, csrf), 200)
+	requireCode(t, call(t, s, "GET", "/r/"+original, nil, nil, ""), 404)
+	requireCode(t, call(t, s, "GET", "/r/my-route", nil, nil, ""), 302)
+	var links []TrafficLink
+	if err := s.DB.Where("user_id = ?", u.ID).Order("position").Find(&links).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(links) != 2 || links[0].PoolSlug != "my-route" || links[1].PoolSlug != "my-route" {
+		t.Fatal("rename lost link membership")
+	}
+	var count int64
+	s.DB.Model(&TrafficPool{}).Where("user_id = ?", u.ID).Count(&count)
+	if count != 1 {
+		t.Fatal("rename created a duplicate pool")
+	}
+	requireCode(t, call(t, s, "POST", "/api/traffic-pools", body, cookie, csrf), 409)
+	other := seedUser(t, s, 0)
+	otherCookie, otherCSRF := sessionFor(t, s, other)
+	requireCode(t, call(t, s, "POST", "/api/traffic-pools", body, otherCookie, otherCSRF), 409)
+	requireCode(t, call(t, s, "PUT", "/api/traffic-pools/my-route", body, otherCookie, otherCSRF), 404)
+	body["slug"] = "occupied"
+	requireCode(t, call(t, s, "POST", "/api/traffic-pools", body, cookie, csrf), 200)
+	body["name"] = "不应保存"
+	requireCode(t, call(t, s, "PUT", "/api/traffic-pools/my-route", body, cookie, csrf), 409)
+	p = TrafficPool{}
+	if err := s.DB.First(&p, "slug = ?", "my-route").Error; err != nil {
+		t.Fatal(err)
+	}
+	if p.Name != "短标识测试" {
+		t.Fatal("conflicting rename changed pool settings")
+	}
+	requireCode(t, call(t, s, "GET", "/r/my-route", nil, nil, ""), 302)
+	body["slug"] = "../invalid"
+	requireCode(t, call(t, s, "PUT", "/api/traffic-pools/my-route", body, cookie, csrf), 400)
+}
+
 func TestTrafficMultiplePoolsSequentialAndOwnership(t *testing.T) {
 	s := testServer(t)
 	u := seedUser(t, s, 0)
