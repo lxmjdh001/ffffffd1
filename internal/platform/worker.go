@@ -77,6 +77,11 @@ func (s *Server) maintenance(ctx context.Context) {
 			slog.Error("domain queue failed", "error", e)
 		} else {
 			for _, d := range ds {
+				// The native domain worker revalidates proxy-backed domains with
+				// an HTTP challenge and refreshes verified_at after success.
+				if d.VerificationMethod == "http" {
+					continue
+				}
 				if ctx.Err() != nil {
 					return
 				}

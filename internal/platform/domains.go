@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -16,6 +17,23 @@ var hostnamePattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(
 
 func validHostname(h string) bool {
 	return len(h) <= 253 && hostnamePattern.MatchString(h) && net.ParseIP(h) == nil && !strings.HasSuffix(h, ".localhost") && !strings.HasSuffix(h, ".local")
+}
+
+// Explicit operator-controlled exceptions are for first-party integration tests.
+// The website and CNAME target remain reserved even when listed here.
+func (s *Server) customerHostnameAllowed(host string) bool {
+	if !validHostname(host) || host == s.Config.Host() || host == s.Config.CNAMEHost {
+		return false
+	}
+	if !strings.HasSuffix(host, "."+s.Config.Host()) {
+		return true
+	}
+	for _, allowed := range strings.Split(os.Getenv("CUSTOM_DOMAIN_TEST_HOSTS"), ",") {
+		if host == strings.TrimSpace(allowed) {
+			return true
+		}
+	}
+	return false
 }
 func (s *Server) listDomains(w http.ResponseWriter, r *http.Request) {
 	listOut[Domain](w, r, s.DB.Model(&Domain{}).Where("user_id = ?", userOf(r).ID))
@@ -35,7 +53,7 @@ func (s *Server) createDomain(w http.ResponseWriter, r *http.Request) {
 		fail(w, problem(400, "域名备注最多 120 字"))
 		return
 	}
-	if !validHostname(in.Hostname) || in.Hostname == s.Config.Host() || in.Hostname == s.Config.CNAMEHost || strings.HasSuffix(in.Hostname, "."+s.Config.Host()) {
+	if !s.customerHostnameAllowed(in.Hostname) {
 		fail(w, problem(400, "请填写你拥有的完整下载子域名，例如 download.example.com"))
 		return
 	}
@@ -94,20 +112,20 @@ func (s *Server) verifyDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	e := s.checkDNS(r.Context(), d)
-	updates := map[string]any{"last_error": "", "verified_at": s.Now()}
-	updates["ssl_retry_at"] = nil
+	now := s.Now()
+	updates := map[string]any{"last_error": "", "verified_at": now, "verification_method": "cname", "verification_requested_at": now, "ssl_retry_at": nil, "ssl_error": ""}
 	if e != nil {
-		updates["last_error"] = e.Error()
+		// A proxy may hide the CNAME. Queue a public HTTP challenge instead of
+		// treating an arbitrary 404 response as proof of a valid binding.
 		updates["verified_at"] = nil
+		updates["verification_method"] = "http"
+		updates["ssl_status"] = "verifying"
+	} else if d.SSLStatus != "ready" {
 		updates["ssl_status"] = "pending"
 	}
 	res := s.DB.Model(&Domain{}).Where("id = ? AND token = ?", d.ID, d.Token).Updates(updates)
 	if res.Error != nil {
 		fail(w, res.Error)
-		return
-	}
-	if e != nil {
-		fail(w, e)
 		return
 	}
 	if res.RowsAffected != 1 {

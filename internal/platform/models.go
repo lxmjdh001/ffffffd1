@@ -106,17 +106,19 @@ type Application struct {
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 }
 type Domain struct {
-	SSLStatus  string     `json:"ssl_status" gorm:"not null;default:pending"`
-	SSLError   string     `json:"ssl_error"`
-	SSLRetryAt *time.Time `json:"-"`
-	Remark     string     `json:"remark" gorm:"size:120"`
-	ID         string     `json:"id" gorm:"primaryKey;size:32"`
-	UserID     string     `json:"user_id" gorm:"index;size:32"`
-	Hostname   string     `json:"hostname" gorm:"uniqueIndex;size:253"`
-	Token      string     `json:"token"`
-	VerifiedAt *time.Time `json:"verified_at"`
-	LastError  string     `json:"last_error"`
-	CreatedAt  time.Time  `json:"created_at"`
+	VerificationMethod      string     `json:"verification_method"`
+	VerificationRequestedAt *time.Time `json:"-"`
+	SSLStatus               string     `json:"ssl_status" gorm:"not null;default:pending"`
+	SSLError                string     `json:"ssl_error"`
+	SSLRetryAt              *time.Time `json:"-"`
+	Remark                  string     `json:"remark" gorm:"size:120"`
+	ID                      string     `json:"id" gorm:"primaryKey;size:32"`
+	UserID                  string     `json:"user_id" gorm:"index;size:32"`
+	Hostname                string     `json:"hostname" gorm:"uniqueIndex;size:253"`
+	Token                   string     `json:"token"`
+	VerifiedAt              *time.Time `json:"verified_at"`
+	LastError               string     `json:"last_error"`
+	CreatedAt               time.Time  `json:"created_at"`
 }
 type Usage struct {
 	UserID       string `json:"user_id" gorm:"primaryKey;size:32"`

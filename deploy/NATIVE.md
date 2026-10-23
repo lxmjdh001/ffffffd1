@@ -22,13 +22,25 @@ database or development environment file to production.
 ## Customer flow
 
 1. Add an owned download subdomain in the domain management page.
-2. Create a DNS-only CNAME to `dns.d1apk.com` at the domain's DNS provider.
+2. Create a CNAME to `dns.d1apk.com` at the domain's DNS provider. DNS-only and
+   proxied records are supported.
 3. Click **检查解析并申请免费 SSL**. The application verifies the CNAME and
-   enqueues certificate provisioning.
-4. The `d1apk-domains.timer` checks every minute. The root helper reads verified
-   bindings from the dedicated D1 database, creates only D1-prefixed Nginx
-   configs, obtains a Let's Encrypt webroot certificate and validates Nginx
-   before a graceful reload. Conflicts with existing site names are rejected.
+   enqueues certificate provisioning. If a proxy hides the CNAME, the application
+   queues HTTP/ACME verification instead; the binding is not authorized yet.
+4. The `d1apk-domains.timer` checks every minute. It reads verified and explicitly
+   requested pending bindings from the dedicated D1 database. The adapted
+   `sync-domain-nginx-certbot.sh` reuses the live PWA deployment's sequence:
+   create HTTP vhost, run Certbot HTTP-01, then enable the HTTPS reverse proxy.
+   It uses the same challenge webroot `/var/www/letsencrypt`, which the existing
+   default HTTPS vhost can already serve for orange-cloud origin connections.
+   D1 uses separate `d1apk-customer-*` configs, `d1apk-*` certificate names and
+   backend port 18088. It does not edit PWA files or shared Nginx snippets.
+   Nginx is validated before a graceful reload and existing site conflicts are
+   rejected. Once TLS is available, proxy-backed domains must also return a
+   random route marker before being marked verified. This check refreshes
+   routing verification during renewal checks without repeatedly issuing certs.
+   A generic 404 cannot by itself mark the binding ready. Outbound checks connect
+   only to public IPs and reject cross-host redirects.
 5. The page polls status and shows **SSL 已就绪** only after the HTTPS config has
    been installed. Failed issuance is retried after one hour; verifying again
    clears the retry delay. Port 80 must remain reachable for ACME validation.
@@ -36,12 +48,25 @@ database or development environment file to production.
 Ready customer domains appear in application download links; the first ready
 domain becomes the displayed traffic entry domain. Customer domains may serve
 only their owner's applications and traffic pools. Registration and administration
-remain on the main website. Main-site subdomains are reserved for the platform.
+remain on the main website. Main-site subdomains are reserved for the platform;
+`CUSTOM_DOMAIN_TEST_HOSTS` permits exact operator-configured exceptions. This
+deployment allows only `aaa.d1apk.com` and `bbb.d1apk.com` for integration tests.
 
 The application periodically rechecks CNAMEs. Bindings older than 48 hours without
 a successful verification stop being authorized. The helper removes only its own
 customer config for deleted/expired bindings; certificate files remain available
 for subsequent renewal/rebinding. No existing website configs are edited.
+
+HTTP verification must remain reachable at `/.well-known/acme-challenge/`; proxy
+WAF/challenge rules and forced HTTPS with incompatible origin TLS can prevent
+verification. Failed checks show a retry/contact-support message. Ready
+proxy-backed domains are revalidated every 12 hours; a failed response cannot
+refresh their verification timestamp.
+
+The live PWA application selects its `catch-all` provider, which skips the older
+heuristic DNS/404 check and relies on the Nginx/Certbot provisioning flow. D1
+therefore reuses that deployed flow, rather than copying the older content-match
+heuristics from the local PWA source tree.
 
 Ready customer certificates are checked every 12 hours and renewed when due.
 Website and shared-test certificates have D1-specific renewal commands in
