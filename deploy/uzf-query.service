@@ -1,0 +1,23 @@
+[Unit]
+Description=UZF private OKX deposit query API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=d1uzf
+Group=d1uzf
+WorkingDirectory=/opt/uzf/current
+Environment=UZF_CONFIG=/etc/d1uzf/config.json
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/uzf/current/venv/bin/python /opt/uzf/current/query_api.py
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/d1uzf
+
+[Install]
+WantedBy=multi-user.target

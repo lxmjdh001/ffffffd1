@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Config struct {
@@ -20,6 +22,7 @@ type Config struct {
 	ClamAVAddr                                                            string
 	FutoonURL, FutoonPID, FutoonKey                                       string
 	USDTMonitorURL, USDTMonitorSecret, USDTWallet, TronAPIURL, TronAPIKey string
+	USDTProvider, USDTAddressPasswordHash                                 string
 	TrustedProxies                                                        []*net.IPNet
 }
 
@@ -32,6 +35,8 @@ func env(key, fallback string) string {
 func LoadConfig() (Config, error) {
 	c := Config{Env: env("APP_ENV", "development"), Addr: env("HTTP_ADDR", "127.0.0.1:8088"), DatabaseURL: os.Getenv("DATABASE_URL"), DataDir: env("DATA_DIR", "data"), WebDir: env("WEB_DIR", "web/dist"), PublicURL: strings.TrimRight(env("APP_URL", "http://localhost:8088"), "/"), Secret: os.Getenv("APP_SECRET"), AdminEmail: env("ADMIN_ACCOUNT", os.Getenv("ADMIN_EMAIL")), AdminPassword: os.Getenv("ADMIN_PASSWORD"), ClamAVAddr: os.Getenv("CLAMAV_ADDR"), FutoonURL: os.Getenv("FUTOON_API_URL"), FutoonPID: os.Getenv("FUTOON_PID"), FutoonKey: os.Getenv("FUTOON_KEY"), USDTMonitorURL: os.Getenv("USDT_MONITOR_URL"), USDTMonitorSecret: os.Getenv("USDT_MONITOR_SECRET"), USDTWallet: os.Getenv("USDT_WALLET"), TronAPIURL: env("TRON_API_URL", "https://api.trongrid.io"), TronAPIKey: os.Getenv("TRON_API_KEY")}
 	c.Role = env("SERVER_ROLE", "all")
+	c.USDTProvider = env("USDT_PROVIDER", "tron")
+	c.USDTAddressPasswordHash = os.Getenv("USDT_ADDRESS_PASSWORD_HASH")
 	c.RemoteStorageURL = os.Getenv("REMOTE_STORAGE_URL")
 	c.S3Endpoint = os.Getenv("S3_ENDPOINT")
 	c.S3AccessKey = os.Getenv("S3_ACCESS_KEY")
@@ -73,6 +78,20 @@ func (c Config) paymentMethods() []string {
 	}
 	return append(methods, "manual")
 }
+
+func (c Config) usdtProvider() string {
+	if c.USDTProvider == "" {
+		return "tron"
+	}
+	return c.USDTProvider
+}
+
+func (c Config) receivingWallet(settings Settings) string {
+	if settings.USDTWallet != nil {
+		return *settings.USDTWallet
+	}
+	return c.USDTWallet
+}
 func (c Config) Production() bool { return c.Env == "production" }
 func (c Config) Host() string {
 	u, _ := url.Parse(c.PublicURL)
@@ -110,12 +129,28 @@ func (c Config) Validate() error {
 	if (c.USDTMonitorURL == "") != (c.USDTMonitorSecret == "") {
 		return errors.New("USDT_MONITOR_URL and USDT_MONITOR_SECRET must be set together")
 	}
+	if c.usdtProvider() != "tron" && c.usdtProvider() != "uzf" {
+		return errors.New("USDT_PROVIDER must be tron or uzf")
+	}
+	if c.USDTAddressPasswordHash != "" {
+		if _, err := bcrypt.Cost([]byte(c.USDTAddressPasswordHash)); err != nil {
+			return errors.New("USDT_ADDRESS_PASSWORD_HASH must be a valid bcrypt hash")
+		}
+	}
+	if c.usdtProvider() == "uzf" && (c.USDTMonitorURL == "" || len(c.USDTMonitorSecret) < 32) {
+		return errors.New("uzf requires USDT_MONITOR_URL and a USDT_MONITOR_SECRET of at least 32 characters")
+	}
 	for _, raw := range []string{c.FutoonURL, c.USDTMonitorURL, c.TronAPIURL} {
 		if raw == "" {
 			continue
 		}
 		p, e := url.Parse(raw)
-		if e != nil || p.Host == "" || p.User != nil || p.RawQuery != "" || p.Fragment != "" || (p.Scheme != "https" && (c.Production() || p.Scheme != "http")) {
+		loopbackMonitor := false
+		if e == nil && raw == c.USDTMonitorURL {
+			ip := net.ParseIP(p.Hostname())
+			loopbackMonitor = ip != nil && ip.IsLoopback() && p.Scheme == "http"
+		}
+		if e != nil || p.Host == "" || p.User != nil || p.RawQuery != "" || p.Fragment != "" || (!loopbackMonitor && p.Scheme != "https" && (c.Production() || p.Scheme != "http")) {
 			return errors.New("payment endpoints must be HTTPS URLs without query, fragment or credentials")
 		}
 	}

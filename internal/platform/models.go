@@ -64,6 +64,7 @@ type Settings struct {
 	MaxUploadBytes       int64                `json:"max_upload_bytes"`
 	DomainLimit          int64                `json:"domain_limit"`
 	USDTRateMicros       int64                `json:"usdt_rate_micros"`
+	USDTWallet           *string              `json:"usdt_wallet"`
 	SupportEmail         string               `json:"support_email"`
 	RechargeBonusEnabled bool                 `json:"recharge_bonus_enabled" gorm:"not null;default:true"`
 	RechargeBonusTiers   []RechargeTier       `json:"recharge_bonus_tiers" gorm:"serializer:json;type:text"`
@@ -208,6 +209,7 @@ type Order struct {
 	TradeID        *string    `json:"trade_id" gorm:"uniqueIndex;size:128"`
 	PayURL         string     `json:"pay_url"`
 	USDTUnits      int64      `json:"usdt_units"`
+	USDTProvider   string     `json:"usdt_provider" gorm:"not null;default:tron"`
 	Wallet         string     `json:"wallet"`
 	RateMicros     int64      `json:"rate_micros"`
 	CreatedAt      time.Time  `json:"created_at"`

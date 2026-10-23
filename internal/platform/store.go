@@ -67,6 +67,9 @@ func Migrate(db *gorm.DB) error {
 		if err := migrateDownloadDomainRules(tx); err != nil {
 			return err
 		}
+		if err := migrateUSDTPayment(tx); err != nil {
+			return err
+		}
 		if err := migrateTrafficGroups(tx); err != nil {
 			return err
 		}

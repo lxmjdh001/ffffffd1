@@ -106,13 +106,45 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, problem(400, "不支持的支付方式"))
 		return
 	}
-	if in.Method == "usdt" && s.Config.USDTWallet == "" {
-		fail(w, problem(503, "该支付渠道尚未配置"))
+	// Retrying a successful request must return its original order even if the
+	// operator has since changed the wallet or the monitor is temporarily down.
+	var existing Order
+	err := s.DB.First(&existing, "idempotency_key = ?", userOf(r).ID+":"+key).Error
+	if err == nil {
+		if existing.Method != in.Method || existing.AmountMicros != amount {
+			fail(w, problem(409, "幂等键已用于另一笔请求"))
+			return
+		}
+		jsonOut(w, 201, existing)
+		return
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		fail(w, err)
 		return
 	}
 	if e = s.rate("order:"+userOf(r).ID, 20, time.Hour); e != nil {
 		fail(w, e)
 		return
+	}
+	if in.Method == "usdt" {
+		settings, err := getSettings(s.DB)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		wallet := s.Config.receivingWallet(settings)
+		if wallet == "" {
+			fail(w, problem(503, "该支付渠道尚未配置"))
+			return
+		}
+		if s.Config.usdtProvider() == "uzf" {
+			// Do not present payment instructions before the new OKX account
+			// has produced a successful, fresh monitor snapshot.
+			if _, err := s.queryUZF(r.Context(), Order{Wallet: wallet, USDTUnits: 1, CreatedAt: s.Now(), ExpiresAt: s.Now()}); err != nil {
+				fail(w, err)
+				return
+			}
+		}
 	}
 	var order Order
 	e = s.DB.Transaction(func(tx *gorm.DB) error {
@@ -141,7 +173,11 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 			order.ExpiresAt = s.Now().Add(7 * 24 * time.Hour)
 		}
 		if in.Method == "usdt" {
-			order.Wallet = s.Config.USDTWallet
+			order.Wallet = s.Config.receivingWallet(settings)
+			if order.Wallet == "" {
+				return problem(503, "该支付渠道尚未配置")
+			}
+			order.USDTProvider = s.Config.usdtProvider()
 			order.RateMicros = settings.USDTRateMicros
 			if e = s.reserveUSDT(tx, &order); e != nil {
 				return e
@@ -165,6 +201,9 @@ func (s *Server) reserveUSDT(tx *gorm.DB, o *Order) error {
 			return e
 		}
 		units := base + n.Int64() + 1
+		if units%10000 == 0 {
+			continue // Keep distinct from go7's two-decimal payment amounts.
+		}
 		reservation := USDTReservation{Wallet: o.Wallet, Units: units, OrderID: o.ID}
 		res := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&reservation)
 		if res.Error != nil {
@@ -362,6 +401,12 @@ func (s *Server) reconcileUSDT(ctx context.Context, o Order) error {
 	}
 	if o.CreatedAt.Before(s.Now().Add(-48 * time.Hour)) {
 		return problem(400, "订单已超过自动核对窗口，请联系管理员")
+	}
+	if o.USDTProvider == "uzf" {
+		return s.reconcileUZF(ctx, o)
+	}
+	if o.USDTProvider != "" && o.USDTProvider != "tron" {
+		return problem(503, "订单支付渠道配置无效，请联系管理员")
 	}
 	s.monitorHint(ctx, o)
 	q := url.Values{"only_confirmed": {"true"}, "only_to": {"true"}, "contract_address": {usdtContract}, "min_timestamp": {strconv.FormatInt(o.CreatedAt.UnixMilli(), 10)}, "max_timestamp": {strconv.FormatInt(o.ExpiresAt.UnixMilli(), 10)}, "limit": {"200"}, "order_by": {"block_timestamp,asc"}}

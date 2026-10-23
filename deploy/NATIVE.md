@@ -97,6 +97,10 @@ file. Verify both `/healthz` and the actual website `/` after every deployment.
 
 ### Administrator credentials
 
+USDT payment setup and secondary-password wallet protection are documented in
+[`USDT.md`](USDT.md). The local integration does not change production payment
+credentials; configure the new OKX account before enabling live payments.
+
 `ADMIN_ACCOUNT` accepts either an email address or a 3–32 character administrator
 username (letters, numbers, hyphens and underscores). It takes precedence over
 the legacy `ADMIN_EMAIL`; ordinary member registration still requires email.

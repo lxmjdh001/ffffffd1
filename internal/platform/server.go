@@ -224,6 +224,7 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("GET /api/admin/audit", s.admin(s.adminAudit))
 	m.Handle("GET /api/admin/settings", s.admin(s.adminSettings))
 	m.Handle("PUT /api/admin/settings", s.admin(s.saveSettings))
+	m.Handle("PUT /api/admin/usdt-wallet", s.admin(s.updateUSDTWallet))
 	m.HandleFunc("GET /a/{slug}", s.directDownload)
 	m.HandleFunc("GET /a/{slug}/info", s.downloadPage)
 	m.HandleFunc("GET /a/{slug}/client.js", s.downloadClient)
@@ -368,7 +369,9 @@ func (s *Server) publicConfig(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
-	methods := s.Config.paymentMethods()
+	channelConfig := s.Config
+	channelConfig.USDTWallet = s.Config.receivingWallet(x)
+	methods := channelConfig.paymentMethods()
 	downloadBase := ""
 	if x.DownloadDomainMode != "separate" {
 		if x.DownloadDomainMode == "public_paid" {
