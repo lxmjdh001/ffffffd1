@@ -94,3 +94,18 @@ files, and `/etc/d1apk/app.env` backed up together.
 After unpacking a release, make static artifacts readable to the service user
 with `chmod -R a+rX RELEASE/web/dist`. Do not apply this to the secret environment
 file. Verify both `/healthz` and the actual website `/` after every deployment.
+
+### Administrator credentials
+
+`ADMIN_ACCOUNT` accepts either an email address or a 3–32 character administrator
+username (letters, numbers, hyphens and underscores). It takes precedence over
+the legacy `ADMIN_EMAIL`; ordinary member registration still requires email.
+Bootstrap variables do not overwrite an existing administrator on startup.
+
+To rotate an existing administrator, run `bin/d1apk reset-admin` with the new
+`ADMIN_ACCOUNT` and `ADMIN_PASSWORD` in a protected process environment. When
+renaming, also set the operator-only `ADMIN_PREVIOUS_ACCOUNT` to the old login.
+The command updates the same user record and revokes all its sessions in one
+transaction. Persist the new credentials in the root-only environment file,
+remove `ADMIN_PREVIOUS_ACCOUNT`, then restart only `d1apk`. Never commit passwords
+or production environment files.

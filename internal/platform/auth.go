@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/mail"
+	"regexp"
 	"strings"
 	"time"
 
@@ -23,6 +24,19 @@ func normalizeEmail(s string) (string, error) {
 	a, e := mail.ParseAddress(s)
 	if e != nil || a.Address != s || len(s) > 254 {
 		return "", problem(400, "请输入有效的邮箱地址")
+	}
+	return s, nil
+}
+
+var adminAccountPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{2,31}$`)
+
+func normalizeAdminAccount(s string) (string, error) {
+	s = strings.ToLower(strings.TrimSpace(s))
+	if strings.Contains(s, "@") {
+		return normalizeEmail(s)
+	}
+	if !adminAccountPattern.MatchString(s) {
+		return "", problem(400, "管理员账号须为 3–32 位字母、数字、短横线或下划线")
 	}
 	return s, nil
 }
@@ -158,9 +172,9 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
-	email, e := normalizeEmail(in.Email)
+	email, e := normalizeAdminAccount(in.Email)
 	if e != nil {
-		fail(w, problem(401, "邮箱或密码错误"))
+		fail(w, problem(401, "账号或密码错误"))
 		return
 	}
 	if e = s.rate("login-email:"+email, 12, 15*time.Minute); e != nil {
@@ -172,14 +186,18 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var u User
-	e = s.DB.First(&u, "email = ?", email).Error
+	q := s.DB.Where("email = ?", email)
+	if !strings.Contains(email, "@") {
+		q = q.Where("role = ?", "admin")
+	}
+	e = q.First(&u).Error
 	hash := []byte(u.PasswordHash)
 	if e != nil {
 		hash = dummyHash
 	}
 	pass := bcrypt.CompareHashAndPassword(hash, []byte(in.Password))
 	if e != nil || pass != nil || u.Disabled {
-		fail(w, problem(401, "邮箱或密码错误，或账户已停用"))
+		fail(w, problem(401, "账号或密码错误，或账户已停用"))
 		return
 	}
 	s.establishSession(w, r, u)

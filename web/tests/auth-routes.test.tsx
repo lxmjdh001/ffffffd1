@@ -126,7 +126,7 @@ describe('real application routes', () => {
     await screen.findByRole('heading', { name: '创建你的账户' });
     await user.click(screen.getByRole('link', { name: /立即登录/ }));
     await screen.findByRole('heading', { name: '登录控制台' });
-    await user.type(screen.getByRole('textbox', { name: '邮箱地址', exact: true }), account.email);
+    await user.type(screen.getByRole('textbox', { name: '账号', exact: true }), account.email);
     await user.type(screen.getByLabelText('密码', { exact: true }), 'test-password-123');
     await user.type(screen.getByRole('textbox', { name: /图形验证码/ }), '12345');
     await user.click(screen.getByRole('button', { name: /登 录/ }));

@@ -132,9 +132,9 @@ func BootstrapAdmin(db *gorm.DB, c Config) error {
 	if c.AdminEmail == "" && c.AdminPassword == "" {
 		return nil
 	}
-	email, err := normalizeEmail(c.AdminEmail)
+	email, err := normalizeAdminAccount(c.AdminEmail)
 	if err != nil || len(c.AdminPassword) < 6 || len(c.AdminPassword) > 72 {
-		return errors.New("ADMIN_EMAIL and a 6–72 byte ADMIN_PASSWORD are required together")
+		return errors.New("ADMIN_ACCOUNT (or ADMIN_EMAIL) and a 6–72 byte ADMIN_PASSWORD are required together")
 	}
 	return db.Transaction(func(tx *gorm.DB) error {
 		if tx.Dialector.Name() == "postgres" {
@@ -160,9 +160,16 @@ func BootstrapAdmin(db *gorm.DB, c Config) error {
 
 // ResetAdmin is an operator-only CLI action; no unauthenticated HTTP reset exists.
 func ResetAdmin(db *gorm.DB, c Config) error {
-	email, e := normalizeEmail(c.AdminEmail)
+	email, e := normalizeAdminAccount(c.AdminEmail)
 	if e != nil || len(c.AdminPassword) < 6 || len(c.AdminPassword) > 72 {
-		return errors.New("ADMIN_EMAIL and 6–72 byte ADMIN_PASSWORD required")
+		return errors.New("ADMIN_ACCOUNT (or ADMIN_EMAIL) and 6–72 byte ADMIN_PASSWORD required")
+	}
+	previous := email
+	if raw := os.Getenv("ADMIN_PREVIOUS_ACCOUNT"); raw != "" {
+		previous, e = normalizeAdminAccount(raw)
+		if e != nil {
+			return e
+		}
 	}
 	hash, e := bcrypt.GenerateFromPassword([]byte(c.AdminPassword), 12)
 	if e != nil {
@@ -170,16 +177,20 @@ func ResetAdmin(db *gorm.DB, c Config) error {
 	}
 	return db.Transaction(func(tx *gorm.DB) error {
 		var user User
-		if e := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, "email = ? AND role = ?", email, "admin").Error; e != nil {
+		if e := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, "email = ? AND role = ?", previous, "admin").Error; e != nil {
 			return e
 		}
-		if e := tx.Model(&user).Update("password_hash", string(hash)).Error; e != nil {
+		updates := map[string]any{"email": email, "password_hash": string(hash)}
+		if previous != email && !strings.Contains(email, "@") {
+			updates["name"] = email
+		}
+		if e := tx.Model(&user).Updates(updates).Error; e != nil {
 			return e
 		}
 		if e := tx.Delete(&Session{}, "user_id = ?", user.ID).Error; e != nil {
 			return e
 		}
-		return recordAudit(tx, user.ID, "admin.cli_password_reset", user.ID, "管理员 CLI 重置密码并撤销所有会话")
+		return recordAudit(tx, user.ID, "admin.cli_password_reset", user.ID, "管理员 CLI 更新登录账号与密码并撤销所有会话")
 	})
 }
 func lockUser(tx *gorm.DB, id string) (User, error) {
