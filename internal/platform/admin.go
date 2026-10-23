@@ -212,7 +212,12 @@ func (s *Server) adminSettings(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
-	jsonOut(w, 200, map[string]any{"settings": settings, "plans": plans, "runtime": map[string]any{"public_url": s.Config.PublicURL, "cname_target": s.Config.CNAMEHost, "turnstile_configured": s.Config.TurnstileSecret != "", "scanner_configured": s.Config.ClamAVAddr != "", "futoon_configured": s.Config.FutoonURL != "", "usdt_configured": s.Config.USDTWallet != "", "production": s.Config.Production()}})
+	usage, err := s.riskUsageSummary()
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	jsonOut(w, 200, map[string]any{"risk_usage": usage, "settings": settings, "plans": plans, "runtime": map[string]any{"public_url": s.Config.PublicURL, "cname_target": s.Config.CNAMEHost, "turnstile_configured": s.Config.TurnstileSecret != "", "scanner_configured": s.Config.ClamAVAddr != "", "futoon_configured": s.Config.FutoonURL != "", "usdt_configured": s.Config.USDTWallet != "", "production": s.Config.Production()}})
 }
 func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 	var in struct {

@@ -376,7 +376,7 @@ func (s *Server) checkTrafficRisk(ctx context.Context) {
 			message := ""
 			// Only inspect the customer-configured traffic target. Do not probe the
 			// host root: the customer's main site is outside this feature's scope.
-			unsafe, err := lookupWebRisk(ctx, client, "https://webrisk.googleapis.com/v1/uris:search", key, l.URL)
+			unsafe, err := s.lookupTrackedWebRisk(ctx, client, "https://webrisk.googleapis.com/v1/uris:search", key, l.URL)
 			if err != nil {
 				status = "unknown"
 				message = err.Error()
