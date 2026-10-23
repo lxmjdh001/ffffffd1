@@ -5,6 +5,10 @@ system user, PostgreSQL database/role, systemd service, and data directory. Its
 HTTP listener is `127.0.0.1:18088`; it does not bind public ports directly.
 
 - Website: `https://d1apk.com`
+- Website alias: `https://www.d1apk.com` redirects to the canonical website,
+  preserving the request path and query. Run `deploy/www-redirect.py` as root
+  after its DNS is pointed to the server. Its separate certificate renewal job
+  is `/etc/cron.d/d1apk-www-renew`.
 - Initial shared download domain: `https://test.d1apk.com`
 - Customer CNAME target: `dns.d1apk.com` (DNS-only A to the deployment server)
 - Secret environment: `/etc/d1apk/app.env`, root-only
