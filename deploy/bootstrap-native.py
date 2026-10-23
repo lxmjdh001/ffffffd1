@@ -13,6 +13,8 @@ def db(query):
     return run(['runuser','-u','postgres','--','psql','-X','-qAt','-v','ON_ERROR_STOP=1','-c',query])
 
 release=Path('/opt/d1apk/releases/20261023-initial')
+# Build artifacts copied from macOS may have owner-only directory permissions.
+run(['chmod','-R','a+rX',str(release/'web/dist')])
 env=Path('/etc/d1apk/app.env')
 if not env.exists():
     if db("SELECT count(*) FROM pg_roles WHERE rolname='d1apk'").strip()!='0' or db("SELECT count(*) FROM pg_database WHERE datname='d1apk'").strip()!='0':

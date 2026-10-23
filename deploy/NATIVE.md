@@ -61,3 +61,7 @@ Application updates should be built into a separate release and health-checked
 before changing the active release. Restart only `d1apk` for application updates;
 do not restart PostgreSQL, Nginx or unrelated PM2 applications. Keep the database,
 files, and `/etc/d1apk/app.env` backed up together.
+
+After unpacking a release, make static artifacts readable to the service user
+with `chmod -R a+rX RELEASE/web/dist`. Do not apply this to the secret environment
+file. Verify both `/healthz` and the actual website `/` after every deployment.
