@@ -31,6 +31,54 @@ func TestUZFConfigurationRequiresPrivateTransportAndHashedSecondarySecret(t *tes
 	}
 }
 
+func TestUZFLegacyHTTPRequiresExplicitScopedOptIn(t *testing.T) {
+	c := Config{Env: "production", PublicURL: "https://d1apk.com", Secret: strings.Repeat("s", 32), DatabaseURL: "postgres://unused/test", ClamAVAddr: "127.0.0.1:3310", USDTProvider: "uzf", USDTMonitorURL: "http://monitor.example/api/check", USDTMonitorSecret: "legacy-secret"}
+	if c.Validate() == nil {
+		t.Fatal("public HTTP accepted without explicit operator opt-in")
+	}
+	c.USDTMonitorAllowHTTP = true
+	if err := c.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	for _, endpoint := range []string{"http://user:pass@monitor.example/api/check", "http://monitor.example/api/check?secret=bad", "ftp://monitor.example/api/check", "http://monitor.example/api/check#fragment"} {
+		bad := c
+		bad.USDTMonitorURL = endpoint
+		if bad.Validate() == nil {
+			t.Fatal("HTTP compatibility bypassed endpoint validation")
+		}
+	}
+	bad := c
+	bad.USDTProvider = "tron"
+	if bad.Validate() == nil {
+		t.Fatal("UZF opt-in changed the legacy TRON monitor policy")
+	}
+	bad = c
+	bad.TronAPIURL = c.USDTMonitorURL
+	if bad.Validate() == nil {
+		t.Fatal("UZF opt-in relaxed the TRON API, even at the same URL")
+	}
+	bad = c
+	bad.FutoonURL, bad.FutoonPID, bad.FutoonKey = c.USDTMonitorURL, "test", "test"
+	if bad.Validate() == nil {
+		t.Fatal("UZF opt-in relaxed Futoon transport")
+	}
+}
+
+func TestUZFLegacyHTTPEnvironmentFlag(t *testing.T) {
+	t.Setenv("APP_ENV", "test")
+	t.Setenv("APP_SECRET", strings.Repeat("s", 32))
+	t.Setenv("USDT_MONITOR_ALLOW_HTTP", "")
+	c, err := LoadConfig()
+	if err != nil || c.USDTMonitorAllowHTTP {
+		t.Fatalf("HTTP compatibility must default off: %v", err)
+	}
+	t.Setenv("USDT_MONITOR_ALLOW_HTTP", "true")
+	c, err = LoadConfig()
+	if err != nil || !c.USDTMonitorAllowHTTP {
+		t.Fatalf("explicit HTTP compatibility flag not loaded: %v", err)
+	}
+}
+
 func TestUSDTWalletRequiresSecondaryPasswordAndCannotBypass(t *testing.T) {
 	s := testServer(t)
 	u := seedUser(t, s, 0)

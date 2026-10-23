@@ -17,7 +17,7 @@ def main():
     if os.geteuid() != 0 or args.backup.parent != Path('/opt/d1apk/backups') or args.backup.exists():
         raise SystemExit('Expected root and a new explicit D1 backup directory')
     updates = json.loads(args.patch.read_text())
-    allowed = {'USDT_PROVIDER', 'USDT_MONITOR_URL', 'USDT_MONITOR_SECRET', 'USDT_ADDRESS_PASSWORD_HASH'}
+    allowed = {'USDT_PROVIDER', 'USDT_MONITOR_URL', 'USDT_MONITOR_SECRET', 'USDT_MONITOR_ALLOW_HTTP', 'USDT_ADDRESS_PASSWORD_HASH'}
     if set(updates) != allowed or updates['USDT_PROVIDER'] != 'uzf':
         raise SystemExit('Only D1 USDT client settings may be changed')
     if any(not isinstance(value, str) or '\n' in value or '\r' in value for value in updates.values()):
@@ -26,6 +26,8 @@ def main():
         raise SystemExit('Expected a bcrypt cost-12 secondary password hash')
     if bool(updates['USDT_MONITOR_URL']) != bool(updates['USDT_MONITOR_SECRET']):
         raise SystemExit('The existing query URL and secret must be supplied together')
+    if updates['USDT_MONITOR_ALLOW_HTTP'] not in {'true', 'false'}:
+        raise SystemExit('Expected an explicit HTTP compatibility choice')
     env_path = Path('/etc/d1apk/app.env')
     original = env_path.read_text()
     args.backup.mkdir(mode=0o700, parents=True)

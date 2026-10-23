@@ -12,9 +12,13 @@ go7 receiving addresses. go7 is a read-only reference for the client protocol.
 - The go7 aliases `USDT_API_URL` and `USDT_API_SECRET` remain supported.
 - Leave both URL and secret empty until the operator supplies them. The D1
   application still starts, but USDT is unavailable and new USDT orders are refused.
-- Public production query endpoints require HTTPS. No request credentials are
-  forwarded across redirects. A literal loopback IP is accepted for legacy tests;
-  it is not a deployment instruction or a default for the external service.
+- Public production query endpoints require HTTPS by default. Only an operator
+  who explicitly accepts the risk of unencrypted and unauthenticated responses
+  may set `USDT_MONITOR_ALLOW_HTTP=true` for an existing UZF HTTP endpoint.
+  HMAC authenticates the request, not the response; HTTPS is strongly preferred.
+  This opt-in affects only the UZF monitor, never Futoon or TRON endpoints.
+  No request credentials are forwarded across redirects. A literal loopback IP
+  is accepted for legacy tests, not as a deployment default.
 
 D1 uses the same sorted-parameter HMAC-SHA256 signature as go7. Query parameters
 are exactly `amount`, `currency=USDT`, `timestamp`, and `signature`. It does not

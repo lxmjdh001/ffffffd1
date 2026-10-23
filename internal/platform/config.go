@@ -23,6 +23,7 @@ type Config struct {
 	FutoonURL, FutoonPID, FutoonKey                                       string
 	USDTMonitorURL, USDTMonitorSecret, USDTWallet, TronAPIURL, TronAPIKey string
 	USDTProvider, USDTAddressPasswordHash                                 string
+	USDTMonitorAllowHTTP                                                  bool
 	TrustedProxies                                                        []*net.IPNet
 }
 
@@ -37,6 +38,7 @@ func LoadConfig() (Config, error) {
 	c.Role = env("SERVER_ROLE", "all")
 	c.USDTProvider = env("USDT_PROVIDER", "tron")
 	c.USDTAddressPasswordHash = os.Getenv("USDT_ADDRESS_PASSWORD_HASH")
+	c.USDTMonitorAllowHTTP = env("USDT_MONITOR_ALLOW_HTTP", "false") == "true"
 	c.RemoteStorageURL = os.Getenv("REMOTE_STORAGE_URL")
 	c.S3Endpoint = os.Getenv("S3_ENDPOINT")
 	c.S3AccessKey = os.Getenv("S3_ACCESS_KEY")
@@ -137,17 +139,20 @@ func (c Config) Validate() error {
 			return errors.New("USDT_ADDRESS_PASSWORD_HASH must be a valid bcrypt hash")
 		}
 	}
-	for _, raw := range []string{c.FutoonURL, c.USDTMonitorURL, c.TronAPIURL} {
+	for i, raw := range []string{c.FutoonURL, c.USDTMonitorURL, c.TronAPIURL} {
 		if raw == "" {
 			continue
 		}
 		p, e := url.Parse(raw)
 		loopbackMonitor := false
-		if e == nil && raw == c.USDTMonitorURL {
+		if e == nil && i == 1 {
 			ip := net.ParseIP(p.Hostname())
 			loopbackMonitor = ip != nil && ip.IsLoopback() && p.Scheme == "http"
 		}
-		if e != nil || p.Host == "" || p.User != nil || p.RawQuery != "" || p.Fragment != "" || (!loopbackMonitor && p.Scheme != "https" && (c.Production() || p.Scheme != "http")) {
+		// The operator may explicitly accept an existing UZF HTTP endpoint.
+		// This exception never relaxes other payment endpoints or redirects.
+		legacyHTTPMonitor := e == nil && i == 1 && c.usdtProvider() == "uzf" && c.USDTMonitorAllowHTTP && p.Scheme == "http"
+		if e != nil || p.Host == "" || p.User != nil || p.RawQuery != "" || p.Fragment != "" || (!loopbackMonitor && !legacyHTTPMonitor && p.Scheme != "https" && (c.Production() || p.Scheme != "http")) {
 			return errors.New("payment endpoints must be HTTPS URLs without query, fragment or credentials")
 		}
 	}
