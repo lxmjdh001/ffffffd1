@@ -16,12 +16,15 @@ import (
 	"context"
 )
 
-func uploadFixture(t *testing.T, s *Server, cookie *http.Cookie, csrf, name string, content []byte) *httptest.ResponseRecorder {
+func uploadFixture(t *testing.T, s *Server, cookie *http.Cookie, csrf, name string, content []byte, slug ...string) *httptest.ResponseRecorder {
 	t.Helper()
 	var b bytes.Buffer
 	form := multipart.NewWriter(&b)
 	_ = form.WriteField("name", "上传测试")
 	_ = form.WriteField("version", "1.0.0")
+	if len(slug) > 0 {
+		_ = form.WriteField("slug", slug[0])
+	}
 	f, e := form.CreateFormFile("file", name)
 	if e != nil {
 		t.Fatal(e)

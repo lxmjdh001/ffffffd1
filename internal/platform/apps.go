@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -41,6 +42,23 @@ func validAppFields(name, description, version string) error {
 		return problem(400, "应用名称须为 1–100 字，版本最多 40 字，说明最多 4000 字")
 	}
 	return nil
+}
+
+var appSlugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,31}$`)
+
+func normalizeAppSlug(raw string) (string, error) {
+	slug := strings.ToLower(strings.TrimSpace(raw))
+	if !appSlugPattern.MatchString(slug) {
+		return "", problem(400, "分享标识须为 1–32 位字母、数字、短横线或下划线，且以字母或数字开头")
+	}
+	return slug, nil
+}
+
+func appSaveError(err error) error {
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return problem(409, "分享标识已被使用，请换一个")
+	}
+	return err
 }
 func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 	u := userOf(r)
@@ -123,6 +141,15 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(fields["name"])
 	description := strings.TrimSpace(fields["description"])
 	version := strings.TrimSpace(fields["version"])
+	slug := ""
+	if r.PathValue("id") == "" && strings.TrimSpace(fields["slug"]) != "" {
+		var err error
+		slug, err = normalizeAppSlug(fields["slug"])
+		if err != nil {
+			fail(w, err)
+			return
+		}
+	}
 	if e = validAppFields(name, description, version); e != nil {
 		fail(w, e)
 		return
@@ -185,6 +212,9 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 				return problem(403, "应用数量已达套餐上限，请升级会员或删除应用")
 			}
 			app = Application{ID: randomHex(16), UserID: u.ID, Slug: randomHex(6), Enabled: true}
+			if slug != "" {
+				app.Slug = slug
+			}
 		} else {
 			if err = tx.First(&app, "id = ? AND user_id = ?", r.PathValue("id"), u.ID).Error; err != nil {
 				return err
@@ -206,7 +236,7 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 		app.FileName = filename
 		app.Size = size
 		app.SHA256 = hex.EncodeToString(h.Sum(nil))
-		return tx.Save(&app).Error
+		return appSaveError(tx.Save(&app).Error)
 	})
 	if e != nil {
 		fail(w, e)
@@ -324,10 +354,11 @@ func (s *Server) scan(ctx context.Context, f *os.File) error {
 }
 func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Version     string `json:"version"`
-		Enabled     bool   `json:"enabled"`
+		Slug        *string `json:"slug"`
+		Name        string  `json:"name"`
+		Description string  `json:"description"`
+		Version     string  `json:"version"`
+		Enabled     bool    `json:"enabled"`
 	}
 	if e := decode(w, r, &in); e != nil {
 		fail(w, e)
@@ -336,6 +367,14 @@ func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
 	if e := validAppFields(in.Name, in.Description, in.Version); e != nil {
 		fail(w, e)
 		return
+	}
+	if in.Slug != nil {
+		slug, err := normalizeAppSlug(*in.Slug)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		in.Slug = &slug
 	}
 	var app Application
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
@@ -349,7 +388,10 @@ func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
 		app.Description = in.Description
 		app.Version = in.Version
 		app.Enabled = in.Enabled
-		return tx.Save(&app).Error
+		if in.Slug != nil {
+			app.Slug = *in.Slug
+		}
+		return appSaveError(tx.Save(&app).Error)
 	})
 	if e != nil {
 		fail(w, e)

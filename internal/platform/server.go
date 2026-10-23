@@ -186,8 +186,22 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("POST /api/apps/{id}/file", s.auth(s.uploadApp))
 	m.Handle("DELETE /api/apps/{id}", s.auth(s.deleteApp))
 	m.Handle("GET /api/download-domain", s.auth(s.assignedDownloadDomain))
+	m.Handle("GET /api/download-domains", s.auth(s.availableDownloadDomains))
+	m.Handle("PATCH /api/download-domains/note", s.auth(s.saveDownloadDomainNote))
+	m.Handle("GET /api/apps/{id}/page-design", s.auth(s.getPageDesign))
+	m.Handle("PATCH /api/apps/{id}/download-settings", s.auth(s.saveDownloadSettings))
+	m.Handle("PUT /api/apps/{id}/page-design", s.auth(s.savePageDesign))
+	m.Handle("POST /api/apps/{id}/page-design/preview", s.auth(s.previewPageDesign))
 	m.Handle("GET /api/domains", s.auth(s.listDomains))
+	m.Handle("GET /api/traffic-pool", s.auth(s.getTrafficPool))
+	m.Handle("PUT /api/traffic-pool", s.auth(s.saveTrafficPool))
+	m.Handle("GET /api/traffic-pools", s.auth(s.getTrafficPool))
+	m.Handle("POST /api/traffic-pools", s.auth(s.saveTrafficPool))
+	m.Handle("PUT /api/traffic-pools/{slug}", s.auth(s.saveTrafficPool))
+	m.Handle("DELETE /api/traffic-pools/{slug}", s.auth(s.deleteTrafficPool))
+	m.HandleFunc("GET /r/{slug}", s.routeTraffic)
 	m.Handle("POST /api/domains", s.auth(s.createDomain))
+	m.Handle("PATCH /api/domains/{id}", s.auth(s.saveDomainRemark))
 	m.Handle("POST /api/domains/{id}/verify", s.auth(s.verifyDomain))
 	m.Handle("DELETE /api/domains/{id}", s.auth(s.deleteDomain))
 	m.Handle("GET /api/downloads", s.auth(s.listDownloads))
@@ -224,7 +238,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 		w.Header().Set("Cache-Control", "no-store")
 		defer func() {
 			if p := recover(); p != nil {
@@ -357,8 +371,15 @@ func (s *Server) publicConfig(w http.ResponseWriter, r *http.Request) {
 	methods := s.Config.paymentMethods()
 	downloadBase := ""
 	if x.DownloadDomainMode != "separate" {
+		if x.DownloadDomainMode == "public_paid" {
+			if normalized, err := s.normalizeDownloadURL(x.FreeDownloadBaseURL); err == nil {
+				downloadBase = normalized
+			}
+		}
 		if normalized, err := s.normalizeDownloadURL(x.DownloadBaseURL); err == nil {
-			downloadBase = normalized
+			if downloadBase == "" {
+				downloadBase = normalized
+			}
 		}
 	}
 	jsonOut(w, 200, map[string]any{"currency": "USD", "site_name": x.SiteName, "registration_open": x.RegistrationOpen, "turnstile_site_key": s.Config.TurnstileSiteKey, "development": !s.Config.Production(), "public_url": s.Config.PublicURL, "download_domain_mode": x.DownloadDomainMode, "download_base_url": downloadBase, "cname_target": s.Config.CNAMEHost, "download_price_micros": x.DownloadPriceMicros, "max_upload_bytes": x.MaxUploadBytes, "domain_limit": x.DomainLimit, "plans": plans, "payment_methods": methods, "support_email": x.SupportEmail, "usdt_rate_micros": x.USDTRateMicros, "recharge_bonus_enabled": x.RechargeBonusEnabled, "recharge_bonus_tiers": x.RechargeBonusTiers})

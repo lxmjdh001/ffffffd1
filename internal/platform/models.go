@@ -41,27 +41,33 @@ type RechargeTier struct {
 	ThresholdMicros int64 `json:"threshold_micros"`
 	Percent         int64 `json:"percent"`
 }
+type DownloadDomainRule struct {
+	URL      string `json:"url"`
+	Audience string `json:"audience"`
+	Remark   string `json:"remark"`
+}
 
 func defaultRechargeTiers() []RechargeTier {
 	return []RechargeTier{{200 * Dollar, 15}, {500 * Dollar, 35}, {1000 * Dollar, 50}}
 }
 
 type Settings struct {
-	ID                   uint           `json:"id" gorm:"primaryKey"`
-	SiteName             string         `json:"site_name"`
-	DownloadBaseURL      string         `json:"download_base_url"`
-	DownloadDomainMode   string         `json:"download_domain_mode" gorm:"not null;default:unified"`
-	FreeDownloadBaseURL  string         `json:"free_download_base_url"`
-	PaidDownloadBaseURL  string         `json:"paid_download_base_url"`
-	RegistrationOpen     bool           `json:"registration_open"`
-	DownloadPriceMicros  int64          `json:"download_price_micros"`
-	MaxUploadBytes       int64          `json:"max_upload_bytes"`
-	DomainLimit          int64          `json:"domain_limit"`
-	USDTRateMicros       int64          `json:"usdt_rate_micros"`
-	SupportEmail         string         `json:"support_email"`
-	RechargeBonusEnabled bool           `json:"recharge_bonus_enabled" gorm:"not null;default:true"`
-	RechargeBonusTiers   []RechargeTier `json:"recharge_bonus_tiers" gorm:"serializer:json;type:text"`
-	UpdatedAt            time.Time      `json:"updated_at"`
+	ID                   uint                 `json:"id" gorm:"primaryKey"`
+	SiteName             string               `json:"site_name"`
+	DownloadBaseURL      string               `json:"download_base_url"`
+	DownloadDomainMode   string               `json:"download_domain_mode" gorm:"not null;default:unified"`
+	FreeDownloadBaseURL  string               `json:"free_download_base_url"`
+	PaidDownloadBaseURL  string               `json:"paid_download_base_url"`
+	DownloadDomainRules  []DownloadDomainRule `json:"download_domain_rules" gorm:"serializer:json;type:text"`
+	RegistrationOpen     bool                 `json:"registration_open"`
+	DownloadPriceMicros  int64                `json:"download_price_micros"`
+	MaxUploadBytes       int64                `json:"max_upload_bytes"`
+	DomainLimit          int64                `json:"domain_limit"`
+	USDTRateMicros       int64                `json:"usdt_rate_micros"`
+	SupportEmail         string               `json:"support_email"`
+	RechargeBonusEnabled bool                 `json:"recharge_bonus_enabled" gorm:"not null;default:true"`
+	RechargeBonusTiers   []RechargeTier       `json:"recharge_bonus_tiers" gorm:"serializer:json;type:text"`
+	UpdatedAt            time.Time            `json:"updated_at"`
 }
 type Session struct {
 	Hash      string `gorm:"primaryKey;size:64"`
@@ -80,25 +86,27 @@ type RateBucket struct {
 	ExpiresAt time.Time `gorm:"index"`
 }
 type Application struct {
-	ID          string         `json:"id" gorm:"primaryKey;size:32"`
-	UserID      string         `json:"user_id" gorm:"index;size:32;not null"`
-	Slug        string         `json:"slug" gorm:"uniqueIndex;size:32;not null"`
-	Name        string         `json:"name" gorm:"size:100"`
-	Description string         `json:"description"`
-	Version     string         `json:"version" gorm:"size:40"`
-	Platform    string         `json:"platform" gorm:"size:16"`
-	FileKey     string         `json:"-" gorm:"size:32"`
-	FileName    string         `json:"file_name"`
-	Size        int64          `json:"size"`
-	SHA256      string         `json:"sha256"`
-	Enabled     bool           `json:"enabled"`
-	Blocked     bool           `json:"blocked"`
-	Downloads   int64          `json:"downloads"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
+	ID           string         `json:"id" gorm:"primaryKey;size:32"`
+	UserID       string         `json:"user_id" gorm:"index;size:32;not null"`
+	Slug         string         `json:"slug" gorm:"uniqueIndex;size:32;not null"`
+	Name         string         `json:"name" gorm:"size:100"`
+	Description  string         `json:"description"`
+	Version      string         `json:"version" gorm:"size:40"`
+	Platform     string         `json:"platform" gorm:"size:16"`
+	FileKey      string         `json:"-" gorm:"size:32"`
+	FileName     string         `json:"file_name"`
+	Size         int64          `json:"size"`
+	SHA256       string         `json:"sha256"`
+	Enabled      bool           `json:"enabled"`
+	DownloadMode string         `json:"download_mode" gorm:"not null;default:direct"`
+	Blocked      bool           `json:"blocked"`
+	Downloads    int64          `json:"downloads"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 }
 type Domain struct {
+	Remark     string     `json:"remark" gorm:"size:120"`
 	ID         string     `json:"id" gorm:"primaryKey;size:32"`
 	UserID     string     `json:"user_id" gorm:"index;size:32"`
 	Hostname   string     `json:"hostname" gorm:"uniqueIndex;size:253"`

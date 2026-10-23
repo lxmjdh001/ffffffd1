@@ -10,10 +10,21 @@ import (
 )
 
 func (x Settings) assignedDownloadURL(planID string) string {
+	for _, rule := range x.DownloadDomainRules {
+		if rule.Audience == "all" || (rule.Audience == "paid" && planID == "pro") {
+			return rule.URL
+		}
+	}
 	if x.DownloadDomainMode == "separate" {
 		if planID == "pro" {
 			return x.PaidDownloadBaseURL
 		}
+		return x.FreeDownloadBaseURL
+	}
+	if x.DownloadDomainMode == "public_paid" && planID == "pro" {
+		return x.PaidDownloadBaseURL
+	}
+	if x.DownloadDomainMode == "public_paid" {
 		return x.FreeDownloadBaseURL
 	}
 	return x.DownloadBaseURL
@@ -35,11 +46,22 @@ func (x Settings) managedDownloadHosts(activeOnly bool) map[string]string {
 		hosts[host] = audience
 	}
 	if !activeOnly || x.DownloadDomainMode != "separate" {
-		add(x.DownloadBaseURL, "all")
+		if !activeOnly || len(x.DownloadDomainRules) == 0 {
+			add(x.DownloadBaseURL, "all")
+		}
 	}
-	if !activeOnly || x.DownloadDomainMode == "separate" {
-		add(x.FreeDownloadBaseURL, "free")
-		add(x.PaidDownloadBaseURL, "pro")
+	if !activeOnly || x.DownloadDomainMode == "separate" || x.DownloadDomainMode == "public_paid" {
+		if !activeOnly || len(x.DownloadDomainRules) == 0 {
+			add(x.FreeDownloadBaseURL, "free")
+			add(x.PaidDownloadBaseURL, "pro")
+		}
+	}
+	for _, rule := range x.DownloadDomainRules {
+		audience := rule.Audience
+		if audience == "paid" {
+			audience = "pro"
+		}
+		add(rule.URL, audience)
 	}
 	return hosts
 }
@@ -53,6 +75,9 @@ func (s *Server) normalizeDownloadURL(raw string) (string, error) {
 		raw = "https://" + raw
 	}
 	u, err := url.Parse(raw)
+	if s.Config.Env == "development" && err == nil && (strings.EqualFold(u.Hostname(), "localhost") || strings.HasPrefix(u.Hostname(), "127.")) {
+		return strings.TrimRight(raw, "/"), nil
+	}
 	if err != nil || !validHTTPS(raw) || !validHostname(strings.ToLower(u.Hostname())) || u.Host != u.Hostname() || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" || u.User != nil || strings.EqualFold(u.Hostname(), s.Config.Host()) || strings.EqualFold(u.Hostname(), "www."+s.Config.Host()) {
 		return "", problem(400, "下载域名须为独立 HTTPS 域名，不含路径、端口、账号或参数，且不能使用官网域名")
 	}
@@ -74,6 +99,20 @@ func (s *Server) assignedDownloadDomain(w http.ResponseWriter, r *http.Request) 
 		base = normalized
 	}
 	jsonOut(w, 200, map[string]string{"mode": x.DownloadDomainMode, "plan_id": plan, "download_base_url": base})
+}
+
+func migrateDownloadDomainRules(tx *gorm.DB) error {
+	var count int64
+	if err := tx.Model(&Migration{}).Where("version = 7").Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+	if err := tx.AutoMigrate(&Settings{}); err != nil {
+		return err
+	}
+	return tx.Create(&Migration{Version: 7, AppliedAt: time.Now().UTC()}).Error
 }
 
 func migrateDownloadDomains(tx *gorm.DB) error {

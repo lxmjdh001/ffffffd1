@@ -49,7 +49,25 @@ func Migrate(db *gorm.DB) error {
 				return err
 			}
 		}
+		if err := tx.AutoMigrate(&TrafficPool{}, &TrafficLink{}); err != nil {
+			return err
+		}
+		if err := tx.AutoMigrate(&AppPageDesign{}); err != nil {
+			return err
+		}
+		if err := tx.AutoMigrate(&Domain{}, &DownloadDomainNote{}); err != nil {
+			return err
+		}
+		if err := tx.AutoMigrate(&Application{}); err != nil {
+			return err
+		}
 		if err := tx.AutoMigrate(&Migration{}); err != nil {
+			return err
+		}
+		if err := migrateDownloadDomainRules(tx); err != nil {
+			return err
+		}
+		if err := migrateTrafficGroups(tx); err != nil {
 			return err
 		}
 		var count int64

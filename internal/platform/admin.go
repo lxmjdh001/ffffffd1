@@ -218,17 +218,63 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Settings Settings `json:"settings"`
 		Plans    []Plan   `json:"plans"`
+		Section  string   `json:"section"`
 	}
 	if e := decode(w, r, &in); e != nil {
 		fail(w, e)
 		return
 	}
 	x := in.Settings
+	sectionFields := map[string][]string{
+		"basic":     {"site_name", "support_email", "registration_open"},
+		"domains":   {"download_domain_rules"},
+		"billing":   {"download_price_micros", "max_upload_bytes", "domain_limit", "usdt_rate_micros"},
+		"recharge":  {"recharge_bonus_enabled", "recharge_bonus_tiers"},
+		"plan_free": {}, "plan_pro": {},
+	}
+	if in.Section != "" {
+		fields, valid := sectionFields[in.Section]
+		if !valid {
+			fail(w, problem(400, "未知的设置模块"))
+			return
+		}
+		current, err := getSettings(s.DB)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		incomingJSON, _ := json.Marshal(x)
+		currentJSON, _ := json.Marshal(current)
+		var incoming, merged map[string]json.RawMessage
+		_ = json.Unmarshal(incomingJSON, &incoming)
+		_ = json.Unmarshal(currentJSON, &merged)
+		for _, key := range fields {
+			merged[key] = incoming[key]
+		}
+		mergedJSON, _ := json.Marshal(merged)
+		_ = json.Unmarshal(mergedJSON, &x)
+		var plans []Plan
+		if err := s.DB.Find(&plans).Error; err != nil {
+			fail(w, err)
+			return
+		}
+		for i := range plans {
+			if in.Section == "plan_"+plans[i].ID {
+				for _, p := range in.Plans {
+					if p.ID == plans[i].ID {
+						plans[i] = p
+						break
+					}
+				}
+			}
+		}
+		in.Plans = plans
+	}
 	x.SiteName = strings.TrimSpace(x.SiteName)
 	if x.DownloadDomainMode == "" {
 		x.DownloadDomainMode = "unified"
 	}
-	if x.DownloadDomainMode != "unified" && x.DownloadDomainMode != "separate" {
+	if x.DownloadDomainMode != "unified" && x.DownloadDomainMode != "separate" && x.DownloadDomainMode != "public_paid" {
 		fail(w, problem(400, "请选择统一分配或按套餐分配下载域名"))
 		return
 	}
@@ -239,6 +285,24 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		*value = normalized
+	}
+	for i := range x.DownloadDomainRules {
+		rule := &x.DownloadDomainRules[i]
+		rule.Remark = strings.TrimSpace(rule.Remark)
+		if len([]rune(rule.Remark)) > 120 {
+			fail(w, problem(400, "域名备注最多 120 字"))
+			return
+		}
+		if rule.Audience != "all" && rule.Audience != "paid" {
+			fail(w, problem(400, "域名权限必须是所有用户或付费用户"))
+			return
+		}
+		normalized, err := s.normalizeDownloadURL(rule.URL)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		rule.URL = normalized
 	}
 	if len(x.RechargeBonusTiers) == 0 || len(x.RechargeBonusTiers) > 10 {
 		fail(w, problem(400, "请设置 1–10 个充值赠送档位"))
@@ -276,6 +340,9 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 			return e
 		}
 		for host := range x.managedDownloadHosts(false) {
+			if in.Section != "" && in.Section != "domains" {
+				break
+			}
 			var n int64
 			if e := tx.Model(&Domain{}).Where("hostname = ?", host).Count(&n).Error; e != nil {
 				return e
@@ -285,10 +352,19 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		x.ID = 1
-		if e := tx.Save(&x).Error; e != nil {
-			return e
+		if in.Section == "" {
+			if e := tx.Save(&x).Error; e != nil {
+				return e
+			}
+		} else if fields := sectionFields[in.Section]; len(fields) > 0 {
+			if e := tx.Model(&Settings{}).Where("id = 1").Select(fields).Updates(&x).Error; e != nil {
+				return e
+			}
 		}
 		for _, p := range in.Plans {
+			if in.Section != "" && in.Section != "plan_"+p.ID {
+				continue
+			}
 			if e := tx.Save(&p).Error; e != nil {
 				return e
 			}

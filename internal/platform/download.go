@@ -46,8 +46,7 @@ func (s *Server) visitor(w http.ResponseWriter, r *http.Request) string {
 	return v
 }
 
-// Public links start the download without a landing page or JavaScript. The
-// redirect keeps resumable transfers on one browser-bound ticket URL.
+// Public share links follow the app's configured download or detail-page mode.
 func (s *Server) directDownload(w http.ResponseWriter, r *http.Request) {
 	if e := s.rate("download-start:"+s.clientIP(r), 1200, time.Minute); e != nil {
 		fail(w, e)
@@ -56,6 +55,15 @@ func (s *Server) directDownload(w http.ResponseWriter, r *http.Request) {
 	a, e := s.publicApp(r)
 	if e != nil {
 		http.Error(w, "应用不存在、已暂停或已被下架", 404)
+		return
+	}
+	if a.DownloadMode == "info" {
+		target := "/a/" + a.Slug + "/info"
+		if r.URL.RawQuery != "" {
+			target += "?" + r.URL.RawQuery
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		http.Redirect(w, r, target, http.StatusFound)
 		return
 	}
 	if r.Method == http.MethodHead {
@@ -95,11 +103,31 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 	}
 	var ads AdConfig
 	_ = s.DB.First(&ads, "app_id = ?", a.ID).Error
+	design, err := s.pageDesign(a)
+	if err != nil {
+		fail(w, err)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = downloadTemplate.Execute(w, map[string]any{"App": a, "Nonce": randomHex(16), "Size": fmt.Sprintf("%.1f MB", float64(a.Size)/(1<<20)), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled})
+	_ = downloadPageTemplate(design.Layout).Execute(w, map[string]any{"App": a, "Design": design, "Nonce": randomHex(16), "Size": pageDesignSize(a.Size), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled})
 }
 
-var downloadTemplate = template.Must(template.New("download").Parse(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{.App.Name}} · 应用下载</title><style>*{box-sizing:border-box}body{margin:0;background:#f3f5f8;color:#18252f;font-family:system-ui,-apple-system,sans-serif;padding:8vh 20px}main{max-width:580px;margin:auto;background:white;border:1px solid #e3e7eb;border-radius:24px;padding:44px;text-align:center}.icon{display:grid;place-items:center;width:80px;height:80px;background:#e7eeff;color:#5266df;font-size:35px;border-radius:24px;margin:auto}h1{font-size:28px;margin:22px 0 10px}p{color:#697481;line-height:1.8}button{background:#5569e8;color:white;border:0;border-radius:12px;font-size:16px;padding:16px 40px;cursor:pointer;width:100%;margin:16px 0}.desc{text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;padding:20px;background:#f7f8fa;border-radius:12px;font-size:14px}.hash{font-size:11px;word-break:break-all;color:#89929f;margin-top:24px}.meta{font-size:14px}.brand{text-align:center;margin:28px;color:#87919c;font-size:12px}</style><script defer src="/a/{{.App.Slug}}/client.js"></script></head><body><main><div class="icon">↓</div><h1>{{.App.Name}}</h1><p class="meta">{{.App.Platform}} · {{.App.Version}} · {{.Size}}</p><form method="post" action="/a/{{.App.Slug}}/download"><input type="hidden" name="request_key" value="{{.Nonce}}"><input type="hidden" name="attribution_token" value="{{.Attribution}}">{{if .AdsEnabled}}<label class="meta"><input type="checkbox" name="ad_consent" value="yes"> 我同意将下载及后续操作用于广告效果统计</label>{{end}}<button type="submit">下载应用 ↓</button></form><p id="download-status" class="meta" role="status" aria-live="polite"></p>{{if .DeepLink}}<p><a href="{{.DeepLink}}">已安装？打开应用并继续</a></p>{{end}}<p class="meta">{{.App.FileName}}<br>支持断点续传 · 重试不会重复计费</p>{{if .App.Description}}<div class="desc">{{.App.Description}}</div>{{end}}<p class="hash">SHA-256<br>{{.App.SHA256}}</p><p class="meta">请确认发布者可信后安装。IPA 需有效签名及对应设备授权。</p></main><div class="brand">应用分发服务 · D1 Apk</div></body></html>`))
+var pageTemplateFunctions = template.FuncMap{"imageURL": func(raw string) template.URL {
+	if validPageImage(raw) {
+		return template.URL(raw)
+	}
+	return ""
+}}
+
+var downloadTemplate = template.Must(template.New("download").Funcs(pageTemplateFunctions).Parse(downloadPageHTML))
+var googlePlayTemplate = template.Must(template.New("google-play").Funcs(pageTemplateFunctions).Parse(strings.Replace(googlePlayHTML, "/*SOURCE_STYLE*/", googlePlayCSS, 1)))
+
+func downloadPageTemplate(layout string) *template.Template {
+	if layout == "google_play" {
+		return googlePlayTemplate
+	}
+	return downloadTemplate
+}
 
 func (s *Server) startDownload(w http.ResponseWriter, r *http.Request) {
 	if e := s.rate("download-start:"+s.clientIP(r), 1200, time.Minute); e != nil {

@@ -23,12 +23,18 @@ func (s *Server) listDomains(w http.ResponseWriter, r *http.Request) {
 func (s *Server) createDomain(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Hostname string `json:"hostname"`
+		Remark   string `json:"remark"`
 	}
 	if e := decode(w, r, &in); e != nil {
 		fail(w, e)
 		return
 	}
 	in.Hostname = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(in.Hostname), "."))
+	in.Remark = strings.TrimSpace(in.Remark)
+	if len([]rune(in.Remark)) > 120 {
+		fail(w, problem(400, "域名备注最多 120 字"))
+		return
+	}
 	if !validHostname(in.Hostname) || in.Hostname == s.Config.Host() || in.Hostname == s.Config.CNAMEHost || strings.HasSuffix(in.Hostname, "."+s.Config.Host()) {
 		fail(w, problem(400, "请填写你拥有的完整下载子域名，例如 download.example.com"))
 		return
@@ -53,7 +59,7 @@ func (s *Server) createDomain(w http.ResponseWriter, r *http.Request) {
 		if n >= settings.DomainLimit {
 			return problem(403, "域名数量已达上限")
 		}
-		d = Domain{ID: randomHex(16), UserID: u.ID, Hostname: in.Hostname, Token: randomHex(24)}
+		d = Domain{ID: randomHex(16), UserID: u.ID, Hostname: in.Hostname, Token: randomHex(24), Remark: in.Remark}
 		if e = tx.Create(&d).Error; e != nil {
 			if e == gorm.ErrDuplicatedKey {
 				return problem(409, "该域名已被绑定，请联系管理员处理")
@@ -75,16 +81,7 @@ func (s *Server) checkDNS(ctx context.Context, d Domain) error {
 	if e != nil || !strings.EqualFold(strings.TrimSuffix(target, "."), s.Config.CNAMEHost) {
 		return problem(400, "尚未检测到 CNAME → "+s.Config.CNAMEHost+"，请使用仅 DNS（灰云）解析")
 	}
-	records, e := s.DNS.LookupTXT(ctx, "_d1apk."+d.Hostname)
-	if e != nil {
-		return problem(400, "尚未检测到域名所有权 TXT 记录")
-	}
-	for _, v := range records {
-		if v == "d1apk-verify="+d.Token {
-			return nil
-		}
-	}
-	return problem(400, "TXT 所有权校验不匹配")
+	return nil
 }
 func (s *Server) verifyDomain(w http.ResponseWriter, r *http.Request) {
 	if e := s.rate("verify-domain:"+userOf(r).ID, 10, time.Minute); e != nil {

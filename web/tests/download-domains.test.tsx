@@ -16,7 +16,7 @@ let assignedBase: string;
 let customDomain: boolean;
 let role: 'member' | 'admin';
 let client: QueryClient;
-let saved: SettingsResponse | undefined;
+let saved: (SettingsResponse & { section?: string }) | undefined;
 let settings: SettingsResponse;
 
 beforeEach(() => {
@@ -71,19 +71,20 @@ it('continues to offer a verified customer domain without a shared domain', asyn
   expect(link.getAttribute('href')).toBe('https://customer.example.com/a/abc123');
 });
 
-it('allows administrators to switch between unified and separate domain assignment', async () => {
+it('allows administrators to save multiple domains with independent audience permissions', async () => {
   role = 'admin';
   const user = open('/admin/settings');
-  const mode = await screen.findByRole('combobox', { name: '分配方式' });
-  expect(screen.getByRole('textbox', { name: /统一下载域名/ })).toBeTruthy();
-  await user.selectOptions(mode, 'separate');
-  await user.type(screen.getByRole('textbox', { name: /免费客户下载域名/ }), 'free.example.com');
-  await user.type(screen.getByRole('textbox', { name: /付费客户下载域名/ }), 'https://paid.example.com');
-  expect(screen.queryByRole('textbox', { name: /统一下载域名/ })).toBeNull();
-  await user.click(screen.getByRole('button', { name: '保存全部设置' }));
-  await waitFor(() => expect(saved?.settings.download_domain_mode).toBe('separate'));
-  expect(saved?.settings.free_download_base_url).toBe('free.example.com');
-  expect(saved?.settings.paid_download_base_url).toBe('https://paid.example.com');
-  await user.selectOptions(mode, 'unified');
-  expect(screen.getByRole('textbox', { name: /统一下载域名/ })).toBeTruthy();
+  await user.click(await screen.findByRole('button', { name: '添加域名' }));
+  await user.type(screen.getByRole('textbox', { name: '域名 1' }), 'https://all.example.com');
+  await user.click(screen.getByRole('button', { name: '添加域名' }));
+  await user.type(screen.getByRole('textbox', { name: '域名 2' }), 'https://paid.example.com');
+  await user.selectOptions(screen.getAllByRole('combobox', { name: /权限/ })[1], 'paid');
+  await user.click(screen.getByRole('button', { name: '保存域名配置' }));
+  await waitFor(() => expect(saved?.section).toBe('domains'));
+  expect(saved?.settings.download_domain_rules).toEqual([
+    { url: 'https://all.example.com', audience: 'all' },
+    { url: 'https://paid.example.com', audience: 'paid' },
+  ]);
+  expect(screen.queryByRole('combobox', { name: '分配方式' })).toBeNull();
+  expect(screen.queryByRole('button', { name: '保存全部设置' })).toBeNull();
 });

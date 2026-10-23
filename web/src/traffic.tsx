@@ -1,0 +1,53 @@
+import { useState, type FormEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { Plus } from 'lucide-react';
+import { api, send } from './api';
+import { Badge, CopyButton, date, Empty, ErrorState, errorText, Field, FormError, Modal, PageHeader, Spinner } from './ui';
+
+type TrafficLink = { id: string; url: string; status: string; error: string; checked_at: string | null; position: number };
+type TrafficItem = { pool: { name: string; mode: 'random' | 'sequential'; enabled: boolean; risk_enabled: boolean; slug: string }; links: TrafficLink[]; entry_url: string };
+type TrafficResponse = { paid: boolean; configured: boolean; data: TrafficItem[] };
+type Draft = { slug?: string; name: string; mode: 'random' | 'sequential'; text: string; enabled: boolean; risk_enabled: boolean };
+const emptyDraft = (): Draft => ({ name: '', mode: 'random', text: '', enabled: true, risk_enabled: false });
+function isEligible(l: TrafficLink, item: TrafficItem, paid: boolean) {
+ if (!item.pool.enabled) return false;
+ if (!item.pool.risk_enabled || !paid) return true;
+ const host = new URL(l.url).hostname.toLowerCase();
+ const blocked = item.links.some(x => new URL(x.url).hostname.toLowerCase() === host && x.status === 'unsafe');
+ return !blocked && item.pool.enabled && paid && l.status === 'clean' && !!l.checked_at && new Date(l.checked_at).getTime() > Date.now() - 120 * 60 * 1000;
+}
+export function TrafficPage() {
+ const { data, error, refetch } = useQuery({ queryKey: ['traffic-pools'], queryFn: () => api<TrafficResponse>('/traffic-pools'), refetchInterval: 15000 });
+ const [draft, setDraft] = useState<Draft>(); const [details, setDetails] = useState<string>(); const [deleting, setDeleting] = useState<TrafficItem>();
+ const [busy, setBusy] = useState(false); const [message, setMessage] = useState('');
+ const refresh = async () => { await refetch(); };
+ const edit = (item: TrafficItem) => { setMessage(''); setDraft({ slug: item.pool.slug, name: item.pool.name, mode: item.pool.mode || 'random', enabled: item.pool.enabled, risk_enabled: item.pool.risk_enabled && data?.paid === true, text: item.links.map(l => l.url).join('\n') }); };
+ const save = async (e: FormEvent) => {
+  e.preventDefault(); if (!draft) return; setBusy(true); setMessage('');
+  try { await send(draft.slug ? '/traffic-pools/' + draft.slug : '/traffic-pools', { name: draft.name, mode: draft.mode, enabled: draft.enabled, risk_enabled: draft.risk_enabled, urls: draft.text.split(/\r?\n/).map(s => s.trim()).filter(Boolean) }, draft.slug ? 'PUT' : 'POST'); await refresh(); setDraft(undefined); }
+  catch (e) { setMessage(errorText(e)); } finally { setBusy(false); }
+ };
+ const toggle = async (item: TrafficItem) => { setBusy(true); setMessage(''); try { await send('/traffic-pools/' + item.pool.slug, { name: item.pool.name, mode: item.pool.mode, enabled: !item.pool.enabled, risk_enabled: item.pool.risk_enabled && data?.paid === true, urls: item.links.map(l => l.url) }, 'PUT'); await refresh(); } catch (e) { setMessage(errorText(e)); } finally { setBusy(false); } };
+ const remove = async () => { if (!deleting) return; setBusy(true); setMessage(''); try { await api('/traffic-pools/' + deleting.pool.slug, { method: 'DELETE' }); await refresh(); setDeleting(undefined); } catch (e) { setMessage(errorText(e)); } finally { setBusy(false); } };
+ if (error) return <ErrorState error={error} retry={refresh} />;
+ if (!data) return <Spinner />;
+ const selected = data.data.find(x => x.pool.slug === details);
+ return <><PageHeader eyebrow="TRAFFIC ROUTING" title="应用分流" subtitle="创建应用分流入口，支持随机或顺序展示。" action={<button className="btn primary" onClick={() => { setMessage(''); setDraft(emptyDraft()); }}><Plus size={16} />新建分流</button>} />
+ {!data.paid && <div className="notice">应用分流免费使用，Google 安全检测为付费会员功能。<Link to="/billing">查看会员方案</Link></div>}
+ {!data.configured && <div className="notice">Google 安全检测暂未配置，普通分流可正常使用。</div>}
+ {!draft && !deleting && <FormError>{message}</FormError>}
+ <section className="panel"><div className="panel-heading"><h2>分流列表</h2><span className="muted small">共 {data.data.length} 个分流</span></div>
+ {!data.data.length ? <Empty title="暂无分流" detail="点击新建分流，在弹窗中输入下载链接，每行一条。" action={<button className="btn secondary" onClick={() => { setMessage(''); setDraft(emptyDraft()); }}><Plus size={15} />新建分流</button>} /> : <div className="table-wrap"><table><thead><tr><th>分流名称 / 入口</th><th>展示方式</th><th>链接数 / 可用</th><th>状态</th><th>Google 安全检测</th><th className="right">操作</th></tr></thead><tbody>{data.data.map(item => <tr key={item.pool.slug}><td><strong>{item.pool.name}</strong><small className="cell-sub mono" style={{ overflowWrap: 'anywhere' }}>{item.entry_url}</small><CopyButton value={item.entry_url} label="复制入口" /></td><td>{item.pool.mode === 'sequential' ? '顺序展示' : '随机展示'}</td><td>{item.links.length} / {item.links.filter(l => isEligible(l, item, data.paid)).length}</td><td><Badge tone={item.pool.enabled ? 'green' : 'gray'}>{item.pool.enabled ? '已开启' : '已暂停'}</Badge></td><td>{item.pool.risk_enabled && data.paid ? '已开启' : item.pool.risk_enabled ? '会员到期，已停用' : '未开启'}</td><td><div className="row-actions wrap"><button className="text-btn" onClick={() => setDetails(item.pool.slug)}>检测详情</button><button className="text-btn" onClick={() => edit(item)}>编辑</button><button className="text-btn" disabled={busy} onClick={() => toggle(item)}>{item.pool.enabled ? '关闭' : '开启'}</button><button className="text-btn danger-text" onClick={() => { setMessage(''); setDeleting(item); }}>删除</button></div></td></tr>)}</tbody></table></div>}
+ </section>
+ {draft && <Modal title={draft.slug ? '编辑分流' : '新建分流'} close={() => { if (!busy) setDraft(undefined); }} wide><form onSubmit={save}>
+ <Field label="分流名称"><input maxLength={60} placeholder="例如：应用下载分流" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} /></Field>
+ <Field label="APK 下载链接（一行一条）" hint="支持 1–30 条完整 HTTP/HTTPS 下载链接，空行会自动忽略。"><textarea required rows={8} placeholder={'https://a.example.com/app.apk\nhttps://b.example.com/app.apk\nhttps://c.example.com/app.apk'} value={draft.text} onChange={e => setDraft({ ...draft, text: e.target.value })} /></Field>
+ <Field label="展示方式" hint={draft.mode === 'sequential' ? '按输入顺序逐次分配：1 → 2 → 3 → 1，自动跳过不可用链接。' : '每次访问从可用链接中等概率随机选择一条。'}><select value={draft.mode} onChange={e => setDraft({ ...draft, mode: e.target.value as Draft['mode'] })}><option value="random">随机展示</option><option value="sequential">顺序展示</option></select></Field>
+ <label className="switch-field"><input type="checkbox" checked={draft.enabled} onChange={e => setDraft({ ...draft, enabled: e.target.checked })} /><span>启用<small>所有用户均可使用，保存后按所选方式分配访问。</small></span></label>
+ <label className="switch-field"><input type="checkbox" checked={draft.risk_enabled} disabled={!draft.risk_enabled && (!data.paid || !data.configured)} onChange={e => setDraft({ ...draft, risk_enabled: e.target.checked })} /><span>分流安全检测<small>如果域名红了则自动下架，不参与分流</small><small>{!data.paid ? '付费会员可用，普通分流不受影响' : !data.configured ? '等待管理员配置检测服务' : '每 120 分钟自动检测；会员到期后恢复普通分流。'}</small></span></label>
+ <FormError>{message}</FormError><div className="modal-footer"><button type="button" className="btn secondary" disabled={busy} onClick={() => setDraft(undefined)}>取消</button><button className="btn primary" disabled={busy}>{busy ? '保存中…' : '保存分流'}</button></div></form></Modal>}
+ {selected && <Modal title={selected.pool.name + ' · 检测详情'} close={() => setDetails(undefined)} wide><p className="modal-intro">Google 安全检测需独立开启（付费会员）。开启后每约 120 分钟检测一次，风险、未检测、失败或结果过期的链接不参与分流。未开启检测或会员到期后，按全部已配置链接进行普通分流。</p><div className="table-wrap"><table><thead><tr><th>下载链接</th><th>风险状态</th><th>参与分流</th><th>最近检测</th></tr></thead><tbody>{selected.links.map(l => <tr key={l.id}><td style={{ overflowWrap: 'anywhere', maxWidth: 260 }}>{l.url}{l.error && <small className="cell-sub">{l.error}</small>}</td><td><Badge tone={l.status === 'unsafe' ? 'red' : l.status === 'clean' ? 'green' : 'gray'}>{({ unsafe: '命中风险', clean: '未命中风险', unknown: '检测失败' } as Record<string, string>)[l.status] || (selected.pool.risk_enabled && data.paid ? '等待检测' : '未开启检测')}</Badge></td><td>{isEligible(l, selected, data.paid) ? '参与' : '不参与'}</td><td>{date(l.checked_at, true)}</td></tr>)}</tbody></table></div></Modal>}
+ {deleting && <Modal title="删除分流？" close={() => { if (!busy) setDeleting(undefined); }}><p>删除「{deleting.pool.name}」后，此分流入口将停止访问。</p><FormError>{message}</FormError><div className="modal-footer"><button className="btn secondary" disabled={busy} onClick={() => setDeleting(undefined)}>取消</button><button className="btn danger" disabled={busy} onClick={remove}>删除分流</button></div></Modal>}
+ </>;
+}
