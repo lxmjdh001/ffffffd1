@@ -19,6 +19,7 @@ import (
 )
 
 type ReturnFlowAsset struct {
+	ObjectKey   string `json:"-" gorm:"size:250;not null;default:''"`
 	ID          string `gorm:"primaryKey;size:32"`
 	UserID      string `gorm:"size:32;not null;uniqueIndex:idx_return_flow_asset_owner_hash,priority:1;index"`
 	SHA256      string `gorm:"size:64;not null;uniqueIndex:idx_return_flow_asset_owner_hash,priority:2"`
@@ -130,6 +131,7 @@ func (s *Server) uploadReturnFlowAsset(w http.ResponseWriter, r *http.Request) {
 	asset.PublicPath = "/return-flow-assets/" + asset.ID + "." + ext
 	final := filepath.Join(directory, filepath.Base(asset.PublicPath))
 	stored := false
+	objectKey := ""
 	err = s.DB.WithContext(r.Context()).Transaction(func(tx *gorm.DB) error {
 		owner, e := lockUser(tx, asset.UserID)
 		if e != nil {
@@ -163,16 +165,30 @@ func (s *Server) uploadReturnFlowAsset(w http.ResponseWriter, r *http.Request) {
 		if e = temporary.Close(); e != nil {
 			return e
 		}
-		if e = os.Rename(temporary.Name(), final); e != nil {
-			return e
+		if s.Media != nil {
+			objectKey = s.Media.Prefix + "return-flow/" + filepath.Base(asset.PublicPath)
+			file, e := os.Open(temporary.Name())
+			if e != nil {
+				return e
+			}
+			defer file.Close()
+			if e = s.Media.put(r.Context(), tx, objectKey, file, size, contentType, asset.SHA256); e != nil {
+				return e
+			}
+			asset.ObjectKey = objectKey
+		} else {
+			if e = os.Rename(temporary.Name(), final); e != nil {
+				return e
+			}
+			stored = true
 		}
-		stored = true
 		if e = tx.Create(&asset).Error; e != nil {
 			return e
 		}
 		return recordAudit(tx, owner.ID, "return_flow.asset", asset.ID, "")
 	})
 	if err != nil {
+		s.Media.discard(objectKey)
 		if stored {
 			_ = os.Remove(final)
 		}
@@ -192,17 +208,38 @@ func (s *Server) publicReturnFlowAsset(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	file, err := os.Open(filepath.Join(s.returnFlowAssetDirectory(), name))
-	if err != nil {
-		http.NotFound(w, r)
-		return
+	var file io.ReadSeekCloser
+	var err error
+	if asset.ObjectKey != "" {
+		if s.Media == nil {
+			http.Error(w, "Media unavailable", 503)
+			return
+		}
+		var size int64
+		file, size, err = s.Media.open(r.Context(), asset.ObjectKey)
+		if err == nil && size != asset.Size {
+			file.Close()
+			err = io.ErrUnexpectedEOF
+		}
+		if err != nil {
+			http.Error(w, "Media unavailable", 503)
+			return
+		}
+	} else {
+		local, e := os.Open(filepath.Join(s.returnFlowAssetDirectory(), name))
+		if e != nil {
+			http.NotFound(w, r)
+			return
+		}
+		stat, e := local.Stat()
+		if e != nil || !stat.Mode().IsRegular() || stat.Size() != asset.Size {
+			local.Close()
+			http.NotFound(w, r)
+			return
+		}
+		file = local
 	}
 	defer file.Close()
-	stat, err := file.Stat()
-	if err != nil || !stat.Mode().IsRegular() || stat.Size() != asset.Size {
-		http.NotFound(w, r)
-		return
-	}
 	w.Header().Set("Content-Type", asset.ContentType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=%q", name))
 	w.Header().Set("X-Content-Type-Options", "nosniff")

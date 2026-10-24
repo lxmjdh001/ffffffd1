@@ -5,7 +5,7 @@
  <meta name="theme-color" content="{{.App.ThemeColor}}"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="{{.App.Name}}">
  <meta name="description" content="{{.App.Description}}"><title>{{.App.Name}}</title>
  <link rel="manifest" href="{{.Base}}manifest.webmanifest"><link rel="icon" type="image/png" href="{{.Base}}icon/192.png"><link rel="apple-touch-icon" href="{{.Base}}icon/192.png">
- <link id="pwa-return-flow-style" rel="stylesheet" href="{{.Base}}style.css{{if .Launch}}?launch=1{{end}}"><script src="{{.Base}}client.js" defer></script>
+ <link id="pwa-return-flow-style" rel="stylesheet" href="{{.Base}}style.css{{if .Launch}}?launch=1{{end}}"><script src="{{.ClientJS}}" defer></script>
 </head>
 <body class="{{if .Launch}}launch-page{{else}}{{.Decoration.Class}}{{end}}" {{if not .Launch}}data-return-flow="{{.App.ReturnFlowJSON}}" data-return-flow-app="{{.App.ID}}" data-return-flow-token="{{.ReturnFlowToken}}" data-return-flow-endpoint="{{.Base}}return-flow/view"{{end}} data-base="{{.Base}}" data-locale="{{if .Chinese}}zh{{else}}en{{end}}" data-push-enabled="{{.App.PushEnabled}}">{{if not .Launch}}{{.Decoration.Noise}}{{end}}
 {{if .Launch}}

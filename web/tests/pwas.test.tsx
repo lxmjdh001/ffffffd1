@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PWAsPage, PWAEditorPage, validPWAIcon, validPWAURL } from '../src/pwas';
 import { defaultReturnFlow } from '../src/return-flow';
+import { defaultPWALanding } from '../src/pwa-landing';
 import type { PWAApp } from '../src/pwa-types';
 
 vi.mock('react-admin', () => ({ useNotify: () => vi.fn() }));
@@ -41,6 +42,49 @@ function setup() { render(<QueryClientProvider client={client}><MemoryRouter><Ro
 async function openCreate(user: ReturnType<typeof userEvent.setup>) { await user.click(await screen.findByRole('button', { name: '新建 PWA 应用' })); const form = within(await screen.findByRole('form')); await user.type(form.getByLabelText('应用名称'), '新应用'); await user.type(form.getByLabelText('网页 URL'), 'https://new.example'); return form; }
 
 describe('PWA applications', () => {
+  it('imports an owned app into a new editable draft without changing the source', async () => {
+    rows[0].landing_config = defaultPWALanding();
+    rows[0].landing_config.storeInfos[0].appSummary = 'Imported store content';
+    rows[0].icon_url = '/source-icon.png';
+    const user = setup(); await user.click(await screen.findByRole('button',{name:'新建 PWA 应用'}));
+    await user.click(screen.getByRole('button',{name:'导入已有应用配置'}));
+    const picker = within(await screen.findByRole('dialog'));
+    await user.type(picker.getByLabelText('搜索应用'),'商店');
+    await user.click(await picker.findByRole('button',{name:/我的商店.*导入配置/}));
+    await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
+    const form = within(screen.getByRole('form'));
+    expect((form.getByLabelText('应用名称') as HTMLInputElement).value).toBe(app.name);
+    expect((form.getByLabelText('商店应用介绍') as HTMLTextAreaElement).value).toBe('Imported store content');
+    await user.clear(form.getByLabelText('应用名称')); await user.type(form.getByLabelText('应用名称'),'Copied app');
+    await user.click(form.getByRole('button',{name:'创建应用',exact:true}));
+    await waitFor(()=>expect(screen.queryByRole('form')).toBeNull());
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toMatchObject({path:'/api/pwas',method:'POST',body:{import_from:app.id,name:'Copied app'}});
+    expect(rows[0].name).toBe(app.name);
+    expect(writes[0].body).not.toHaveProperty('slug');
+  });
+  it('focuses the first missing or invalid field when Save is clicked',async()=>{
+    const scroll = vi.fn(); Object.defineProperty(HTMLElement.prototype,'scrollIntoView',{configurable:true,value:scroll});
+    const user=setup();await user.click(await screen.findByRole('button',{name:'新建 PWA 应用'}));
+    const form=within(screen.getByRole('form'));
+    const save=form.getByRole('button',{name:'创建应用',exact:true});
+    await user.click(save);expect(document.activeElement).toBe(form.getByLabelText('应用名称'));expect(scroll).toHaveBeenCalled();
+    await user.type(form.getByLabelText('应用名称'),'New');await user.type(form.getByLabelText('网页 URL'),'http://unsafe.example');
+    await user.click(save);expect(document.activeElement).toBe(form.getByLabelText('网页 URL'));
+    await user.clear(form.getByLabelText('网页 URL'));await user.type(form.getByLabelText('网页 URL'),'https://safe.example');
+    await user.click(form.getByLabelText('浏览器打开引导'));await user.click(save);
+    expect(document.activeElement).toBe(form.getByLabelText('浏览器引导文案'));expect(writes).toHaveLength(0);
+    Reflect.deleteProperty(HTMLElement.prototype,'scrollIntoView');
+  });
+  it('switches to a hidden language with an invalid imported media URL before saving',async()=>{
+    const landing=defaultPWALanding();landing.storeInfos.push({...structuredClone(landing.storeInfos[0]),language:'fr-FR',appIcon:'javascript:alert(1)'});landing.languagePriority.push('fr-FR');
+    rows[0].landing_config=landing;
+    const user=setup();await user.click(await screen.findByRole('button',{name:'编辑',exact:true}));
+    const form=within(await screen.findByRole('form'));await user.click(form.getByRole('button',{name:'保存应用'}));
+    await waitFor(()=>expect(document.activeElement?.getAttribute('data-field')).toBe('appIcon-0'));
+    expect(writes).toHaveLength(0);
+  });
+
   it('matches the source template controls and persists all install/access flags',async()=>{
     const user=setup();const form=await openCreate(user);
     expect(form.queryByLabelText('嵌入网页')).toBeNull();
@@ -94,7 +138,7 @@ describe('PWA applications', () => {
   it('validates safe website URLs and rejects oversized or unsupported icons before writing', async () => {
     expect(validPWAURL('https://shop.example')).toBe(true); expect(validPWAURL('http://127.0.0.1:5184/test')).toBe(true); for (const value of ['javascript:alert(1)', 'http://shop.example', 'https://user:pass@shop.example', 'https://shop.example:8080', 'not-url']) expect(validPWAURL(value)).toBe(false);
     expect(validPWAIcon(new File(['x'], 'file.svg', { type: 'image/svg+xml' }))).toBe(false); expect(validPWAIcon(new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'file.png', { type: 'image/png' }))).toBe(false);
-    const user = setup(); const form = await openCreate(user); await user.upload(form.getByLabelText('上传应用图标'), new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'file.png', { type: 'image/png' })); expect(form.getByRole('alert').textContent).toContain('2 MB'); expect((form.getByRole('button', { name: '创建应用', exact: true }) as HTMLButtonElement).disabled).toBe(true); expect(writes).toHaveLength(0);
+    const user = setup(); const form = await openCreate(user); await user.upload(form.getByLabelText('上传应用图标'), new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'file.png', { type: 'image/png' })); expect(form.getByRole('alert').textContent).toContain('2 MB'); await user.click(form.getByRole('button', { name: '创建应用', exact: true })); expect(document.activeElement).toBe(form.getByLabelText('上传应用图标')); expect(writes).toHaveLength(0);
   });
 
   it('preserves settings when pausing an app and requires confirmation to delete only that app', async () => {

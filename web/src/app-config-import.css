@@ -1,0 +1,9 @@
+.config-import-button{background:#08bc59;border-color:#08bc59;color:white}
+.config-import-button:hover{background:#06a94f;color:white}
+.config-import-list{display:grid;gap:8px;margin-top:16px}
+.config-import-list>button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:14px 16px;border:1px solid var(--border,#e2e6ef);border-radius:12px;background:transparent;text-align:left;color:inherit}
+.config-import-list>button:hover{border-color:#08bc59}
+.config-import-list>button>span:first-child{display:grid;gap:4px;min-width:0}
+.config-import-list small{color:var(--muted,#8892a6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.config-import-list>button>span:last-child{flex-shrink:0;color:#08a64d}
+[aria-invalid=true]{outline:2px solid #e45b64;outline-offset:2px;scroll-margin-block:100px}

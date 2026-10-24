@@ -60,6 +60,24 @@ it('previews drafts separately and publishes only when saved', async () => {
  client.clear();
 });
 
+it('focuses a required title instead of silently refusing a bottom Save',async()=>{
+ const state=renderDesigner(),user=userEvent.setup();const title=await screen.findByLabelText('展示名称');
+ await user.clear(title);await user.click(screen.getByRole('button',{name:'保存并发布'}));
+ expect(document.activeElement).toBe(title);expect(state.published).toBeUndefined();
+ await user.type(title,'Corrected');await user.click(screen.getByRole('button',{name:'保存并发布'}));
+ await screen.findByRole('heading',{name:'应用列表'});expect(state.published?.title).toBe('Corrected');
+});
+it('switches back to the language whose hidden title is invalid on Save',async()=>{
+ const state=renderDesigner(),user=userEvent.setup();const title=await screen.findByLabelText('展示名称');
+ await user.click(screen.getByRole('checkbox',{name:'English',exact:true}));
+ await user.clear(title);
+ await user.click(screen.getByRole('button',{name:'简体中文',exact:true}));
+ await user.click(screen.getByRole('button',{name:'保存并发布'}));
+ await waitFor(()=>expect(document.activeElement).toBe(screen.getByLabelText('展示名称')));
+ expect((screen.getByLabelText('展示名称') as HTMLInputElement).value).toBe('');
+ expect(state.published).toBeUndefined();
+});
+
 function renderDesigner(overrides: Partial<PageDesign> = {}) {
  const design: PageDesign = { layout: 'google_play', title: '测试应用', developer: '', summary: '', description: '', icon: '', screenshots: [], tags: [], button_text: '下载应用', theme_color: '#01875f', background_color: '#ffffff', show_description: true, show_screenshots: true, show_file_info: true, show_downloads: true, ...overrides };
  const state: { published?: PageDesign; previews: PageDesign[]; uploads: FormData[] } = { previews: [], uploads: [] };

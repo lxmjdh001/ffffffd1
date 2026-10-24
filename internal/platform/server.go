@@ -25,14 +25,16 @@ import (
 )
 
 type Server struct {
-	PageImages  *R2PageImageStore
-	Blobs       BlobStore
-	DB          *gorm.DB
-	Config      Config
-	HTTP        *http.Client
-	DNS         *net.Resolver
-	Now         func() time.Time
-	uploadSlots chan struct{}
+	LandingScripts *LandingScriptRelease
+	Media          *R2MediaStore
+	PageImages     *R2PageImageStore
+	Blobs          BlobStore
+	DB             *gorm.DB
+	Config         Config
+	HTTP           *http.Client
+	DNS            *net.Resolver
+	Now            func() time.Time
+	uploadSlots    chan struct{}
 	// Push delivery uses a separate restricted client; tests may replace its
 	// transport without changing payment, DNS, or advertisement HTTP traffic.
 	pwaPushHTTP *http.Client
@@ -273,7 +275,11 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; frame-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		policy := "default-src 'self'; script-src 'self'; frame-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+		if strings.HasPrefix(r.URL.Path, "/a/") || strings.HasPrefix(r.URL.Path, "/p/") || strings.HasPrefix(r.URL.Path, "/c/") {
+			policy = s.landingScriptPolicy(policy)
+		}
+		w.Header().Set("Content-Security-Policy", policy)
 		w.Header().Set("Cache-Control", "no-store")
 		defer func() {
 			if p := recover(); p != nil {

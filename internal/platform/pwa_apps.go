@@ -37,6 +37,7 @@ type PWAApp struct {
 	VAPIDPublicKey    string         `json:"-"`
 	VAPIDPrivateKey   string         `json:"-"`
 	IconPNG           []byte         `json:"-"`
+	IconObjectKey     string         `json:"-" gorm:"size:250;not null;default:''"`
 	CreatedAt         time.Time      `json:"created_at"`
 	UpdatedAt         time.Time      `json:"updated_at"`
 	CreateKey         *string        `json:"-" gorm:"uniqueIndex;size:64"`
@@ -130,6 +131,7 @@ func (s *Server) getPWA(w http.ResponseWriter, r *http.Request) {
 }
 
 type pwaAppInput struct {
+	ImportFrom       string            `json:"import_from"`
 	LandingConfig    *PWALandingConfig `json:"landing_config"`
 	ReturnFlowConfig *ReturnFlowConfig `json:"return_flow_config"`
 	Name             *string           `json:"name"`
@@ -282,7 +284,8 @@ func (s *Server) createPWA(w http.ResponseWriter, r *http.Request) {
 		Enabled, PushEnabled                     bool
 		ReturnFlowConfig                         *ReturnFlowConfig `json:",omitempty"`
 		LandingConfig                            *PWALandingConfig `json:",omitempty"`
-	}{a.Name, a.TargetURL, a.Description, a.ThemeColor, a.Enabled, a.PushEnabled, in.ReturnFlowConfig, in.LandingConfig})
+		ImportFrom                               string            `json:",omitempty"`
+	}{a.Name, a.TargetURL, a.Description, a.ThemeColor, a.Enabled, a.PushEnabled, in.ReturnFlowConfig, in.LandingConfig, in.ImportFrom})
 	a.CreateFingerprint = hashString(string(canonical))
 	private, public, err := webpush.GenerateVAPIDKeys()
 	if err != nil {
@@ -316,6 +319,14 @@ func (s *Server) createPWA(w http.ResponseWriter, r *http.Request) {
 			if e != gorm.ErrRecordNotFound {
 				return e
 			}
+		}
+		if in.ImportFrom != "" {
+			var source PWAApp
+			if e = tx.First(&source, "id = ? AND user_id = ?", in.ImportFrom, owner.ID).Error; e != nil {
+				return e
+			}
+			a.IconPNG = append([]byte(nil), source.IconPNG...)
+			a.IconObjectKey = source.IconObjectKey
 		}
 		plan, e := getPlan(tx, owner, s.Now())
 		if e != nil {
@@ -459,6 +470,7 @@ func (s *Server) uploadPWAIcon(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
+	objectKey := ""
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		owner, e := lockUser(tx, userOf(r).ID)
 		if e != nil {
@@ -470,12 +482,21 @@ func (s *Server) uploadPWAIcon(w http.ResponseWriter, r *http.Request) {
 		if e := tx.First(&a, "id = ? AND user_id = ?", a.ID, userOf(r).ID).Error; e != nil {
 			return e
 		}
-		if e := tx.Model(&a).Updates(map[string]any{"icon_png": normalized, "updated_at": s.Now()}).Error; e != nil {
+		updates := map[string]any{"icon_png": normalized, "icon_object_key": "", "updated_at": s.Now()}
+		if s.Media != nil {
+			objectKey, e = s.Media.putPNG(r.Context(), tx, "pwa-icons", normalized)
+			if e != nil {
+				return e
+			}
+			updates["icon_png"], updates["icon_object_key"] = []byte{}, objectKey
+		}
+		if e := tx.Model(&a).Updates(updates).Error; e != nil {
 			return e
 		}
 		return recordAudit(tx, userOf(r).ID, "pwa.icon", a.ID, "")
 	})
 	if err != nil {
+		s.Media.discard(objectKey)
 		fail(w, err)
 		return
 	}

@@ -12,6 +12,7 @@ import (
 )
 
 type Config struct {
+	R2                                                                    R2Config
 	PageImages                                                            PageImageConfig
 	Role, RemoteStorageURL                                                string
 	S3Endpoint, S3AccessKey, S3SecretKey, S3Bucket, S3Region              string
@@ -38,6 +39,7 @@ func env(key, fallback string) string {
 func LoadConfig() (Config, error) {
 	c := Config{Env: env("APP_ENV", "development"), Addr: env("HTTP_ADDR", "127.0.0.1:8088"), DatabaseURL: os.Getenv("DATABASE_URL"), DataDir: env("DATA_DIR", "data"), WebDir: env("WEB_DIR", "web/dist"), PublicURL: strings.TrimRight(env("APP_URL", "http://localhost:8088"), "/"), Secret: os.Getenv("APP_SECRET"), AdminEmail: env("ADMIN_ACCOUNT", os.Getenv("ADMIN_EMAIL")), AdminPassword: os.Getenv("ADMIN_PASSWORD"), ClamAVAddr: os.Getenv("CLAMAV_ADDR"), FutoonURL: os.Getenv("FUTOON_API_URL"), FutoonPID: os.Getenv("FUTOON_PID"), FutoonKey: os.Getenv("FUTOON_KEY"), USDTMonitorURL: os.Getenv("USDT_MONITOR_URL"), USDTMonitorSecret: os.Getenv("USDT_MONITOR_SECRET"), USDTWallet: os.Getenv("USDT_WALLET"), TronAPIURL: env("TRON_API_URL", "https://api.trongrid.io"), TronAPIKey: os.Getenv("TRON_API_KEY")}
 	c.Role = env("SERVER_ROLE", "all")
+	c.R2 = R2Config{Endpoint: os.Getenv("R2_ENDPOINT"), AccessKey: os.Getenv("R2_ACCESS_KEY"), SecretKey: os.Getenv("R2_SECRET_KEY"), Bucket: os.Getenv("R2_BUCKET")}
 	c.USDTProvider = env("USDT_PROVIDER", "tron")
 	c.USDTAddressPasswordHash = os.Getenv("USDT_ADDRESS_PASSWORD_HASH")
 	c.USDTMonitorAllowHTTP = env("USDT_MONITOR_ALLOW_HTTP", "false") == "true"
@@ -115,6 +117,9 @@ func (c Config) Host() string {
 	return strings.ToLower(u.Hostname())
 }
 func (c Config) Validate() error {
+	if err := c.r2Config().validate(c); err != nil {
+		return err
+	}
 	if err := c.PageImages.validate(); err != nil {
 		return err
 	}

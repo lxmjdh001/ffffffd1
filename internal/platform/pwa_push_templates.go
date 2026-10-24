@@ -61,6 +61,7 @@ type pwaPushTemplateView struct {
 // Public image URLs contain random IDs, never an owner identifier or file name.
 // Store only normalized PNG data and deduplicate independently for each owner.
 type PWAPushAsset struct {
+	ObjectKey string    `json:"-" gorm:"size:250;not null;default:''"`
 	ID        string    `json:"-" gorm:"primaryKey;size:32"`
 	UserID    string    `json:"-" gorm:"uniqueIndex:idx_pwa_push_asset_content,priority:1;index;size:32;not null"`
 	SHA256    string    `json:"-" gorm:"uniqueIndex:idx_pwa_push_asset_content,priority:2;size:64;not null"`
@@ -326,6 +327,7 @@ func (s *Server) uploadPWAPushAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var row PWAPushAsset
+	objectKey := ""
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		owner, err := lockUser(tx, userOf(r).ID)
 		if err != nil {
@@ -350,12 +352,20 @@ func (s *Server) uploadPWAPushAsset(w http.ResponseWriter, r *http.Request) {
 			return problem(409, "通知图片已达 500 张，请复用已有图片")
 		}
 		row = PWAPushAsset{ID: randomHex(16), UserID: owner.ID, SHA256: digest, PNG: normalized, Width: width, Height: height, CreatedAt: s.Now()}
+		if s.Media != nil {
+			objectKey, err = s.Media.putPNG(r.Context(), tx, "push-images", normalized)
+			if err != nil {
+				return err
+			}
+			row.ObjectKey, row.PNG = objectKey, []byte{}
+		}
 		if err = tx.Create(&row).Error; err != nil {
 			return err
 		}
 		return recordAudit(tx, owner.ID, "pwa.push.asset.create", row.ID, "")
 	})
 	if err != nil {
+		s.Media.discard(objectKey)
 		fail(w, err)
 		return
 	}
@@ -428,6 +438,14 @@ func (s *Server) publicPWAPushAsset(w http.ResponseWriter, r *http.Request) {
 	if err := s.DB.Joins("JOIN users ON users.id = pwa_push_assets.user_id AND users.disabled = ?", false).First(&row, "pwa_push_assets.id = ?", id).Error; err != nil {
 		http.NotFound(w, r)
 		return
+	}
+	if row.ObjectKey != "" {
+		data, err := s.Media.readPNG(r.Context(), row.ObjectKey)
+		if err != nil {
+			http.Error(w, "Image unavailable", 503)
+			return
+		}
+		row.PNG = data
 	}
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
