@@ -46,10 +46,14 @@ func (s *Server) getTrafficPool(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	base := s.Config.PublicURL
-	var domain Domain
-	if err := s.DB.Where("user_id = ? AND verified_at > ? AND ssl_status = ?", userOf(r).ID, s.Now().Add(-48*time.Hour), "ready").Order("created_at, id").First(&domain).Error; err == nil {
-		base = "https://" + domain.Hostname
+	domains, err := s.downloadDomainsFor(userOf(r))
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	base := ""
+	if len(domains) > 0 {
+		base = domains[0].URL
 	}
 	data := []map[string]any{}
 	for _, p := range pools {
@@ -58,7 +62,11 @@ func (s *Server) getTrafficPool(w http.ResponseWriter, r *http.Request) {
 			fail(w, err)
 			return
 		}
-		data = append(data, map[string]any{"pool": p, "links": links, "entry_url": base + "/r/" + p.Slug})
+		entryURL := ""
+		if base != "" {
+			entryURL = base + "/r/" + p.Slug
+		}
+		data = append(data, map[string]any{"pool": p, "links": links, "entry_url": entryURL})
 	}
 	jsonOut(w, 200, map[string]any{"data": data, "paid": userOf(r).PlanID(s.Now()) == "pro", "configured": os.Getenv("GOOGLE_WEB_RISK_API_KEY") != ""})
 }
@@ -262,9 +270,19 @@ func (s *Server) routeTraffic(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	target, err := s.trafficTarget(r, p.Slug, p.UserID)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+// Traffic and cloaks share eligibility and cursor updates under the owner lock.
+func (s *Server) trafficTarget(r *http.Request, slug, ownerID string) (string, error) {
 	target := ""
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
-		owner, err := lockUser(tx, p.UserID)
+		owner, err := lockUser(tx, ownerID)
 		if err != nil {
 			return err
 		}
@@ -274,7 +292,8 @@ func (s *Server) routeTraffic(w http.ResponseWriter, r *http.Request) {
 		if audience, managed := r.Context().Value(downloadAudienceKey).(string); managed && audience != "all" && owner.PlanID(s.Now()) != audience {
 			return problem(404, "分流未启用")
 		}
-		if err := tx.First(&p, "slug = ? AND user_id = ? AND enabled = ?", p.Slug, owner.ID, true).Error; err != nil {
+		var p TrafficPool
+		if err := tx.First(&p, "slug = ? AND user_id = ? AND enabled = ?", slug, owner.ID, true).Error; err != nil {
 			return err
 		}
 		var links []TrafficLink
@@ -311,11 +330,7 @@ func (s *Server) routeTraffic(w http.ResponseWriter, r *http.Request) {
 		target = candidates[index].URL
 		return nil
 	})
-	if err != nil {
-		fail(w, err)
-		return
-	}
-	http.Redirect(w, r, target, http.StatusFound)
+	return target, err
 }
 
 func lookupWebRisk(ctx context.Context, client *http.Client, endpoint, key, uri string) (bool, error) {

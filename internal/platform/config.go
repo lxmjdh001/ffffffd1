@@ -26,6 +26,7 @@ type Config struct {
 	USDTProvider, USDTAddressPasswordHash                                 string
 	USDTMonitorAllowHTTP                                                  bool
 	TrustedProxies                                                        []*net.IPNet
+	CloakCountryProxies                                                   []*net.IPNet
 }
 
 func env(key, fallback string) string {
@@ -59,6 +60,11 @@ func LoadConfig() (Config, error) {
 			return c, errors.New("invalid TRUSTED_PROXY_CIDRS")
 		}
 		c.TrustedProxies = append(c.TrustedProxies, cidr)
+	}
+	var countryErr error
+	c.CloakCountryProxies, countryErr = parseCloakCountryNetworks(os.Getenv("CLOAK_COUNTRY_PROXY_CIDRS"))
+	if countryErr != nil {
+		return c, countryErr
 	}
 	// Accept go7's environment names as aliases so both applications can use
 	// the same gateway credentials without sharing their callback URLs.

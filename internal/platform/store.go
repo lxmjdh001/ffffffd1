@@ -49,7 +49,7 @@ func Migrate(db *gorm.DB) error {
 				return err
 			}
 		}
-		if err := tx.AutoMigrate(&TrafficPool{}, &TrafficLink{}, &RiskUsage{}); err != nil {
+		if err := tx.AutoMigrate(&TrafficPool{}, &TrafficLink{}, &RiskUsage{}, &Cloak{}); err != nil {
 			return err
 		}
 		if err := tx.AutoMigrate(&AppPageDesign{}, &PageImageObject{}); err != nil {

@@ -202,6 +202,11 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("PUT /api/traffic-pools/{slug}", s.auth(s.saveTrafficPool))
 	m.Handle("DELETE /api/traffic-pools/{slug}", s.auth(s.deleteTrafficPool))
 	m.HandleFunc("GET /r/{slug}", s.routeTraffic)
+	m.Handle("GET /api/cloaks", s.auth(s.listCloaks))
+	m.Handle("POST /api/cloaks", s.auth(s.saveCloak))
+	m.Handle("PUT /api/cloaks/{id}", s.auth(s.saveCloak))
+	m.Handle("DELETE /api/cloaks/{id}", s.auth(s.deleteCloak))
+	m.HandleFunc("GET /c/{slug}", s.routeCloak)
 	m.Handle("POST /api/domains", s.auth(s.createDomain))
 	m.Handle("PATCH /api/domains/{id}", s.auth(s.saveDomainRemark))
 	m.Handle("POST /api/domains/{id}/verify", s.auth(s.verifyDomain))
@@ -287,7 +292,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		if host != s.Config.Host() {
 			if !s.Config.Production() && (host == "localhost" || host == "127.0.0.1") {
 			} else {
-				if !strings.HasPrefix(r.URL.Path, "/a/") && !strings.HasPrefix(r.URL.Path, "/d/") && !strings.HasPrefix(r.URL.Path, "/r/") {
+				if !strings.HasPrefix(r.URL.Path, "/a/") && !strings.HasPrefix(r.URL.Path, "/d/") && !strings.HasPrefix(r.URL.Path, "/r/") && !strings.HasPrefix(r.URL.Path, "/c/") {
 					http.NotFound(w, r)
 					return
 				}
@@ -377,7 +382,11 @@ func (s *Server) publicConfig(w http.ResponseWriter, r *http.Request) {
 	channelConfig.USDTWallet = s.Config.receivingWallet(x)
 	methods := channelConfig.paymentMethods()
 	downloadBase := ""
-	if x.DownloadDomainMode != "separate" {
+	if len(x.DownloadDomainRules) > 0 {
+		if normalized, err := s.normalizeDownloadURL(x.assignedDownloadURL("free")); err == nil {
+			downloadBase = normalized
+		}
+	} else if x.DownloadDomainMode != "separate" {
 		if x.DownloadDomainMode == "public_paid" {
 			if normalized, err := s.normalizeDownloadURL(x.FreeDownloadBaseURL); err == nil {
 				downloadBase = normalized

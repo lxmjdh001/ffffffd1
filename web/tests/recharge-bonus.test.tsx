@@ -107,6 +107,8 @@ describe('recharge promotion', () => {
     expect(within(paidCard).getByText('500')).toBeTruthy();
     expect(within(paidCard).getByText('30.0 GB')).toBeTruthy();
     expect(within(paidCard).getByText('10,000')).toBeTruthy();
+    expect(within(paidCard).getByText('自动检查域名安全')).toBeTruthy();
+    expect(within(freeCard).queryByText('自动检查域名安全')).toBeNull();
     const recharge = screen.getByRole('button', { name: '充值余额' });
     expect(recharge.closest('section')?.textContent).toContain('可用余额');
     await user.click(recharge);

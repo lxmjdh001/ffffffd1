@@ -200,13 +200,28 @@ describe('real application routes', () => {
     expect((screen.getByRole('textbox', { name: '邮箱地址', exact: true }) as HTMLInputElement).value).toBe('half.typed@example.com');
   }, 15000);
 
-  it.each(['/apps', '/referrals', '/admin/settings'])('redirects an anonymous visitor away from protected %s', async path => {
+  it.each(['/apps', '/referrals', '/cloaks', '/admin/settings'])('redirects an anonymous visitor away from protected %s', async path => {
     open(path);
     await screen.findByRole('heading', { name: '登录控制台' });
     expect(window.location.hash).toBe('#/login');
     expect(screen.queryByText('我的工作空间')).toBeNull();
     expect(requests).not.toContain('/api/apps');
     expect(requests).not.toContain('/api/admin/settings');
+  });
+
+  it('retains an invitation when returning to the homepage and opening registration again', async () => {
+    const user = userEvent.setup();
+    const invite = '0123456789abcdef';
+    open(`/register?invite=${invite}`);
+    await screen.findByRole('heading', { name: '创建你的账户' });
+    await user.click(screen.getByRole('link', { name: 'D1 Apk', exact: true }));
+    await screen.findByRole('heading', { name: '让好应用，轻松抵达。' });
+    expect(window.location.hash).toBe(`#/welcome?invite=${invite}`);
+    await user.click(screen.getByRole('link', { name: /开始免费分发/ }));
+    await screen.findByRole('heading', { name: '创建你的账户' });
+    expect((screen.getByRole('textbox', { name: '邀请码（选填）', exact: true }) as HTMLInputElement).value).toBe(invite);
+    await user.click(screen.getByRole('link', { name: /立即登录/ }));
+    expect(window.location.hash).toBe(`#/login?invite=${invite}`);
   });
 
   it('can navigate from the public welcome page through registration and login into the console', async () => {

@@ -53,6 +53,7 @@ export function BillingPage() {
           <div><span><HardDrive size={15} />存储空间</span><strong>{bytes(p.storage_bytes)}</strong></div>
           <div><span><ArrowDownToLine size={15} />赠送下载</span><strong>{number(p.download_limit)}<small> 次</small></strong></div>
         </div>
+        {p.id !== 'free' && <div className="membership-term membership-security" title="在应用分流中开启安全检测后生效"><ShieldCheck size={14} />自动检查域名安全</div>}
         <div className="membership-term"><CalendarDays size={14} />{p.id === 'free' ? '仅注册首月赠送，次月不再新增' : '每个付费月赠送，续费后再次发放'}</div>
         {p.id === 'free' ? <button className="btn membership-buy full" disabled>{d.plan.id === 'free' ? '当前套餐' : '免费套餐'}</button> : <button className="btn membership-buy full" onClick={() => { setPurchase(true); setFormError(''); key.current = newKey(); }}><Zap size={15} />{d.plan.id === 'pro' ? `续费${p.name}` : `开通${p.name}`}</button>}
       </section>)}
