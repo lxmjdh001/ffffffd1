@@ -1853,7 +1853,8 @@
     "请填写 APK 下载地址": "Enter the APK download URL",
     "请选择不超过 50 MB 的 PNG、JPG、WebP、GIF 图片或 MP4、WebM、MOV、M4V 视频。": "Choose a PNG, JPG, WebP or GIF image, or an MP4, WebM, MOV or M4V video, up to 50 MB.",
     "配置应用资料与落地页，预览后保存。": "Configure your app and landing page, preview, then save.",
-    "预览不会安装、下载或跳转。": "Preview does not install, download or navigate."
+    "预览不会安装、下载或跳转。": "Preview does not install, download or navigate.",
+    "PWA管理": "PWA management"
   },
   "pt": {
     " + 活动赠送 $": " + Bônus promocional $",
@@ -3709,7 +3710,8 @@
     "请填写 APK 下载地址": "Informe a URL de download do APK",
     "请选择不超过 50 MB 的 PNG、JPG、WebP、GIF 图片或 MP4、WebM、MOV、M4V 视频。": "Escolha uma imagem PNG, JPG, WebP ou GIF, ou um vídeo MP4, WebM, MOV ou M4V de até 50 MB.",
     "配置应用资料与落地页，预览后保存。": "Configure o app e a página, visualize e salve.",
-    "预览不会安装、下载或跳转。": "A prévia não instala, baixa nem redireciona."
+    "预览不会安装、下载或跳转。": "A prévia não instala, baixa nem redireciona.",
+    "PWA管理": "Gerenciar PWA"
   },
   "de": {
     " + 活动赠送 $": " + Aktionsbonus $",
@@ -5565,7 +5567,8 @@
     "请填写 APK 下载地址": "APK-Download-URL eingeben",
     "请选择不超过 50 MB 的 PNG、JPG、WebP、GIF 图片或 MP4、WebM、MOV、M4V 视频。": "Wählen Sie ein PNG-, JPG-, WebP- oder GIF-Bild oder ein MP4-, WebM-, MOV- oder M4V-Video bis 50 MB.",
     "配置应用资料与落地页，预览后保存。": "App und Landingpage konfigurieren, prüfen und speichern.",
-    "预览不会安装、下载或跳转。": "Die Vorschau installiert, lädt und öffnet nichts."
+    "预览不会安装、下载或跳转。": "Die Vorschau installiert, lädt und öffnet nichts.",
+    "PWA管理": "PWA-Verwaltung"
   },
   "fr": {
     " + 活动赠送 $": " + Prime promotionnelle $",
@@ -7421,7 +7424,8 @@
     "请填写 APK 下载地址": "Saisissez l’URL de téléchargement APK",
     "请选择不超过 50 MB 的 PNG、JPG、WebP、GIF 图片或 MP4、WebM、MOV、M4V 视频。": "Choisissez une image PNG, JPG, WebP ou GIF, ou une vidéo MP4, WebM, MOV ou M4V de 50 Mo maximum.",
     "配置应用资料与落地页，预览后保存。": "Configurez l’application et la page, prévisualisez et enregistrez.",
-    "预览不会安装、下载或跳转。": "L’aperçu n’installe, ne télécharge et ne redirige rien."
+    "预览不会安装、下载或跳转。": "L’aperçu n’installe, ne télécharge et ne redirige rien.",
+    "PWA管理": "Gestion des PWA"
   },
   "ko": {
     " + 活动赠送 $": " + 프로모션 보너스 $",
@@ -9277,7 +9281,8 @@
     "请填写 APK 下载地址": "APK 다운로드 주소를 입력하세요",
     "请选择不超过 50 MB 的 PNG、JPG、WebP、GIF 图片或 MP4、WebM、MOV、M4V 视频。": "50 MB 이하의 PNG, JPG, WebP, GIF 이미지 또는 MP4, WebM, MOV, M4V 동영상을 선택하세요.",
     "配置应用资料与落地页，预览后保存。": "앱과 랜딩 페이지를 설정하고 미리 본 후 저장하세요.",
-    "预览不会安装、下载或跳转。": "미리보기에서는 설치, 다운로드 또는 이동하지 않습니다."
+    "预览不会安装、下载或跳转。": "미리보기에서는 설치, 다운로드 또는 이동하지 않습니다.",
+    "PWA管理": "PWA 관리"
   },
   "ja": {
     " + 活动赠送 $": " + プロモーションボーナス $",
@@ -11133,7 +11138,8 @@
     "请填写 APK 下载地址": "APKダウンロードURLを入力してください",
     "请选择不超过 50 MB 的 PNG、JPG、WebP、GIF 图片或 MP4、WebM、MOV、M4V 视频。": "50 MB以下のPNG、JPG、WebP、GIF画像またはMP4、WebM、MOV、M4V動画を選択してください。",
     "配置应用资料与落地页，预览后保存。": "アプリとランディングページを設定し、プレビューして保存します。",
-    "预览不会安装、下载或跳转。": "プレビューではインストール、ダウンロード、移動は行いません。"
+    "预览不会安装、下载或跳转。": "プレビューではインストール、ダウンロード、移動は行いません。",
+    "PWA管理": "PWA管理"
   },
   "zh-TW": {
     " + 活动赠送 $": " + 活動贈送 $",
@@ -12989,7 +12995,8 @@
     "请填写 APK 下载地址": "請填寫 APK 下載地址",
     "请选择不超过 50 MB 的 PNG、JPG、WebP、GIF 图片或 MP4、WebM、MOV、M4V 视频。": "請選擇不超過 50 MB 的 PNG、JPG、WebP、GIF 圖片或 MP4、WebM、MOV、M4V 影片。",
     "配置应用资料与落地页，预览后保存。": "設定應用資料與落地頁，預覽後儲存。",
-    "预览不会安装、下载或跳转。": "預覽不會安裝、下載或跳轉。"
+    "预览不会安装、下载或跳转。": "預覽不會安裝、下載或跳轉。",
+    "PWA管理": "PWA管理"
   },
   "ru": {
     " + 活动赠送 $": " + Рекламный бонус $",
@@ -14845,6 +14852,7 @@
     "请填写 APK 下载地址": "Введите URL загрузки APK",
     "请选择不超过 50 MB 的 PNG、JPG、WebP、GIF 图片或 MP4、WebM、MOV、M4V 视频。": "Выберите изображение PNG, JPG, WebP, GIF или видео MP4, WebM, MOV, M4V размером до 50 МБ.",
     "配置应用资料与落地页，预览后保存。": "Настройте приложение и страницу, проверьте и сохраните.",
-    "预览不会安装、下载或跳转。": "Предпросмотр не запускает установку, загрузку или переход."
+    "预览不会安装、下载或跳转。": "Предпросмотр не запускает установку, загрузку или переход.",
+    "PWA管理": "Управление PWA"
   }
 }

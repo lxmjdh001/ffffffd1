@@ -46,3 +46,8 @@ it('closes the mobile navigation after using the workspace entry and keeps other
   expect(screen.getByRole('heading', { name: '应用管理' })).toBeTruthy();
   expect(screen.getByRole('link', { name: '我的工作空间', exact: true }).getAttribute('aria-current')).toBeNull();
 });
+
+it('places PWA and notifications after apps and ad tracking before referrals',()=>{
+ open();expect(screen.getByRole('link', {name: 'PWA管理', exact:true}).getAttribute('href')).toBe('/pwas');const links=within(document.querySelector('aside nav')!).getAllByRole('link').map(link=>link.getAttribute('href'));
+ expect(links).toEqual(['/apps','/pwas','/pwa-push','/domains','/traffic','/cloaks','/billing','/integrations','/referrals','/activity','/account']);
+});

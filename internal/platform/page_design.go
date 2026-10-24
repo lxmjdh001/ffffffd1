@@ -37,26 +37,27 @@ var ratingStarsHTML string
 var ratingStarsCSS string
 
 type PageDesign struct {
-	ReturnFlowConfig     *ReturnFlowConfig `json:"return_flow_config,omitempty"`
-	Layout               string            `json:"layout"`
-	Language             string            `json:"language"`
-	Title                string            `json:"title"`
-	Developer            string            `json:"developer"`
-	Summary              string            `json:"summary"`
-	Description          string            `json:"description"`
-	Icon                 string            `json:"icon"`
-	Screenshots          []string          `json:"screenshots"`
-	Tags                 []string          `json:"tags"`
-	ButtonText           string            `json:"button_text"`
-	ThemeColor           string            `json:"theme_color"`
-	BackgroundColor      string            `json:"background_color"`
-	ShowDescription      bool              `json:"show_description"`
-	ShowScreenshots      bool              `json:"show_screenshots"`
-	ShowFileInfo         bool              `json:"show_file_info"`
-	ShowDownloads        bool              `json:"show_downloads"`
-	DisplayRating        string            `json:"display_rating"`
-	DisplayReviewCount   string            `json:"display_review_count"`
-	DisplayDownloadCount string            `json:"display_download_count"`
+	Landing              *APKLandingOptions `json:"landing,omitempty"`
+	ReturnFlowConfig     *ReturnFlowConfig  `json:"return_flow_config,omitempty"`
+	Layout               string             `json:"layout"`
+	Language             string             `json:"language"`
+	Title                string             `json:"title"`
+	Developer            string             `json:"developer"`
+	Summary              string             `json:"summary"`
+	Description          string             `json:"description"`
+	Icon                 string             `json:"icon"`
+	Screenshots          []string           `json:"screenshots"`
+	Tags                 []string           `json:"tags"`
+	ButtonText           string             `json:"button_text"`
+	ThemeColor           string             `json:"theme_color"`
+	BackgroundColor      string             `json:"background_color"`
+	ShowDescription      bool               `json:"show_description"`
+	ShowScreenshots      bool               `json:"show_screenshots"`
+	ShowFileInfo         bool               `json:"show_file_info"`
+	ShowDownloads        bool               `json:"show_downloads"`
+	DisplayRating        string             `json:"display_rating"`
+	DisplayReviewCount   string             `json:"display_review_count"`
+	DisplayDownloadCount string             `json:"display_download_count"`
 }
 type AppPageDesign struct {
 	AppID     string     `json:"-" gorm:"primaryKey;size:32"`
@@ -127,10 +128,13 @@ func validatePageDesign(d PageDesign, publicURL ...string) error {
 			return err
 		}
 	}
+	if err := validateAPKLanding(d.Landing); err != nil {
+		return err
+	}
 	if _, supported := pageLanguages[d.Language]; d.Language != "" && !supported {
 		return problem(400, "请选择支持的详情页语言")
 	}
-	if (d.Layout != "store" && d.Layout != "minimal" && d.Layout != "google_play") || !pageColor.MatchString(d.ThemeColor) || !pageColor.MatchString(d.BackgroundColor) {
+	if (d.Layout != "store" && d.Layout != "minimal" && d.Layout != "google_play" && d.Layout != "custom") || !pageColor.MatchString(d.ThemeColor) || !pageColor.MatchString(d.BackgroundColor) {
 		return problem(400, "请选择有效模板和十六进制主题颜色")
 	}
 	if strings.TrimSpace(d.Title) == "" || len([]rune(d.Title)) > 100 || len([]rune(d.Developer)) > 80 || len([]rune(d.Summary)) > 200 || len([]rune(d.Description)) > 4000 || strings.TrimSpace(d.ButtonText) == "" || len([]rune(d.ButtonText)) > 30 {
@@ -190,6 +194,11 @@ func (s *Server) savePageDesign(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := s.validatePageImageReferences(tx, a.ID, d); err != nil {
 			return err
+		}
+		for _, media := range append([]string{d.Icon}, d.Screenshots...) {
+			if err := s.validateReturnFlowAsset(tx, a.UserID, &ReturnFlowConfig{MediaURL: media}); err != nil {
+				return err
+			}
 		}
 		if err := s.validateReturnFlowAsset(tx, a.UserID, d.ReturnFlowConfig); err != nil {
 			return err

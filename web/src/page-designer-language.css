@@ -9,3 +9,5 @@
 .designer-button-copy{display:grid;gap:7px}
 .designer-button-copy .text-btn{justify-self:start;font-size:11px}
 @media(max-width:650px){.designer-language-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.designer-device>.pwa-live-preview{position:static;border:0;border-radius:0;padding:0;box-shadow:none;max-width:none;background:white;width:100%;height:100%}.designer-device>.pwa-live-preview>strong,.designer-device>.pwa-live-preview>p{display:none}.designer-device>.pwa-live-preview iframe{border-radius:0;width:100%;height:100%}.designer-device .designer-shot video,.designer-shot video{width:100%;height:160px;object-fit:contain;background:#f7faff}

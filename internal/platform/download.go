@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"html/template"
@@ -115,6 +116,15 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if design.Layout == "google_play" || design.Layout == "custom" {
+		var out bytes.Buffer
+		if e := s.renderAPKLanding(a, design, randomHex(16), token, deepLinkWithToken(ads, token), ads.FacebookEnabled || ads.TikTokEnabled, &out); e != nil {
+			fail(w, e)
+			return
+		}
+		w.Write(out.Bytes())
+		return
+	}
 	_ = downloadPageTemplate(design.Layout).Execute(w, map[string]any{"App": a, "Design": design, "Nonce": randomHex(16), "Size": pageDesignSize(a.Size), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled})
 }
 
@@ -204,7 +214,7 @@ const form=document.querySelector('form');
 const button=form.querySelector('button');
 const status=document.getElementById('download-status');
 let returnFlowSource=false;
-window.D1ReturnFlowInstall=()=>{returnFlowSource=true;try{form.requestSubmit();}finally{returnFlowSource=false;}};
+window.D1ReturnFlowInstall=(options)=>{returnFlowSource=options?.source==='return_flow';try{form.requestSubmit();}finally{returnFlowSource=false;}};
 form.addEventListener('submit',async function(event){
  event.preventDefault();if(button.disabled)return;const fromReturnFlow=returnFlowSource;button.disabled=true;status.textContent=copy.preparing;
  try {
@@ -217,7 +227,7 @@ form.addEventListener('submit',async function(event){
   window.location.assign(data.download_url);
  }catch(error){status.textContent=error.message||copy.network_error;}
  finally{button.disabled=false;}
-});`+"\n"+returnFlowJS)
+});`+"\n"+returnFlowJS+"\n"+apkLandingBridgeJS)
 }
 
 type billingWriter struct {
