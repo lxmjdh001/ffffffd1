@@ -45,7 +45,25 @@ describe('public landing page', () => {
     openLanding(false);
     expect(screen.getByText('注册暂未开放 · 已有账户可登录')).toBeTruthy();
     expect(screen.queryByRole('link', { name: /开始免费分发/ })).toBeNull();
-    expect(screen.getByRole('link', { name: '登录控制台' }).getAttribute('href')).toBe('/login?invite=invite-code');
+    for (const link of screen.getAllByRole('link', { name: '登录控制台' })) expect(link.getAttribute('href')).toBe('/login?invite=invite-code');
     expect(screen.getAllByRole('link').some(link => link.getAttribute('href')?.startsWith('/register'))).toBe(false);
+  });
+
+  it('presents APK and PWA as separate publishing paths and explains permission-based notifications', () => {
+    openLanding();
+    expect(document.querySelector('.home-editorial')).toBeTruthy();
+    expect(document.querySelector('.home-soft')).toBeNull();
+    expect(document.querySelectorAll('.home-story')).toHaveLength(2);
+    expect(document.querySelector('.home-story-apk')?.textContent).toContain('上传安装包');
+    expect(document.querySelector('.home-story-pwa')?.textContent).toContain('无需下载 APK');
+    expect(screen.getByRole('heading', {name:'什么是 PWA？'})).toBeTruthy();
+    expect(document.querySelector('.home-push-copy')?.textContent).toContain('用户自主订阅');
+    expect(screen.getByText(/iOS 通常需从主屏幕打开/)).toBeTruthy();
+    expect(document.querySelectorAll('.home-solution-grid article')).toHaveLength(5);
+    expect(document.querySelector('.home-solution-grid')?.textContent).toContain('回流页');
+    expect(document.querySelector('.home-solution-grid')?.textContent).toContain('广告回传');
+    expect(document.querySelector('.home-solution-grid')?.textContent).toContain('斗篷');
+    expect(screen.getByRole('img', { name: /APK 与 PWA 两大产品/ })).toBeTruthy();
+    expect(document.querySelector('.home-cover img')).toBeNull();
   });
 });

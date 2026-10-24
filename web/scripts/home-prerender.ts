@@ -33,13 +33,14 @@ export function renderHomeHead(publicURL: string): string {
 
 export function renderHomeBody(): string {
   const e = escapeHTML;
-  return `<div class="home home-prerender">
+  return `<div class="home home-editorial home-prerender">
     <header class="home-header"><nav class="home-width home-nav" aria-label="首页导航"><a href="/">D1 Apk</a><div class="home-nav-actions"><a class="home-login" href="/#/login">登录</a><a class="home-button home-button-small" href="/#/register">免费开始</a></div></nav></header>
     <main>
-      <section class="home-hero"><div class="home-hero-wash"></div><div class="home-width home-hero-layout"><div class="home-hero-copy"><div class="home-kicker"><span></span><span>${e(content.hero.kicker)}</span></div><h1>${e(content.hero.lines[0])}<br /><span>${e(content.hero.lines[1])}</span></h1><p>${e(content.hero.description)}</p><div class="home-hero-actions"><a class="home-button" href="/#/register">开始免费分发</a></div></div></div></section>
+      <section class="home-width home-hero"><div class="home-edition"><span>D1 / DIGITAL PUBLISHING</span><span>${e(content.hero.kicker)}</span></div><div class="home-hero-layout"><div class="home-hero-copy"><h1>${e(content.hero.lines[0])}<br /><span>${e(content.hero.lines[1])}</span></h1></div><div class="home-hero-aside"><p>${e(content.hero.description)}</p><div class="home-hero-actions"><a class="home-button" href="/#/register">免费创建账户</a></div></div></div></section>
       <section class="home-width home-solutions" id="home-solutions" aria-labelledby="home-solutions-heading"><div class="home-section-top"><div><div class="home-eyebrow">APP DISTRIBUTION SOLUTIONS</div><h2 id="home-solutions-heading">${e(content.solutions.heading)}</h2></div><p>${e(content.solutions.intro)}</p></div><div class="home-solution-grid">${content.solutions.items.map(item => `<article id="${e(item.id)}"${item.id === 'ads' ? ' class="home-solution-ads"' : ''}><div class="home-solution-top"><span>${e(item.label)}</span></div><h3>${e(item.title)}</h3><p>${e(item.description)}</p><ul class="home-solution-tags">${item.tags.map(tag => `<li>${e(tag)}</li>`).join('')}</ul></article>`).join('')}</div></section>
+      <section class="home-width home-pwa-explainer"><div><h3>${e(content.paths.pwaHeading)}</h3><p>${e(content.paths.pwaDescription)}</p></div></section>
       <section class="home-width home-faq" id="home-faq" aria-labelledby="home-faq-heading"><div class="home-section-top"><div><div class="home-eyebrow">FREQUENTLY ASKED QUESTIONS</div><h2 id="home-faq-heading">${e(content.faq.heading)}</h2></div><p>${e(content.faq.intro)}</p></div><div class="home-faq-list">${content.faq.items.map((item, index) => `<details${index === 0 ? ' open' : ''}><summary>${e(item.question)}</summary><p>${e(item.answer)}</p></details>`).join('')}</div></section>
-    </main><footer class="home-width home-footer"><a href="/">D1 Apk</a><span>APK 分发 · 链接分流 · 斗篷 · 下载落地页</span><a href="/#/login">进入控制台</a></footer>
+    </main><footer class="home-width home-footer"><a href="/">D1 Apk</a><span>APK 分发 · 网页转 PWA · Web Push</span><a href="/#/login">进入控制台</a></footer>
     <noscript><p class="home-width">应用控制台需要启用 JavaScript。你仍可在本页了解产品功能和常见问题。</p></noscript>
   </div>`;
 }

@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { authProvider } from '../src/api';
@@ -215,9 +215,9 @@ describe('real application routes', () => {
     open(`/register?invite=${invite}`);
     await screen.findByRole('heading', { name: '创建你的账户' });
     await user.click(screen.getByRole('link', { name: 'D1 Apk', exact: true }));
-    await screen.findByRole('heading', { name: /APK 分发，\s*让下载更简单。/ });
+    await screen.findByRole('heading', { name: /每一次抵达，\s*都有下一次。/ });
     expect(window.location.hash).toBe(`#/welcome?invite=${invite}`);
-    await user.click(screen.getByRole('link', { name: /开始免费分发/ }));
+    await user.click(within(document.querySelector('.home-hero-actions')!).getByRole('link', { name: '免费创建账户' }));
     await screen.findByRole('heading', { name: '创建你的账户' });
     expect((screen.getByRole('textbox', { name: '邀请码（选填）', exact: true }) as HTMLInputElement).value).toBe(invite);
     await user.click(screen.getByRole('link', { name: /立即登录/ }));
@@ -227,7 +227,8 @@ describe('real application routes', () => {
   it('can navigate from the public welcome page through registration and login into the console', async () => {
     const user = userEvent.setup();
     open('/welcome');
-    await user.click(await screen.findByRole('link', { name: /开始免费分发/ }));
+    await screen.findByRole('heading', { name: /每一次抵达，\s*都有下一次。/ });
+    await user.click(within(document.querySelector('.home-hero-actions')!).getByRole('link', { name: '免费创建账户' }));
     await screen.findByRole('heading', { name: '创建你的账户' });
     await user.click(screen.getByRole('link', { name: /立即登录/ }));
     await screen.findByRole('heading', { name: '登录控制台' });

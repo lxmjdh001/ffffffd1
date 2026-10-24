@@ -57,6 +57,20 @@ function renderUser(data = summary) {
 function renderAdmin() { render(<QueryClientProvider client={client}><AdminReferralWithdrawalsPage /></QueryClientProvider>); return userEvent.setup(); }
 
 describe('referral withdrawals', () => {
+  it('pairs each summary label with its own amount without flex notice line breaks', () => {
+    renderUser();
+    const dialog = screen.getByRole('dialog');
+    const summary = dialog.querySelector('.withdrawal-request-summary')!;
+    const entries = summary.querySelectorAll(':scope > div');
+    expect(entries).toHaveLength(2);
+    expect(entries[0].querySelector('dt')?.textContent).toBe('可提现额度：');
+    expect(entries[0].querySelector('dd')?.textContent).toBe('$ 150.000001');
+    expect(entries[1].querySelector('dt')?.textContent).toBe('单笔最低提现：');
+    expect(entries[1].querySelector('dd')?.textContent).toBe('$ 100.00');
+    expect(summary.querySelector('br')).toBeNull();
+    expect(summary.classList.contains('notice')).toBe(false);
+  });
+
   it('uses available reward balance rather than lifetime total and rejects insufficient or over-precise amounts', async () => {
     const { user } = renderUser();
     const form = within(screen.getByRole('dialog'));

@@ -37,14 +37,15 @@ it('keeps invitation links in the compact menu and dismisses on section navigati
 it('closes the menu when clicking outside without changing language', async () => {
   const user = open();
   await user.click(screen.getByRole('button', { name: '打开导航' }));
-  await user.click(screen.getByRole('combobox'));
+  await user.click(screen.getByRole('button', { name: '语言' }));
   expect(document.querySelector('.home-menu-panel')).toBeNull();
 });
 it('keeps long translated controls accessible and menu labels reactive', async () => {
   setLocale('fr', false);
   const user = open();
   expect(screen.getByRole('link', { name: t('免费开始') }).getAttribute('title')).toBe(t('免费开始'));
-  await user.selectOptions(screen.getByRole('combobox'), 'de');
+  await user.click(screen.getByRole('button', { name: t('语言') }));
+  await user.click(screen.getByRole('menuitemradio', { name: 'Deutsch' }));
   await user.click(screen.getByRole('button', { name: t('打开导航') }));
   expect(within(document.querySelector('.home-menu-panel')!).getByRole('button', { name: t('常见问题') })).toBeTruthy();
 });

@@ -30,7 +30,7 @@ for (const item of content.solutions.items) {
 assert.deepEqual([...main.querySelectorAll('.home-faq-list summary')].map(node => node.textContent), content.faq.items.map(item => item.question));
 assert.deepEqual([...main.querySelectorAll('.home-faq-list details p')].map(node => node.textContent), content.faq.items.map(item => item.answer));
 assert.equal(main.querySelectorAll('[hidden], [aria-hidden="true"]').length, 0, 'SEO copy is normal visible product content');
-for (const keyword of ['APK 分发', '应用分流', '斗篷', '下载落地页']) assert.ok(main.textContent.includes(keyword), `missing visible product topic: ${keyword}`);
+for (const keyword of ['APK 分发', 'PWA', '回流页', 'Web Push', '应用分流', '斗篷', '下载落地页']) assert.ok(main.textContent.includes(keyword), `missing visible product topic: ${keyword}`);
 assert.equal(main.querySelectorAll('form, input').length, 0, 'initial HTML must contain public marketing content only');
 assert.ok(!html.includes('HOME_SEO_HEAD') && !html.includes('HOME_PRERENDER'), 'build placeholders must be replaced');
 

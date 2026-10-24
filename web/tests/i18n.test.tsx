@@ -73,10 +73,11 @@ describe('catalog coverage', () => {
 describe('reactive interface', () => {
   it('offers all nine native language names and remembers a selected value', async () => {
     const user = userEvent.setup(); render(<LanguageSelector />);
-    expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual(languageOptions.map(option => option.label));
-    await user.selectOptions(screen.getByRole('combobox'), 'fr');
+    await user.click(screen.getByRole('button', { name: '语言' }));
+    expect(screen.getAllByRole('menuitemradio').map(option => option.querySelector('[lang]')?.textContent)).toEqual(languageOptions.map(option => option.label));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Français' }));
     expect(getLocale()).toBe('fr'); expect(localStorage.getItem('d1.locale')).toBe('fr');
-    expect(screen.getByRole('combobox', { name: 'Langue' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Langue' })).toBeTruthy();
   });
   it.each(locales)('renders translated homepage content in %s without translating customer data', locale => {
     setLocale(locale, false);
@@ -96,7 +97,8 @@ describe('reactive interface', () => {
     const user = userEvent.setup(), client = new QueryClient();
     render(<QueryClientProvider client={client}><LanguageSelector /><AppDownloadSettings app={{ id: 'test', name: '客户应用名称', download_mode: 'direct' } as App} close={vi.fn()} /></QueryClientProvider>);
     await user.click(screen.getByRole('tab', { name: '跳转详情页' }));
-    await user.selectOptions(screen.getByRole('combobox'), 'en');
+    await user.click(screen.getByRole('button', { name: '语言' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
     expect(screen.getByRole('tab', { name: 'Open detail page', selected: true })).toBeTruthy();
     expect(screen.getByText(/客户应用名称/)).toBeTruthy(); client.clear();
   });

@@ -69,12 +69,15 @@ export function ReferralWithdrawals({ summary, open, close }: { summary: Referra
     <div className="withdrawal-records-heading"><h3>{t('提现记录')}</h3></div>
     {query.error ? <ErrorState error={query.error} retry={() => query.refetch()} /> : !query.data ? <Spinner /> : !query.data.data.length ? <Empty title={t('暂无提现记录')} detail={t('可提现额度达到 $100 后，可提交提现申请。')} /> : <div className="table-wrap"><table><thead><tr><th>{t('申请金额')}</th><th>{t('收款信息 / 处理记录')}</th><th>{t('状态')}</th><th>{t('申请时间')}</th></tr></thead><tbody>{query.data.data.map(withdrawal => <tr key={withdrawal.id}><td className="nowrap">$ {rechargeMoney(withdrawal.amount_micros)}</td><td><WithdrawalDetails withdrawal={withdrawal} /></td><td><WithdrawalStatus status={withdrawal.status} /></td><td className="muted nowrap">{date(withdrawal.created_at, true)}<small className="cell-sub mono">{withdrawal.id}</small></td></tr>)}</tbody></table></div>}
     <fieldset className="referral-pager" disabled={query.isFetching}><Pager page={page} total={query.data?.total || 0} setPage={setPage} size={pageSize} /></fieldset>
-    {open && <Modal title={t('申请提现')} close={() => { if (!submitting.current) close(); }}><form onSubmit={submit}>
-      <div className="notice compact">{t('可提现额度：')}<strong>$ {rechargeMoney(available)}</strong><br />{t('单笔最低提现：')}<strong>$ {rechargeMoney(minimum)}</strong></div>
+    {open && <Modal title={t('申请提现')} close={() => { if (!submitting.current) close(); }}><form className="withdrawal-request-form" onSubmit={submit}>
+      <dl className="withdrawal-request-summary">
+        <div><dt>{t('可提现额度：')}</dt><dd>$ {rechargeMoney(available)}</dd></div>
+        <div><dt>{t('单笔最低提现：')}</dt><dd>$ {rechargeMoney(minimum)}</dd></div>
+      </dl>
       {available < minimum && <p className="withdrawal-threshold" role="status">{t('可提现额度尚未达到 $100，请达到门槛后再申请。')}</p>}
       <Field label={t('提现金额（美元）')} hint={t('最多支持 6 位小数，申请金额不可超过可提现额度。')}><input aria-label={t('提现金额（美元）')} required inputMode="decimal" autoComplete="off" placeholder="100" maxLength={24} value={amount} disabled={busy} onChange={event => setAmount(event.target.value)} /></Field>
       <Field label={t('USDT（TRC20）收款地址')} hint={t('仅支持 TRON 网络，请仔细核对地址，打款后无法撤回。')}><input aria-label={t('USDT（TRC20）收款地址')} required autoComplete="off" spellCheck={false} maxLength={34} pattern="T[1-9A-HJ-NP-Za-km-z]{33}" placeholder="T…" value={address} disabled={busy} onChange={event => setAddress(event.target.value)} /></Field>
-      <p className="small muted">{t('提交后会冻结对应额度；管理员审核通过后人工打款，审核驳回则退回。')}</p>
+      <p className="withdrawal-request-note">{t('提交后会冻结对应额度；管理员审核通过后人工打款，审核驳回则退回。')}</p>
       <FormError>{error}</FormError><div className="modal-footer"><button type="button" className="btn secondary" disabled={busy} onClick={close}>{t('取消')}</button><button className="btn primary" disabled={busy || !canSubmit}>{busy ? t('提交中…') : t('提交提现申请')}</button></div>
     </form></Modal>}
   </section>;

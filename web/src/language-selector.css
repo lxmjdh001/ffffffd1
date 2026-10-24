@@ -1,7 +1,25 @@
 /* Fixed control widths keep translated labels from moving surrounding content. */
 .language-switcher{position:relative;display:inline-flex;align-items:center;width:124px;max-width:100%;flex:0 0 124px;color:#74839b}
-.language-switcher>svg{position:absolute;left:9px;width:14px;height:14px;pointer-events:none;z-index:1}
-.language-switcher select{display:block;width:100%;max-width:100%;min-width:0;height:34px;background:#fff;border:1px solid #e1e6ef;padding:7px 21px 7px 29px;border-radius:7px;font-size:11px;color:#53647d;line-height:1.5;cursor:pointer}
+.language-trigger{display:flex;align-items:center;gap:7px;width:100%;min-width:0;height:36px;padding:5px 8px 5px 5px;border:1px solid #e6ebe1;border-radius:11px;background:#f3f5ef;color:#61705a;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s;font-size:11px;font-weight:550;text-align:left}
+.language-trigger:hover,.language-trigger[aria-expanded=true]{background:#ecf1e6;border-color:#dce6d4;color:#4e6b42}
+.language-trigger[aria-expanded=true]{box-shadow:0 0 0 3px #6c815b0c}
+.language-trigger:focus-visible{outline:2px solid #a6bb95;outline-offset:3px}
+.language-trigger-icon{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;border-radius:7px;background:white;color:#829675;box-shadow:0 1px 3px #253d6d0a}
+.language-trigger-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5}
+.language-trigger-chevron{flex-shrink:0;color:#a0ad96;transition:transform .15s}
+.language-trigger[aria-expanded=true] .language-trigger-chevron{transform:rotate(180deg)}
+.language-menu{position:fixed;z-index:10000;width:min(308px,calc(100vw - 24px));padding:8px;border:1px solid #e6eadf;border-radius:15px;background:#fffefa;box-shadow:0 16px 48px #36452c18,0 3px 10px #334b3106;overflow:auto;overscroll-behavior:contain;color:#61705a}
+.language-menu-heading{display:flex;align-items:center;gap:8px;padding:7px 8px 12px;color:#9ca891;font-size:11px;border-bottom:1px solid #f0f2ea;margin-bottom:7px}
+.language-menu-heading small{margin-left:auto;font-size:9px;letter-spacing:.5px;color:#a7b29c}
+.language-menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.language-option{display:flex;align-items:center;gap:8px;min-width:0;min-height:40px;padding:8px;border:1px solid transparent;border-radius:9px;background:transparent;color:#68775e;font-size:11px;line-height:1.5;text-align:left;cursor:pointer}
+.language-option:hover,.language-option:focus-visible{background:#f4f6ef;outline:none;border-color:#e9eee0}
+.language-option[aria-checked=true]{background:#ecf2e4;color:#6c8557;border-color:#e5eddc}
+.language-option-code{display:grid;place-items:center;flex:0 0 23px;width:23px;height:23px;background:#f0f3ea;border-radius:6px;color:#a4af99;font-size:8px;letter-spacing:.2px;font-weight:650}
+.language-option[aria-checked=true] .language-option-code{background:white;color:#8ca375}
+.language-option>span:nth-child(2){flex:1;min-width:0;white-space:nowrap}
+.language-option>svg{flex-shrink:0}
+@media(prefers-reduced-motion:reduce){.language-trigger,.language-trigger-chevron{transition:none}}
 
 /* One-row public header at every breakpoint, regardless of locale. */
 .home .home-nav{display:grid;grid-template-columns:140px minmax(0,1fr) 452px;align-items:center;height:88px;min-height:88px;gap:20px;padding-block:0;flex-wrap:nowrap}
@@ -10,7 +28,7 @@
 .home .home-nav-brand .brand img{flex-shrink:0}
 .home .home-nav-sections{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,.6fr) minmax(0,1.4fr);gap:12px;margin-left:0;min-width:0}
 .home .home-nav-sections button{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
-.home .home-nav-actions{display:grid;grid-template-columns:124px 84px 220px;gap:12px;margin-left:0;min-width:0;flex-wrap:nowrap}
+.home .home-nav-actions{display:grid;grid-template-columns:124px 84px 220px;align-items:center;gap:12px;margin-left:0;min-width:0;flex-wrap:nowrap}
 .home .home-nav-actions .home-login{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;min-width:0}
 .home .home-nav-actions .home-button-small{min-width:0;gap:8px;width:100%;white-space:nowrap;padding-inline:12px}
 .home .home-nav-actions .home-button-small>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -45,7 +63,7 @@
 .auth-top{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
 .auth-top .language-switcher{margin-right:auto}
 .home .home-hero-copy,.home .home-section-top>div{min-width:0}
-html:not([lang^="zh"]):not([lang="ja"]):not([lang="ko"]) .home h1{font-size:clamp(38px,4.6vw,60px);letter-spacing:-1.5px;overflow-wrap:anywhere}
+html:not([lang^="zh"]):not([lang="ja"]):not([lang="ko"]) .home:not(.home-editorial):not(.home-soft) h1{font-size:clamp(38px,4.6vw,60px);letter-spacing:-1.5px;overflow-wrap:anywhere}
 
 @media(max-width:1199px){
   .home .home-nav{grid-template-columns:minmax(0,1fr) 452px 38px;gap:16px}
@@ -61,7 +79,7 @@ html:not([lang^="zh"]):not([lang="ja"]):not([lang="ko"]) .home h1{font-size:clam
 }
 @media(max-width:650px){
   .language-switcher{width:108px;flex-basis:108px}
-  .language-switcher select{font-size:10px}
+  .language-trigger{gap:5px;font-size:10px;padding-right:6px}
   .home .home-nav{grid-template-columns:minmax(0,1fr) 108px 38px;gap:10px}
   .home .home-nav-actions{grid-template-columns:108px;gap:0}
   .home .home-hero-actions{flex-wrap:wrap}
