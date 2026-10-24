@@ -8,8 +8,8 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -408,14 +408,28 @@ func (s *Server) deleteApp(w http.ResponseWriter, r *http.Request) {
 		if e := tx.First(&app, "id = ? AND user_id = ?", r.PathValue("id"), userOf(r).ID).Error; e != nil {
 			return e
 		}
-		return tx.Delete(&app).Error
+		// Only the app and its live configuration are removed. Download and
+		// billing history, including tickets awaiting reservation release, stay.
+		for _, model := range []any{&AppPageDesign{}, &AdConfig{}} {
+			if e := tx.Where("app_id = ?", app.ID).Delete(model).Error; e != nil {
+				return e
+			}
+		}
+		// Application keeps DeletedAt for legacy rows; this endpoint must never
+		// soft-delete new requests or keep the unique share slug reserved.
+		if e := tx.Unscoped().Delete(&app).Error; e != nil {
+			return e
+		}
+		return recordAudit(tx, userOf(r).ID, "app.delete", app.ID, app.Name)
 	})
 	if e != nil {
 		fail(w, e)
 		return
 	}
+	cleanupPending := false
 	if e = s.Blobs.Delete(context.Background(), app.FileKey); e != nil && !errors.Is(e, os.ErrNotExist) {
-		fmt.Println("file cleanup deferred")
+		cleanupPending = true
+		slog.Warn("deleted app file cleanup deferred", "app", app.ID, "error", e)
 	}
-	jsonOut(w, 200, map[string]bool{"ok": true})
+	jsonOut(w, 200, map[string]bool{"ok": true, "file_cleanup_pending": cleanupPending})
 }
