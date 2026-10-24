@@ -17,7 +17,7 @@ func (s *Server) lookupTrackedWebRisk(ctx context.Context, client *http.Client, 
 	month := s.Now().UTC().Format("2006-01")
 	err := s.DB.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "month"}},
-		DoUpdates: clause.Assignments(map[string]any{"requests": gorm.Expr("requests + 1")}),
+		DoUpdates: clause.Assignments(map[string]any{"requests": gorm.Expr("risk_usages.requests + 1")}),
 	}).Create(&RiskUsage{Month: month, Requests: 1}).Error
 	if err != nil {
 		return false, err

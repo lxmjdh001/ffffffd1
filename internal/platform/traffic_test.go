@@ -123,7 +123,7 @@ func TestTrafficMultiplePoolsSequentialAndOwnership(t *testing.T) {
 
 func TestTrafficLegacyMigrationKeepsEntryAndLinks(t *testing.T) {
 	s := testServer(t)
-	if err := s.DB.Exec("CREATE TABLE traffic_pools (user_id text PRIMARY KEY, slug text, enabled boolean, updated_at datetime)").Error; err != nil {
+	if err := s.DB.Exec("CREATE TABLE traffic_pools (user_id text PRIMARY KEY, slug text, enabled boolean, updated_at timestamp)").Error; err != nil {
 		t.Fatal(err)
 	}
 	if err := s.DB.Exec("INSERT INTO traffic_pools VALUES ('legacy-user','legacy-entry',false,CURRENT_TIMESTAMP)").Error; err != nil {

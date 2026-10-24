@@ -166,7 +166,8 @@ func TestReferralThreeLevelsPrincipalOnlyAndPermanentRewards(t *testing.T) {
 			if err := s.DB.First(&ledger, "reference = ?", "referral:"+order.ID+":1").Error; err != nil || ledger.Kind != "referral_reward" || ledger.UserID != chain[3].ID {
 				t.Fatal("reward did not credit spendable balance with a unique ledger reference")
 			}
-			originalNow := s.Now()
+			// PostgreSQL stores microsecond timestamps, unlike SQLite's text.
+			originalNow := s.Now().Truncate(time.Microsecond)
 			s.Now = func() time.Time { return originalNow.AddDate(5, 0, 0) }
 			next := seedReferralOrder(t, s, payer, method, 1234567, 0)
 			if err := s.settle(next.ID, "test:"+next.ID, method, next.AmountMicros); err != nil {

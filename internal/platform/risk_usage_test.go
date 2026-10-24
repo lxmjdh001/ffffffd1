@@ -4,18 +4,23 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
 func TestRiskUsageCountsFailuresAndMonthlyRemaining(t *testing.T) {
 	s := testServer(t)
-	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(503) }))
+	var attempts atomic.Int64
+	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { attempts.Add(1); w.WriteHeader(503) }))
 	defer endpoint.Close()
 	for i := 0; i < 2; i++ {
 		if _, err := s.lookupTrackedWebRisk(context.Background(), endpoint.Client(), endpoint.URL, "fixture", "https://example.com/app.apk"); err == nil {
 			t.Fatal("expected lookup failure")
 		}
+	}
+	if attempts.Load() != 2 {
+		t.Fatal("tracked requests failed before reaching the upstream API")
 	}
 	usage, err := s.riskUsageSummary()
 	if err != nil {
