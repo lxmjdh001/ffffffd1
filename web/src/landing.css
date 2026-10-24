@@ -97,7 +97,7 @@
 .home-step-line{position:absolute;left:48px;right:53px;top:28px;border-top:1px dashed #dfebfa}
 .home-features-wrap{background:#f6faff;border-block:1px solid #edf4fd;padding:72px 0 78px;scroll-margin-top:35px}
 .home-section-note{font-size:11px;color:#9aabc0;margin-bottom:7px}
-.home-feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.home-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
 .home-feature-grid>article{position:relative;background:#fff;border:1px solid #e0ebf9;border-radius:12px;padding:27px 25px 0;box-shadow:0 7px 0 -3px #e9f2ff,0 14px 0 -7px #dfedff,0 12px 24px #39659e03;min-height:259px;overflow:hidden}
 .home-feature-icon{width:42px;height:42px;display:grid;place-items:center;color:#78a3df;background:#eff6ff;border:1px solid #e5effc;border-radius:11px;margin-bottom:21px}
 .home-feature-grid h3{font-size:15px;font-weight:550;color:#4c6584;margin-bottom:10px}
@@ -110,6 +110,10 @@
 .home-security-illustration{display:flex;align-items:center;gap:12px;padding:15px 16px;margin:24px -4px -9px 8px;border:1px solid #dfeaf9;border-radius:9px 9px 0 0;background:#f5f9ff;transform:rotate(3deg);color:#82a9de}
 .home-security-illustration strong{display:block;font-size:10px;font-weight:500;color:#809bc0;margin-bottom:5px}
 .home-security-illustration span{font-size:8px;color:#acbad0}
+.home-cloak-illustration{display:flex;align-items:center;justify-content:center;gap:22px;padding:17px 20px;margin:23px 12px -8px;border:1px solid #dfeaf9;border-radius:9px 9px 0 0;background:#f5f9ff;transform:rotate(-2deg);color:#7399cc}
+.home-cloak-illustration>span,.home-cloak-illustration>div>span{display:flex;align-items:center;gap:7px;font-size:11px;white-space:nowrap}
+.home-cloak-illustration>div{display:flex;flex-direction:column;gap:9px;padding-left:2px}
+@media(max-width:600px){.home-cloak-illustration{gap:18px;margin-inline:18px;padding:15px 12px}.home-cloak-illustration>span,.home-cloak-illustration>div>span{font-size:10px}}
 .home-pricing{padding-top:84px;padding-bottom:65px}
 .home-pricing-heading{text-align:center;margin-bottom:37px}
 .home-pricing-heading h2>span{color:#6191d2}

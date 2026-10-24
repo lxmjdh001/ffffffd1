@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, CheckCheck, CloudUpload, Copy, Globe2, Layers3, Link2, Monitor, Package, ShieldCheck, Smartphone, Sparkles } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, CheckCheck, CloudUpload, Copy, Globe2, Layers3, Link2, ListFilter, Monitor, Package, ShieldCheck, Smartphone, Sparkles } from 'lucide-react';
 import { Brand } from './auth';
 import { bytes, money, number, useConfig } from './ui';
 import './landing.css';
@@ -76,7 +76,8 @@ export function LandingPage() {
         <div className="home-feature-grid">
           <article className="home-feature-domain"><div className="home-feature-icon"><Globe2 size={23} strokeWidth={1.5} /></div><h3>你的域名，你的品牌</h3><p>使用自己的下载域名，让每一次访问，都延续你的品牌体验。</p><div className="home-domain-illustration" aria-hidden="true"><Globe2 size={17} /><span>download.yourbrand.com</span><Link2 size={14} /></div></article>
           <article className="home-feature-insights"><div className="home-feature-icon"><Layers3 size={23} strokeWidth={1.5} /></div><h3>管理更有条理</h3><p>应用版本、下载记录和账户用量，在一个清晰的工作空间中掌握。</p><div className="home-insight-illustration" aria-hidden="true"><span><Package size={15} />应用管理<Check size={13} /></span><span><ArrowDownRight size={15} />下载记录<Check size={13} /></span></div></article>
-          <article className="home-feature-security"><div className="home-feature-icon"><ShieldCheck size={23} strokeWidth={1.5} /></div><h3>为安心，多想一步</h3><p>付费套餐支持自动检查分流域名安全，开启后持续关注下载入口状态。</p><div className="home-security-illustration" aria-hidden="true"><ShieldCheck size={34} strokeWidth={1.3} /><div><strong>自动检查域名安全</strong><span>付费套餐专属权益</span></div></div></article>
+          <article className="home-feature-cloak"><div className="home-feature-icon"><ListFilter size={23} strokeWidth={1.5} /></div><h3>斗篷，让访问按规则抵达</h3><p>选择已有分流链接或直接输入 URL，按语言、UA、国家、平台、设备及系统设置访问规则。命中拦截条件时，自动跳转到你指定的安全页。</p><div className="home-cloak-illustration" aria-hidden="true"><span><ListFilter size={16} />访问规则</span><ArrowRight size={15} /><div><span><Link2 size={14} />目标页</span><span><ShieldCheck size={14} />安全页</span></div></div></article>
+          <article className="home-feature-security"><div className="home-feature-icon"><ShieldCheck size={23} strokeWidth={1.5} /></div><h3>自动检测域名安全性</h3><p>付费套餐在应用分流中开启安全检测后，系统约每 120 分钟自动检查分流链接风险。命中风险的域名会自动停止参与分流，让你及时掌握下载入口状态。</p><div className="home-security-illustration" aria-hidden="true"><ShieldCheck size={34} strokeWidth={1.3} /><div><strong>定时检测 · 风险自动排除</strong><span>付费套餐专属权益</span></div></div></article>
         </div>
       </div></section>
 
