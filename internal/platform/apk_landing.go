@@ -89,7 +89,17 @@ func (s *Server) apkLandingConfigData(w http.ResponseWriter, r *http.Request) (m
 	if e != nil {
 		return nil, e
 	}
-	return s.apkLandingRuntime(a, d), nil
+	requested := r.URL.Query().Get("language")
+	if requested == "" {
+		requested = r.Header.Get("Accept-Language")
+	}
+	d = d.localized(requested)
+	w.Header().Add("Vary", "Accept-Language")
+	runtime := s.apkLandingRuntime(a, d)
+	// Relative template/media paths must resolve against the visitor's chosen
+	// download domain, including when the page was rendered by a cloak.
+	runtime["s3PublicDomain"] = s.pwaRequestOrigin(r)
+	return runtime, nil
 }
 func (s *Server) apkLandingConfig(w http.ResponseWriter, r *http.Request) {
 	v, e := s.apkLandingConfigData(w, r)

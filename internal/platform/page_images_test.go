@@ -196,12 +196,18 @@ func TestPageImageCleanupPreservesPublishedDraftOtherEnvironmentAndPWA(t *testin
 	f := attachPageImageFixture(t, s)
 	cookie, csrf := sessionFor(t, s, u)
 	published := uploadedPageImage(t, s, a, cookie, csrf)
+	localized := uploadedPageImage(t, s, a, cookie, csrf)
 	orphan := uploadedPageImage(t, s, a, cookie, csrf)
 	recent := uploadedPageImage(t, s, a, cookie, csrf)
 	design := defaultPageDesign(a)
 	design.Icon = published
+	locale := design
+	locale.Language = "en-US"
+	locale.Icon = localized
+	design.Localizations = []PageDesign{locale}
+	design.LanguagePriority = []string{"en-US"}
 	requireCode(t, call(t, s, "PUT", "/api/apps/"+a.ID+"/page-design", design, cookie, csrf), 200)
-	if err := s.DB.Model(&PageImageObject{}).Where("url IN ?", []string{published, orphan}).Update("created_at", s.Now().Add(-48*time.Hour)).Error; err != nil {
+	if err := s.DB.Model(&PageImageObject{}).Where("url IN ?", []string{published, localized, orphan}).Update("created_at", s.Now().Add(-48*time.Hour)).Error; err != nil {
 		t.Fatal(err)
 	}
 	foreign := PageImageObject{Key: "d1apk/page-images/other-environment/" + a.ID + "/" + randomHex(16) + ".jpg", AppID: a.ID, UserID: u.ID, URL: "https://images.example.com/other.jpg", CreatedAt: s.Now().Add(-48 * time.Hour)}
@@ -214,7 +220,7 @@ func TestPageImageCleanupPreservesPublishedDraftOtherEnvironmentAndPWA(t *testin
 	if len(f.deleted) != 1 || f.deleted[0] != strings.TrimPrefix(orphan, "https://images.example.com/") {
 		t.Fatal("cleanup deleted a live/recent/foreign asset", f.deleted)
 	}
-	for _, raw := range []string{published, recent} {
+	for _, raw := range []string{published, localized, recent} {
 		if _, ok := f.objects[strings.TrimPrefix(raw, "https://images.example.com/")]; !ok {
 			t.Fatal("published or pending draft image was removed")
 		}

@@ -42,11 +42,18 @@
  if(document.body.classList.contains('pwa-reference-page'))window.downloadInCurrentPage=downloadInCurrentPage;
  async function installApp(options = {}) {
   const settings=window.__APP_CONFIG__?.app?.settings;
+  if (window.showBrowserGuide && window.showBrowserGuide()) return;
   if(!options.forcePwa && settings?.packagePriority==='w2a_only' && settings.apkUrl) {
+   // Match both source templates: APK/W2A is Android-only; iOS follows
+   // its configured compatible destination, never the Android package.
+   if(isIOS) {
+    const target=window.__APP_CONFIG__?.iosRedirectUrl;
+    if(settings.iosCompatible && target) { window.location.assign(target);return {outcome:'ios_redirect'}; }
+    return {outcome:'unsupported'};
+   }
    if(options.source!=='return_flow' && window.scheduleReturnFlowRiskCancelPrompt)window.scheduleReturnFlowRiskCancelPrompt('download_risk_cancel');
    downloadInCurrentPage(settings.apkUrl);return {outcome:'apk_download'};
   }
-  if (window.showBrowserGuide && window.showBrowserGuide()) return;
   if (!installPrompt) { showGuide(); return; }
   const prompt = installPrompt; installPrompt = null; if (installButton) installButton.disabled = true;
   try { await prompt.prompt(); const choice = await prompt.userChoice; setStatus(installStatus, choice.outcome === 'accepted' ? text('Installation started. Look for the app on your home screen.', '已开始安装，请在桌面查看应用。') : text('Installation canceled. You can install it later.', '已取消安装，你可以随时重新安装。')); }

@@ -213,7 +213,7 @@ func (s *Server) pwaLandingRuntime(a *PWAApp, r *http.Request) map[string]any {
 		requested = r.Header.Get("Accept-Language")
 	}
 	v := pwaLandingLanguage(c, requested)
-	base := s.Config.PublicURL + "/p/" + a.Slug + "/"
+	base := s.pwaRequestOrigin(r) + "/p/" + a.Slug + "/"
 	if v.AppIcon == "" {
 		v.AppIcon = base + "icon/512.png"
 	}
@@ -230,7 +230,7 @@ func (s *Server) pwaLandingRuntime(a *PWAApp, r *http.Request) map[string]any {
 	if c.Settings.APKURL != "" {
 		settings["apkUrl"] = returnFlowButtonURL(c.Settings.APKURL, s.Config.PublicURL)
 	}
-	out := map[string]any{"apiBaseUrl": strings.TrimSuffix(base, "/"), "s3PublicDomain": s.Config.PublicURL, "productH5Url": a.TargetURL, "iosRedirectUrl": c.IOSRedirectURL}
+	out := map[string]any{"apiBaseUrl": strings.TrimSuffix(base, "/"), "s3PublicDomain": s.pwaRequestOrigin(r), "productH5Url": a.TargetURL, "iosRedirectUrl": c.IOSRedirectURL}
 	common := map[string]any{"id": a.ID, "appName": a.Name, "appIcon": base + "icon/512.png", "startupBgColor": c.StartupBgColor, "startupThemeColor": c.StartupThemeColor, "displayMode": c.DisplayMode, "pwaOrientation": c.PWAOrientation, "bottomMenu": c.BottomMenu, "enableGoogleBadge": c.EnableGoogleBadge, "enableOfficialVerify": c.EnableOfficialVerify, "settings": settings, "storeInfo": v}
 	out["app"] = common
 	custom := map[string]any{}

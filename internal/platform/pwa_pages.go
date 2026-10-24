@@ -29,6 +29,16 @@ var pwaPageCSS string
 
 var pwaPageTemplate = template.Must(template.New("pwa-page").Parse(pwaPageHTML))
 
+// Called only after the host middleware has validated the configured host,
+// public domain audience or verified customer domain. Never trust forwarded Host.
+func (s *Server) pwaRequestOrigin(r *http.Request) string {
+	scheme := "https"
+	if !s.Config.Production() {
+		scheme = "http"
+	}
+	return scheme + "://" + r.Host
+}
+
 type pwaPageData struct {
 	ReturnFlowToken string
 	App             *PWAApp
@@ -121,7 +131,7 @@ func (s *Server) pwaManifest(w http.ResponseWriter, r *http.Request) {
 		if v.AppIcon != "" {
 			icon = v.AppIcon
 			if !strings.HasPrefix(icon, "https://") && !strings.HasPrefix(icon, "http://") {
-				icon = strings.TrimRight(s.Config.PublicURL, "/") + "/" + strings.TrimLeft(icon, "/")
+				icon = s.pwaRequestOrigin(r) + "/" + strings.TrimLeft(icon, "/")
 			}
 		}
 	}

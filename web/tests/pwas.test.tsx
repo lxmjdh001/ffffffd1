@@ -32,6 +32,7 @@ beforeEach(() => {
     }
     if (path.startsWith('/api/pwas/')) return new Response(JSON.stringify(rows.find(row=>row.id===path.split('/')[3])));
     if (path === '/api/pwas') return new Response(JSON.stringify({ data: rows }));
+    if (path === '/api/download-domains') return new Response(JSON.stringify({data:[{url:'https://chosen.example',remark:'',source:'platform',audience:'all'}]}));
     throw new Error(`Unexpected request ${method} ${path}`);
   }));
 });
@@ -40,6 +41,32 @@ function setup() { render(<QueryClientProvider client={client}><MemoryRouter><Ro
 async function openCreate(user: ReturnType<typeof userEvent.setup>) { await user.click(await screen.findByRole('button', { name: '新建 PWA 应用' })); const form = within(await screen.findByRole('form')); await user.type(form.getByLabelText('应用名称'), '新应用'); await user.type(form.getByLabelText('网页 URL'), 'https://new.example'); return form; }
 
 describe('PWA applications', () => {
+  it('matches the source template controls and persists all install/access flags',async()=>{
+    const user=setup();const form=await openCreate(user);
+    expect(form.queryByLabelText('嵌入网页')).toBeNull();
+    expect(form.getAllByLabelText('显示桌面二维码')).toHaveLength(1);
+    await user.click(form.getByLabelText('兼容 iOS'));
+    await user.click(form.getByLabelText('自动下载 APK'));
+    await user.click(form.getByLabelText('显示桌面二维码'));
+    await user.click(form.getByLabelText('浏览器打开引导'));
+    await user.type(form.getByLabelText('浏览器引导文案'),'Open in your browser');
+    await user.click(form.getByRole('button',{name:'自定义图片模板'}));
+    await user.click(form.getByLabelText('嵌入网页'));
+    expect(form.getAllByLabelText('显示桌面二维码')).toHaveLength(1);
+    await user.click(form.getByLabelText('显示桌面二维码'));
+    await user.click(form.getByRole('button',{name:'创建应用',exact:true}));
+    await waitFor(()=>expect(screen.queryByRole('form')).toBeNull());
+    expect(writes[0]).toMatchObject({body:{landing_config:{template:'custom',settings:{iosCompatible:false,w2aAutoDownload:true,enableIframeEmbed:true,enableQrcode:true,browserGuideConfig:{enabled:true,message:'Open in your browser'}},storeInfos:[{showQrCode:true}]}}});
+  });
+  it('opens the right-side domain drawer for the install link',async()=>{
+    const user=setup();await screen.findByRole('heading',{name:app.name});
+    await user.click(screen.getByRole('button',{name:'复制',exact:true}));
+    const drawer=within(await screen.findByRole('dialog'));
+    expect(drawer.getByRole('heading',{name:'选择域名复制链接'})).toBeTruthy();
+    expect(await drawer.findByText('https://chosen.example/p/my-shop/')).toBeTruthy();
+    expect(screen.getByRole('dialog').className).toContain('side');
+    expect(writes).toHaveLength(0);
+  });
   it('shows owned applications and an install QR code without exposing configuration secrets', async () => {
     const user = setup(); expect(await screen.findByRole('heading', { name: app.name })).toBeTruthy(); expect(screen.getAllByText('12')).toHaveLength(2);
     await user.click(screen.getByRole('button', { name: '安装二维码' })); const dialog = within(screen.getByRole('dialog')); expect(dialog.getByRole('link', { name: app.entry_url }).getAttribute('href')).toBe(app.entry_url); expect(dialog.getByTitle('扫描二维码安装应用')).toBeTruthy();

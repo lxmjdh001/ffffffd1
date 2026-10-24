@@ -37,6 +37,8 @@ var ratingStarsHTML string
 var ratingStarsCSS string
 
 type PageDesign struct {
+	Localizations        []PageDesign       `json:"localizations,omitempty"`
+	LanguagePriority     []string           `json:"language_priority,omitempty"`
 	Landing              *APKLandingOptions `json:"landing,omitempty"`
 	ReturnFlowConfig     *ReturnFlowConfig  `json:"return_flow_config,omitempty"`
 	Layout               string             `json:"layout"`
@@ -123,6 +125,9 @@ func validatePageDesign(d PageDesign, publicURL ...string) error {
 	if len(publicURL) > 0 {
 		origin = publicURL[0]
 	}
+	if err := validateAPKLocales(d, origin); err != nil {
+		return err
+	}
 	if d.ReturnFlowConfig != nil {
 		if err := normalizeReturnFlow(d.ReturnFlowConfig, origin); err != nil {
 			return err
@@ -131,7 +136,7 @@ func validatePageDesign(d PageDesign, publicURL ...string) error {
 	if err := validateAPKLanding(d.Landing); err != nil {
 		return err
 	}
-	if _, supported := pageLanguages[d.Language]; d.Language != "" && !supported {
+	if _, supported := pageLanguages[d.Language]; d.Language != "" && !supported && apkLanguageButtons[apkLocaleCode(d.Language)] == "" {
 		return problem(400, "请选择支持的详情页语言")
 	}
 	if (d.Layout != "store" && d.Layout != "minimal" && d.Layout != "google_play" && d.Layout != "custom") || !pageColor.MatchString(d.ThemeColor) || !pageColor.MatchString(d.BackgroundColor) {
@@ -194,6 +199,19 @@ func (s *Server) savePageDesign(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := s.validatePageImageReferences(tx, a.ID, d); err != nil {
 			return err
+		}
+		for _, locale := range d.Localizations {
+			if err := s.validatePageImageReferences(tx, a.ID, locale); err != nil {
+				return err
+			}
+			for _, media := range append([]string{locale.Icon}, locale.Screenshots...) {
+				if err := s.validateReturnFlowAsset(tx, a.UserID, &ReturnFlowConfig{MediaURL: media}); err != nil {
+					return err
+				}
+			}
+			if err := s.validateReturnFlowAsset(tx, a.UserID, locale.ReturnFlowConfig); err != nil {
+				return err
+			}
 		}
 		for _, media := range append([]string{d.Icon}, d.Screenshots...) {
 			if err := s.validateReturnFlowAsset(tx, a.UserID, &ReturnFlowConfig{MediaURL: media}); err != nil {

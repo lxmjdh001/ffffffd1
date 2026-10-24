@@ -206,7 +206,7 @@ func (s *Server) pwaEventToken(d PWAPushDelivery) string {
 	return s.mac("pwa-push-event:" + d.PWAID + ":" + d.ID)
 }
 func (s *Server) pwaPublicPOST(r *http.Request) error {
-	if r.Header.Get("Origin") != s.Config.PublicURL || r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+	if r.Header.Get("Origin") != s.pwaRequestOrigin(r) || r.Header.Get("Sec-Fetch-Site") == "cross-site" {
 		return problem(403, "请求来源不受信任")
 	}
 	return nil

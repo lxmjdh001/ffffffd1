@@ -1,0 +1,2 @@
+// Shared by PWA and APK editors; keep the same supported codes and order.
+export const landingLanguages=[['en-US','English'],['zh-CN','简体中文'],['zh-TW','繁體中文'],['es-ES','Español'],['fr-FR','Français'],['de-DE','Deutsch'],['ja-JP','日本語'],['ko-KR','한국어'],['pt-BR','Português'],['ru-RU','Русский'],['it-IT','Italiano'],['ar-SA','العربية'],['hi-IN','हिन्दी'],['tr-TR','Türkçe'],['vi-VN','Tiếng Việt'],['th-TH','ไทย'],['pl-PL','Polski'],['nl-NL','Nederlands'],['id-ID','Indonesia'],['sv-SE','Svenska'],['uk-UA','Українська'],['ro-RO','Română'],['cs-CZ','Čeština']];

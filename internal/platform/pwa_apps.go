@@ -538,12 +538,15 @@ func resizePWAIcon(src image.Image, size int) *image.NRGBA {
 	return dst
 }
 
-// Every public endpoint shares the same tenant/owner availability checks. Public
-// PWA wrappers can never be served on customer APK/download domains.
+// Every public endpoint shares the same tenant/owner and domain-audience checks.
 func (s *Server) loadPublicPWA(r *http.Request) (*PWAApp, error) {
 	host := requestHost(r)
 	if host != s.Config.Host() && !(!s.Config.Production() && (host == "localhost" || host == "127.0.0.1")) {
-		return nil, gorm.ErrRecordNotFound
+		_, custom := r.Context().Value(domainOwnerKey).(string)
+		_, managed := r.Context().Value(downloadAudienceKey).(string)
+		if !custom && !managed {
+			return nil, gorm.ErrRecordNotFound
+		}
 	}
 	slug := r.PathValue("slug")
 	if !pwaSlugPattern.MatchString(slug) {
@@ -553,6 +556,15 @@ func (s *Server) loadPublicPWA(r *http.Request) (*PWAApp, error) {
 	err := s.DB.Omit("icon_png").Joins("JOIN users ON users.id = pwa_apps.user_id AND users.disabled = ?", false).Where("pwa_apps.slug = ? AND pwa_apps.enabled = ?", slug, true).First(&app).Error
 	if err != nil {
 		return nil, err
+	}
+	if owner, ok := r.Context().Value(domainOwnerKey).(string); ok && owner != app.UserID {
+		return nil, gorm.ErrRecordNotFound
+	}
+	if audience, managed := r.Context().Value(downloadAudienceKey).(string); managed && audience != "all" {
+		var owner User
+		if s.DB.First(&owner, "id = ?", app.UserID).Error != nil || owner.PlanID(s.Now()) != audience {
+			return nil, gorm.ErrRecordNotFound
+		}
 	}
 	if _, err = s.normalizePWATarget(app.TargetURL); err != nil {
 		return nil, gorm.ErrRecordNotFound

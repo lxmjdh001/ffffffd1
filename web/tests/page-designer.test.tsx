@@ -13,6 +13,23 @@ import { getLocale, setLocale, t } from '../src/i18n';
 vi.mock('../src/download-domain', () => ({ useDownloadDomain: () => ({ data: { download_base_url: 'http://localhost:8088' } }) }));
 vi.mock('../src/page-images', () => ({ readPagePicture: vi.fn() }));
 const clients: QueryClient[] = [];
+it('shares the PWA multi-language picker, preserves separate APK content and saves its priority',async()=>{
+ const state=renderDesigner(),user=userEvent.setup();await screen.findByLabelText('展示名称');
+ expect(screen.getByRole('heading',{name:'多语言落地页'})).toBeTruthy();
+ expect(screen.getByRole('checkbox',{name:'Français'})).toBeTruthy();
+ await user.click(screen.getByRole('checkbox',{name:'English',exact:true}));
+ const title=screen.getByLabelText('展示名称');await user.clear(title);await user.type(title,'English app');
+ expect((screen.getByRole('textbox',{name:'下载按钮文字',exact:true}) as HTMLInputElement).value).toBe('Download app');
+ await user.click(screen.getByRole('button',{name:'简体中文',exact:true}));
+ expect((screen.getByLabelText('展示名称') as HTMLInputElement).value).toBe('测试应用');
+ await user.click(screen.getByRole('button',{name:'English',exact:true}));
+ expect((screen.getByLabelText('展示名称') as HTMLInputElement).value).toBe('English app');
+ await user.click(screen.getByRole('button',{name:'提高语言优先级'}));
+ await user.click(screen.getByRole('button',{name:'保存并发布'}));await screen.findByRole('heading',{name:'应用列表'});
+ expect(state.published?.language_priority).toEqual(['en-US','zh-CN']);
+ expect(state.published?.localizations?.map(v=>[v.language,v.title])).toEqual([['en-US','English app'],['zh-CN','测试应用']]);
+ expect(state.published?.localizations?.every(v=>!v.localizations)).toBe(true);
+});
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); vi.mocked(readPagePicture).mockReset(); setLocale('zh-CN', false); });
 it('previews drafts separately and publishes only when saved', async () => {
  const design: PageDesign = { layout: 'store', title: '原始标题', developer: '', summary: '', description: '', icon: '', screenshots: [], tags: [], button_text: '下载应用', theme_color: '#246b55', background_color: '#f4f7f5', show_description: true, show_screenshots: true, show_file_info: true, show_downloads: true };
@@ -126,7 +143,7 @@ it('keeps the current icon and re-enables controls if R2 rejects the upload', as
 
 it.each(pageLanguageOptions)('switches template copy to $label in one click, previews it and persists only on save', async option => {
  const original = { title: '客户自己的应用名称', description: '介绍不能被覆盖', icon: 'https://example.com/app.png', display_download_count: '100K+' };
- const state = renderDesigner(original), user = userEvent.setup();
+ const state = renderDesigner({...original,layout:'store'}), user = userEvent.setup();
  await screen.findByLabelText('展示名称');
  expect(screen.getByRole('button', { name: '简体中文', pressed: true })).toBeTruthy();
  await user.click(screen.getByRole('button', { name: option.label, exact: true }));
@@ -141,7 +158,7 @@ it.each(pageLanguageOptions)('switches template copy to $label in one click, pre
 });
 
 it('preserves customized button wording and restores the selected language default on request', async () => {
- renderDesigner({ button_text: '领取专属安装包' }); const user = userEvent.setup();
+ renderDesigner({ layout:'store', button_text: '领取专属安装包' }); const user = userEvent.setup();
  await screen.findByLabelText('展示名称');
  await user.click(screen.getByRole('button', { name: 'English', exact: true }));
  expect((screen.getByRole('textbox', { name: '下载按钮文字', exact: true }) as HTMLInputElement).value).toBe('领取专属安装包');
@@ -152,7 +169,7 @@ it('preserves customized button wording and restores the selected language defau
 });
 
 it('keeps template language independent of console language and keeps it when restoring other defaults', async () => {
- renderDesigner(); const user = userEvent.setup();
+ renderDesigner({layout:'store'}); const user = userEvent.setup();
  await screen.findByLabelText('展示名称');
  await user.click(screen.getByRole('button', { name: '日本語', exact: true }));
  await user.click(screen.getByRole('button', { name: '恢复默认' }));

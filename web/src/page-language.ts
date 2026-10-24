@@ -14,7 +14,7 @@ export function pageButtonText(language?: string) { return messages[pageLanguage
 
 // Only system defaults follow a language change automatically. Preserve custom
 // copy and every other publisher field, including names, images and statistics.
-export function withPageLanguage<T extends { language?: PageLanguage; button_text: string }>(draft: T, language: PageLanguage): T {
+export function withPageLanguage<T extends { language?: string; button_text: string }>(draft: T, language: PageLanguage): T {
   const automatic = !draft.button_text.trim() || Object.values(messages).some(copy => copy.download_button === draft.button_text.trim());
   return { ...draft, language, button_text: automatic ? pageButtonText(language) : draft.button_text };
 }

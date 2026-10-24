@@ -253,7 +253,12 @@ func (s *Server) cleanupPageImages(ctx context.Context, appID string) error {
 				if err := tx.First(&design, "app_id = ?", asset.AppID).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 					return err
 				}
-				for _, raw := range append([]string{design.Design.Icon}, design.Design.Screenshots...) {
+				images := append([]string{design.Design.Icon}, design.Design.Screenshots...)
+				for _, locale := range design.Design.Localizations {
+					images = append(images, locale.Icon)
+					images = append(images, locale.Screenshots...)
+				}
+				for _, raw := range images {
 					if raw == asset.URL {
 						return nil
 					}

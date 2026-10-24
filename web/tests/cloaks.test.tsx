@@ -6,11 +6,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloaksPage, type Cloak, type CloakDraft } from '../src/cloaks';
 
-const editableKeys = ['name', 'enabled', 'target_type', 'target_url', 'traffic_pool_slug', 'safe_url', 'blocked_languages', 'blocked_uas', 'blocked_countries', 'allowed_platforms', 'blocked_devices'].sort();
+const editableKeys = ['name', 'enabled', 'target_type', 'target_url', 'traffic_pool_slug', 'target_id', 'app_target_mode', 'safe_url', 'blocked_languages', 'blocked_uas', 'blocked_countries', 'allowed_platforms', 'blocked_devices'].sort();
 const baseDraft: CloakDraft = {
-  name: '海外应用推广', enabled: true, target_type: 'url', target_url: 'https://download.example/app.apk', traffic_pool_slug: '', safe_url: 'https://brand.example/help',
+  name: '海外应用推广', enabled: true, target_type: 'url', target_url: 'https://download.example/app.apk', traffic_pool_slug: '', target_id: '', app_target_mode: '', safe_url: 'https://brand.example/help',
   blocked_languages: [], blocked_uas: [], blocked_countries: [], allowed_platforms: [], blocked_devices: [],
 };
+const appDraft: CloakDraft = { ...baseDraft, target_type: 'app', target_url: '', target_id: 'a'.repeat(32), app_target_mode: 'direct' };
 const fixture = (overrides: Partial<Cloak> = {}): Cloak => ({
   ...structuredClone(baseDraft), id: '11111111111111111111111111111111', slug: 'a1b2c3d4', entry_url: 'https://d1apk.com/c/a1b2c3d4', created_at: '2026-10-24T04:00:00Z', updated_at: '2026-10-24T04:00:00Z', ...overrides,
 });
@@ -31,6 +32,8 @@ beforeEach(() => {
     const method = options?.method || 'GET';
     if (method === 'GET' && path === '/api/cloaks') return json({ data: rows, country_detection_configured: true });
     if (method === 'GET' && path === '/api/traffic-pools') return json({ data: [{ pool: { slug: 'launch-route', name: '应用下载分流', enabled: true }, entry_url: 'https://go.example/r/launch-route' }] });
+    if (method === 'GET' && path === '/api/cloak-targets') return json({ apps: [{id:'a'.repeat(32),name:'测试 APK',direct_url:'https://go.example/a/demo/direct',detail_url:'https://go.example/a/demo/info'}, {id:'b'.repeat(32),name:'另一个 APK'}], pwas:[{id:'c'.repeat(32),name:'测试 PWA',entry_url:'https://d1apk.com/p/demo/'}] });
+    if (method === 'GET' && path === '/api/download-domains') return json({data:[{url:'https://chosen.example',remark:'',source:'platform',audience:'all'}]});
     if ((method === 'POST' && path === '/api/cloaks') || (method === 'PUT' && path.startsWith('/api/cloaks/'))) {
       const body = JSON.parse(String(options?.body)) as CloakDraft;
       mutations.push({ path, method, body });
@@ -66,8 +69,8 @@ async function newEditor(user: ReturnType<typeof userEvent.setup>, safeURL = 'ht
   if (safeURL) await user.type(screen.getByRole('textbox', { name: /安全页 URL/ }), safeURL);
 }
 async function chooseURL(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('radio', { name: /直接输入 URL/ }));
-  await user.type(screen.getByRole('textbox', { name: '目标 URL', exact: true }), 'https://download.example/app.apk');
+  await user.click(screen.getByRole('radio', { name: /应用链接/ }));
+  await user.selectOptions(screen.getByRole('combobox', { name: '应用链接', exact: true }), 'a'.repeat(32));
 }
 async function openTab(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(screen.getByRole('tab', { name: new RegExp(`^${name}`) }));
@@ -79,6 +82,33 @@ async function saveNew(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('cloak editor API integration', () => {
+  it('hides manual URL entry, creates app details and PWA targets, and preserves legacy URLs read-only', async () => {
+    const user = await showPage();
+    await newEditor(user);
+    expect(screen.queryByRole('radio', { name: /直接输入 URL/ })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: '目标 URL', exact: true })).toBeNull();
+    await chooseURL(user);
+    await user.click(screen.getByRole('button', { name: '详情页', exact: true }));
+    await saveNew(user);
+    expect(mutations[0].body).toMatchObject({target_type:'app',target_id:'a'.repeat(32),app_target_mode:'info',target_url:'',traffic_pool_slug:''});
+    await user.click(screen.getByRole('button', {name:'编辑',exact:true}));
+    await user.click(screen.getByRole('radio', {name:/PWA 应用/}));
+    await user.selectOptions(screen.getByRole('combobox', {name:'PWA 应用'}),'c'.repeat(32));
+    await user.click(screen.getByRole('button',{name:'保存修改'}));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[1].body).toMatchObject({target_type:'pwa',target_id:'c'.repeat(32),app_target_mode:'',target_url:'',traffic_pool_slug:''});
+  });
+
+  it('opens domain selection instead of copying a fixed cloak domain', async () => {
+    rows=[fixture()];
+    const user=await showPage();
+    await user.click(screen.getByRole('button',{name:'复制入口',exact:true}));
+    const drawer=within(await screen.findByRole('dialog'));
+    expect(drawer.getByRole('heading',{name:'选择域名复制链接'})).toBeTruthy();
+    expect(await drawer.findByText('https://chosen.example/c/a1b2c3d4')).toBeTruthy();
+    expect(screen.getByRole('dialog').className).toContain('side');
+    expect(mutations).toHaveLength(0);
+  });
   it('creates a traffic target with independent language/country blocks, UA keywords, and multiple allowed platforms', async () => {
     const user = await showPage();
     await newEditor(user);
@@ -119,14 +149,14 @@ describe('cloak editor API integration', () => {
     expect(summary.getByText('默认 404 页面')).toBeTruthy();
     expect(summary.getByText('Account not found')).toBeTruthy();
     await saveNew(user);
-    expect(mutations[0]).toEqual({ path: '/api/cloaks', method: 'POST', body: { ...baseDraft, safe_url: '' } });
+    expect(mutations[0]).toEqual({ path: '/api/cloaks', method: 'POST', body: { ...appDraft, safe_url: '' } });
 
     await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
     expect((screen.getByRole('textbox', { name: /安全页 URL/ }) as HTMLInputElement).value).toBe('');
     expect(within(screen.getByRole('complementary')).getByText('默认 404 页面')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '保存修改' }));
     await screen.findByText('斗篷已保存，入口可以使用了');
-    expect(mutations[1]).toEqual({ path: '/api/cloaks/11111111111111111111111111111111', method: 'PUT', body: { ...baseDraft, safe_url: '' } });
+    expect(mutations[1]).toEqual({ path: '/api/cloaks/11111111111111111111111111111111', method: 'PUT', body: { ...appDraft, safe_url: '' } });
     expect(Object.keys(mutations[1].body!).sort()).toEqual(editableKeys);
   });
 
@@ -135,6 +165,8 @@ describe('cloak editor API integration', () => {
     const user = await showPage();
     await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
     const summary = within(screen.getByRole('complementary'));
+    expect(screen.queryByRole('textbox', {name:'目标 URL',exact:true})).toBeNull();
+    expect(screen.getAllByText(baseDraft.target_url).length).toBeGreaterThan(0);
     expect(summary.getByText('自定义安全页')).toBeTruthy();
     expect(summary.getByText(baseDraft.safe_url)).toBeTruthy();
     expect(screen.queryByRole('region', { name: '默认安全页预览' })).toBeNull();
@@ -147,13 +179,13 @@ describe('cloak editor API integration', () => {
     expect(mutations[0]).toEqual({ path: '/api/cloaks/11111111111111111111111111111111', method: 'PUT', body: { ...baseDraft, safe_url: '' } });
   });
 
-  it('clears the inactive target when switching between direct URL and traffic targets', async () => {
+  it('clears inactive fields when switching between app and traffic targets', async () => {
     const user = await showPage();
     await newEditor(user);
     await user.selectOptions(screen.getByRole('combobox', { name: '分流链接' }), 'launch-route');
     await chooseURL(user);
     await saveNew(user);
-    expect(mutations[0].body).toEqual(baseDraft);
+    expect(mutations[0].body).toEqual(appDraft);
     await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
     await user.click(screen.getByRole('radio', { name: /选择分流链接/ }));
     await user.selectOptions(screen.getByRole('combobox', { name: '分流链接' }), 'launch-route');
@@ -238,14 +270,13 @@ describe('cloak editor API integration', () => {
     await user.click(screen.getByRole('button', { name: '保存并生成入口' }));
     expect((await screen.findByRole('alert')).textContent).toContain('目标页和安全页不能填写本站斗篷入口');
     expect((screen.getByRole('textbox', { name: '斗篷名称', exact: true }) as HTMLInputElement).value).toBe('  海外应用推广  ');
-    expect((screen.getByRole('textbox', { name: '目标 URL', exact: true }) as HTMLInputElement).value).toBe(baseDraft.target_url);
+    expect((screen.getByRole('combobox', { name: '应用链接', exact: true }) as HTMLSelectElement).value).toBe(appDraft.target_id);
     expect((screen.getByRole('textbox', { name: /安全页 URL/ }) as HTMLInputElement).value).toBe(baseDraft.safe_url);
     expect((screen.getByRole('checkbox', { name: /^日语/ }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByRole('checkbox', { name: /启用拦截规则/ }) as HTMLInputElement).checked).toBe(false);
-    const target = screen.getByRole('textbox', { name: '目标 URL', exact: true });
-    await user.clear(target); await user.type(target, 'https://new.example/download');
+    await user.selectOptions(screen.getByRole('combobox', { name: '应用链接', exact: true }), 'b'.repeat(32));
     await saveNew(user);
     await waitFor(() => expect(mutations).toHaveLength(2));
-    expect(mutations[1].body).toEqual({ ...baseDraft, enabled: false, target_url: 'https://new.example/download', blocked_languages: ['ja'] });
+    expect(mutations[1].body).toEqual({ ...appDraft, enabled: false, target_id: 'b'.repeat(32), blocked_languages: ['ja'] });
   });
 });

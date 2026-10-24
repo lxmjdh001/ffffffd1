@@ -3,27 +3,30 @@ import { localizedCountry, localizedLanguage, t, translateContent, useLocale } f
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronRight, CircleHelp, Globe2, Languages, Link2, ListFilter, Monitor, Plus, Save, Search, ShieldCheck, ShieldOff, SlidersHorizontal, Smartphone, Tablet, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronRight, CircleHelp, Copy, Globe2, Languages, Link2, ListFilter, Monitor, Plus, Save, Search, ShieldCheck, ShieldOff, SlidersHorizontal, Smartphone, Tablet, X } from 'lucide-react';
 import { api, send } from './api';
-import { Badge, CopyButton, date, Empty, ErrorState, errorText, Field, FormError, Modal, PageHeader, Spinner } from './ui';
+import { Badge, date, Empty, ErrorState, errorText, Field, FormError, Modal, PageHeader, Spinner } from './ui';
+import { DomainShareDrawer } from './domain-share-drawer';
 import { countryOptions as originalCountries, deviceOptions as originalDevices, languageOptions as originalLanguages, platformOptions, type CloakOption } from './cloak-options';
 import './cloaks.css';
 
 type Device = 'desktop' | 'tablet' | 'mobile';
 type DeviceRule = { device: Device; systems: string[] };
 export type CloakDraft = {
-  name: string; enabled: boolean; target_type: 'url' | 'traffic_pool'; target_url: string; traffic_pool_slug: string; safe_url: string;
+  name: string; enabled: boolean; target_type: 'url' | 'traffic_pool' | 'app' | 'pwa'; target_url: string; traffic_pool_slug: string; target_id: string; app_target_mode: '' | 'direct' | 'info'; safe_url: string;
   blocked_languages: string[]; blocked_uas: string[]; blocked_countries: string[]; allowed_platforms: string[]; blocked_devices: DeviceRule[];
 };
 export type Cloak = CloakDraft & { id: string; slug: string; entry_url: string; created_at: string; updated_at: string };
 type CloaksResponse = { data: Cloak[]; country_detection_configured: boolean };
 type TrafficChoice = { pool: { slug: string; name: string; enabled: boolean }; entry_url: string };
+type AppChoice = { id: string; name: string; direct_url?: string; detail_url?: string; entry_url?: string };
+type TargetChoices = { apps: AppChoice[]; pwas: AppChoice[] };
 type RuleTab = 'languages' | 'ua' | 'countries' | 'platforms' | 'devices';
 const ruleTabs: Array<{ id: RuleTab; label: string; icon: typeof Languages }> = [
   { id: 'languages', get label() { return t("语言拦截"); }, icon: Languages }, { id: 'ua', get label() { return t("UA 拦截"); }, icon: ListFilter }, { id: 'countries', get label() { return t("国家拦截"); }, icon: Globe2 }, { id: 'platforms', get label() { return t("广告允许"); }, icon: Link2 }, { id: 'devices', get label() { return t("设备与系统"); }, icon: Monitor },
 ];
-const newDraft = (): CloakDraft => ({ name: '', enabled: true, target_type: 'traffic_pool', target_url: '', traffic_pool_slug: '', safe_url: '', blocked_languages: [], blocked_uas: [], blocked_countries: [], allowed_platforms: [], blocked_devices: [] });
-const editable = (item: CloakDraft): CloakDraft => ({ name: item.name, enabled: item.enabled, target_type: item.target_type, target_url: item.target_url, traffic_pool_slug: item.traffic_pool_slug, safe_url: item.safe_url, blocked_languages: item.blocked_languages, blocked_uas: item.blocked_uas, blocked_countries: item.blocked_countries, allowed_platforms: item.allowed_platforms, blocked_devices: item.blocked_devices });
+const newDraft = (): CloakDraft => ({ name: '', enabled: true, target_type: 'traffic_pool', target_url: '', traffic_pool_slug: '', target_id: '', app_target_mode: '', safe_url: '', blocked_languages: [], blocked_uas: [], blocked_countries: [], allowed_platforms: [], blocked_devices: [] });
+const editable = (item: CloakDraft): CloakDraft => ({ name: item.name, enabled: item.enabled, target_type: item.target_type, target_url: item.target_url, traffic_pool_slug: item.traffic_pool_slug, target_id: item.target_id || '', app_target_mode: item.app_target_mode || '', safe_url: item.safe_url, blocked_languages: item.blocked_languages, blocked_uas: item.blocked_uas, blocked_countries: item.blocked_countries, allowed_platforms: item.allowed_platforms, blocked_devices: item.blocked_devices });
 const toggleValue = (values: string[], value: string, selected: boolean) => selected ? [...values.filter(item => item.toLowerCase() !== value.toLowerCase()), value] : values.filter(item => item.toLowerCase() !== value.toLowerCase());
 const labelFor = (options: CloakOption[], value: string) => options.find(option => option.value.toLowerCase() === value.toLowerCase())?.label || value;
 const ruleCount = (item: CloakDraft) => [item.blocked_languages.length, item.blocked_uas.length, item.blocked_countries.length, item.allowed_platforms.length, item.blocked_devices.length].filter(Boolean).length;
@@ -52,6 +55,7 @@ export function CloaksPage() {
   const deviceOptions = translateContent(originalDevices);
   const { data, error, refetch } = useQuery({ queryKey: ['cloaks'], queryFn: () => api<CloaksResponse>('/cloaks') });
   const pools = useQuery({ queryKey: ['traffic-pools'], queryFn: () => api<{ data: TrafficChoice[] }>('/traffic-pools') });
+  const targets = useQuery({ queryKey: ['cloak-targets'], queryFn: () => api<TargetChoices>('/cloak-targets') });
   const [draft, setDraft] = useState<CloakDraft>();
   const [editing, setEditing] = useState<Cloak>();
   const [deleting, setDeleting] = useState<Cloak>();
@@ -60,6 +64,7 @@ export function CloaksPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [saved, setSaved] = useState<Cloak>();
+  const [sharing, setSharing] = useState<Cloak>();
   const start = (item?: Cloak) => {
     setEditing(item); setDraft(item ? editable(item) : newDraft());
     setUaText(item?.blocked_uas.join('\n') || ''); setActiveTab('languages'); setMessage(''); setSaved(undefined);
@@ -68,7 +73,7 @@ export function CloaksPage() {
   const save = async (event: FormEvent) => {
     event.preventDefault(); if (!draft) return; setBusy(true); setMessage('');
     try {
-      const payload: CloakDraft = { ...editable(draft), name: draft.name.trim(), target_url: draft.target_type === 'url' ? draft.target_url.trim() : '', traffic_pool_slug: draft.target_type === 'traffic_pool' ? draft.traffic_pool_slug : '', safe_url: draft.safe_url.trim(), blocked_uas: uaText.split(/\r?\n/).map(value => value.trim()).filter(Boolean) };
+      const payload: CloakDraft = { ...editable(draft), name: draft.name.trim(), target_url: draft.target_type === 'url' ? draft.target_url.trim() : '', traffic_pool_slug: draft.target_type === 'traffic_pool' ? draft.traffic_pool_slug : '', target_id: draft.target_type === 'app' || draft.target_type === 'pwa' ? draft.target_id : '', app_target_mode: draft.target_type === 'app' ? draft.app_target_mode || 'direct' : '', safe_url: draft.safe_url.trim(), blocked_uas: uaText.split(/\r?\n/).map(value => value.trim()).filter(Boolean) };
       const result = await send<Cloak>(editing ? `/cloaks/${editing.id}` : '/cloaks', payload, editing ? 'PUT' : 'POST');
       setSaved(result); setDraft(undefined); setEditing(undefined); await refetch();
     } catch (error) { setMessage(errorText(error)); } finally { setBusy(false); }
@@ -94,10 +99,15 @@ export function CloaksPage() {
   if (error) return <ErrorState error={error} retry={() => refetch()} />;
   if (!data) return <Spinner />;
   const trafficChoices = pools.data?.data || [];
+  const appChoices = targets.data?.apps || [];
+  const pwaChoices = targets.data?.pwas || [];
+  const targetName = (item: CloakDraft) => item.target_type === 'traffic_pool' ? trafficChoices.find(pool => pool.pool.slug === item.traffic_pool_slug)?.pool.name || item.traffic_pool_slug : item.target_type === 'url' ? item.target_url : (item.target_type === 'pwa' ? pwaChoices : appChoices).find(app => app.id === item.target_id)?.name || t("目标不可用");
+  const targetKind = (item: CloakDraft) => item.target_type === 'traffic_pool' ? t("分流链接") : item.target_type === 'pwa' ? t("PWA 应用") : item.target_type === 'app' ? item.app_target_mode === 'info' ? t("详情页") : t("直接下载") : t("自定义 URL");
 
   if (draft) {
     const counts: Record<RuleTab, number> = { languages: draft.blocked_languages.length, ua: uaText.split(/\r?\n/).filter(value => value.trim()).length, countries: draft.blocked_countries.length, platforms: draft.allowed_platforms.length, devices: draft.blocked_devices.length };
-    const target = draft.target_type === 'url' ? draft.target_url : trafficChoices.find(item => item.pool.slug === draft.traffic_pool_slug)?.entry_url;
+    const chosenApp = (draft.target_type === 'pwa' ? pwaChoices : appChoices).find(app => app.id === draft.target_id);
+    const target = draft.target_type === 'url' ? draft.target_url : draft.target_type === 'traffic_pool' ? trafficChoices.find(item => item.pool.slug === draft.traffic_pool_slug)?.entry_url : draft.target_type === 'pwa' ? chosenApp?.entry_url : draft.app_target_mode === 'info' ? chosenApp?.detail_url : chosenApp?.direct_url;
     const safeURL = draft.safe_url.trim();
     return <div className="cloak-page">
       <div className="cloak-editor-back"><button type="button" onClick={() => { setDraft(undefined); setEditing(undefined); setMessage(''); }} disabled={busy}><ArrowLeft size={15} />{t("返回斗篷列表")}</button><span>{t("访问规则工作台")}</span></div>
@@ -107,9 +117,15 @@ export function CloaksPage() {
           <Field label={t("斗篷名称")}><input required maxLength={60} placeholder={t("例如：海外应用推广")} value={draft.name} onChange={event => update('name', event.target.value)} /></Field>
           <div className="cloak-target-types" role="group" aria-label={t("目标类型")}>
             <label className={draft.target_type === 'traffic_pool' ? 'selected' : ''}><input type="radio" name="cloak-target-type" value="traffic_pool" checked={draft.target_type === 'traffic_pool'} onChange={() => update('target_type', 'traffic_pool')} /><span className="cloak-type-icon"><SlidersHorizontal size={20} /></span><span><strong>{t("选择分流链接")}</strong><small>{t("沿用已有分流的分配规则")}</small></span><span className="cloak-radio-dot" /></label>
-            <label className={draft.target_type === 'url' ? 'selected' : ''}><input type="radio" name="cloak-target-type" value="url" checked={draft.target_type === 'url'} onChange={() => update('target_type', 'url')} /><span className="cloak-type-icon"><Link2 size={20} /></span><span><strong>{t("直接输入 URL")}</strong><small>{t("跳转到指定的网页或下载地址")}</small></span><span className="cloak-radio-dot" /></label>
+            <label className={draft.target_type === 'pwa' ? 'selected' : ''}><input type="radio" name="cloak-target-type" value="pwa" checked={draft.target_type === 'pwa'} onChange={() => setDraft({ ...draft, target_type: 'pwa', target_id: draft.target_type === 'pwa' ? draft.target_id : '' })} /><span className="cloak-type-icon"><Globe2 size={20} /></span><span><strong>{t("PWA 应用")}</strong><small>{t("安装链接")}</small></span><span className="cloak-radio-dot" /></label>
+            <label className={draft.target_type === 'app' ? 'selected' : ''}><input type="radio" name="cloak-target-type" value="app" checked={draft.target_type === 'app'} onChange={() => setDraft({ ...draft, target_type: 'app', target_id: draft.target_type === 'app' ? draft.target_id : '', app_target_mode: draft.app_target_mode || 'direct' })} /><span className="cloak-type-icon"><Smartphone size={20} /></span><span><strong>{t("应用链接")}</strong><small>{t("直接下载 / 详情页")}</small></span><span className="cloak-radio-dot" /></label>
           </div>
-          {draft.target_type === 'url' ? <Field label={t("目标 URL")}><input type="url" required maxLength={4096} placeholder="https://example.com/download" value={draft.target_url} onChange={event => update('target_url', event.target.value)} /></Field> : <div><Field label={t("分流链接")}><select required value={draft.traffic_pool_slug} onChange={event => update('traffic_pool_slug', event.target.value)}><option value="">{pools.isPending ? t("正在读取分流…") : t("请选择分流链接")}</option>{trafficChoices.map(item => <option key={item.pool.slug} value={item.pool.slug}>{item.pool.name || item.pool.slug}{!item.pool.enabled ? t("（已关闭）") : ''}</option>)}</select></Field>{pools.error ? <div className="cloak-inline-message">{t("分流读取失败。")}<button type="button" className="text-btn" onClick={() => pools.refetch()}>{t("重试")}</button></div> : !pools.isPending && !trafficChoices.length ? <p className="cloak-field-help">{t("还没有分流链接。可以")}<Link to="/traffic">{t("创建分流")}</Link>{t("，或切换为直接输入 URL。")}</p> : target && <div className="cloak-target-preview"><Link2 size={14} /><span>{target}</span></div>}</div>}
+          {draft.target_type === 'url' ? <div className="cloak-legacy-target"><p>{t("已保留原目标链接，可切换为分流、PWA 或应用。")}</p><code>{draft.target_url}</code></div> : draft.target_type === 'traffic_pool' ? <div><Field label={t("分流链接")}><select required value={draft.traffic_pool_slug} onChange={event => update('traffic_pool_slug', event.target.value)}><option value="">{pools.isPending ? t("正在读取分流…") : t("请选择分流链接")}</option>{trafficChoices.map(item => <option key={item.pool.slug} value={item.pool.slug}>{item.pool.name || item.pool.slug}{!item.pool.enabled ? t("（已关闭）") : ''}</option>)}</select></Field>{pools.error ? <div className="cloak-inline-message">{t("分流读取失败。")}<button type="button" className="text-btn" onClick={() => pools.refetch()}>{t("重试")}</button></div> : !pools.isPending && !trafficChoices.length ? <p className="cloak-field-help">{t("还没有分流链接。可以")}<Link to="/traffic">{t("创建分流")}</Link></p> : null}</div> : <div>
+            <Field label={draft.target_type === 'pwa' ? t("PWA 应用") : t("应用链接")}><select required value={draft.target_id} onChange={event => update('target_id', event.target.value)} disabled={targets.isPending || !!targets.error}><option value="">{targets.isPending ? t("加载中…") : t("请选择应用")}</option>{draft.target_id && !chosenApp && <option value={draft.target_id} disabled>{t("目标不可用")}</option>}{(draft.target_type === 'pwa' ? pwaChoices : appChoices).map(app => <option key={app.id} value={app.id}>{app.name}</option>)}</select></Field>
+            {draft.target_type === 'app' && <div className="cloak-app-modes" role="group" aria-label={t("跳转方式")}>{(['direct', 'info'] as const).map(mode => <button type="button" key={mode} className={draft.app_target_mode === mode ? 'selected' : ''} aria-pressed={draft.app_target_mode === mode} onClick={() => update('app_target_mode', mode)}>{mode === 'direct' ? t("直接下载") : t("详情页")}</button>)}</div>}
+            {targets.error ? <div className="cloak-inline-message">{t("加载失败")}<button type="button" className="text-btn" onClick={() => targets.refetch()}>{t("重试")}</button></div> : !targets.isPending && !(draft.target_type === 'pwa' ? pwaChoices : appChoices).length && <p className="cloak-field-help">{t("暂无可用应用")}</p>}
+          </div>}
+          {draft.target_type !== 'url' && target && <div className="cloak-target-preview"><Link2 size={14} /><span>{target}</span></div>}
         </EditorSection>
 
         <EditorSection step="02" title={t("访问规则")} description={t("语言、UA、国家和设备均为选中即拦截；广告平台可单独设置允许条件。")}>
@@ -143,11 +159,12 @@ export function CloaksPage() {
   }
 
   return <div className="cloak-page"><PageHeader eyebrow="CLOAK ROUTING" title={t("斗篷管理")} subtitle={t("为每个入口设置访问条件，让不同访问进入对应页面。")} action={<button className="btn primary" onClick={() => start()}><Plus size={16} />{t("新建斗篷")}</button>} />
-    {saved && <div className="cloak-saved"><span><Check size={18} /></span><div><strong>{t("斗篷已保存，入口可以使用了")}</strong><p>{saved.entry_url}</p></div><CopyButton value={saved.entry_url} label={t("复制入口")} /><button type="button" className="icon-btn" aria-label={t("关闭保存提示")} onClick={() => setSaved(undefined)}><X size={16} /></button></div>}
+    {saved && <div className="cloak-saved"><span><Check size={18} /></span><div><strong>{t("斗篷已保存，入口可以使用了")}</strong><p>{saved.entry_url}</p></div><button type="button" className="text-btn" onClick={() => setSharing(saved)}><Copy size={14} />{t("复制入口")}</button><button type="button" className="icon-btn" aria-label={t("关闭保存提示")} onClick={() => setSaved(undefined)}><X size={16} /></button></div>}
     <div className="cloak-overview"><div className="cloak-overview-intro"><div><ShieldCheck size={25} strokeWidth={1.5} /></div><span><strong>{t("一个入口，两条访问路径。")}</strong><small>{t("符合条件进入目标链接，命中拦截进入安全页。")}</small></span></div><div className="cloak-overview-metrics"><div><strong>{data.data.length}</strong><span>{t("全部斗篷")}</span></div><div><strong>{data.data.filter(item => item.enabled).length}</strong><span>{t("开启拦截")}</span></div></div></div>
     {!deleting && <FormError>{message}</FormError>}
-    <section className="panel cloak-list"><div className="panel-heading"><h2><ShieldCheck size={17} />{t("我的斗篷")}</h2><span className="small muted">{data.data.length} {t(" 个入口")}</span></div>{!data.data.length ? <Empty title={t("让每一次访问，都有合适的去向")} detail={t("连接分流或目标 URL，设置拦截条件，生成你的第一个斗篷入口。")} action={<button className="btn secondary" onClick={() => start()}><Plus size={15} />{t("创建第一个斗篷")}</button>} /> : <div className="table-wrap"><table><thead><tr><th>{t("名称 / 斗篷入口")}</th><th>{t("目标链接")}</th><th>{t("访问规则")}</th><th>{t("拦截状态")}</th><th className="right">{t("操作")}</th></tr></thead><tbody>{data.data.map(item => <tr key={item.id}><td><div className="cloak-item-name"><span><ShieldCheck size={16} /></span><div><strong>{item.name}</strong><small>{date(item.updated_at)} {t(" 更新")}</small></div></div><div className="cloak-entry-link"><span>{item.entry_url}</span><CopyButton value={item.entry_url} /></div></td><td><span className="cloak-target-kind">{item.target_type === 'traffic_pool' ? t("分流链接") : t("自定义 URL")}</span><p className="cloak-table-url">{item.target_type === 'traffic_pool' ? trafficChoices.find(pool => pool.pool.slug === item.traffic_pool_slug)?.pool.name || item.traffic_pool_slug : item.target_url}</p></td><td><div className="cloak-rule-tags">{item.blocked_languages.length > 0 && <span>{t("语言 ")}{item.blocked_languages.length}</span>}{item.blocked_uas.length > 0 && <span>UA {item.blocked_uas.length}</span>}{item.blocked_countries.length > 0 && <span>{t("国家 ")}{item.blocked_countries.length}</span>}{item.allowed_platforms.length > 0 && <span>{t("广告 ")}{item.allowed_platforms.length}</span>}{item.blocked_devices.length > 0 && <span>{t("设备 ")}{item.blocked_devices.length}</span>}{!ruleCount(item) && <span className="cloak-no-rule">{t("未设置条件")}</span>}</div></td><td><Badge tone={item.enabled ? 'blue' : 'gray'}>{item.enabled ? t("已开启") : t("已关闭")}</Badge></td><td><div className="row-actions wrap"><button className="text-btn" onClick={() => start(item)}>{t("编辑")}</button><button className="text-btn" disabled={busy} onClick={() => toggle(item)}>{item.enabled ? t("关闭拦截") : t("开启拦截")}</button><button className="text-btn danger-text" disabled={busy} onClick={() => { setMessage(''); setDeleting(item); }}>{t("删除")}</button></div></td></tr>)}</tbody></table></div>}</section>
+    <section className="panel cloak-list"><div className="panel-heading"><h2><ShieldCheck size={17} />{t("我的斗篷")}</h2><span className="small muted">{data.data.length} {t(" 个入口")}</span></div>{!data.data.length ? <Empty title={t("让每一次访问，都有合适的去向")} detail={t("连接分流、PWA 或应用，设置访问条件并生成入口。")} action={<button className="btn secondary" onClick={() => start()}><Plus size={15} />{t("创建第一个斗篷")}</button>} /> : <div className="table-wrap"><table><thead><tr><th>{t("名称 / 斗篷入口")}</th><th>{t("目标链接")}</th><th>{t("访问规则")}</th><th>{t("拦截状态")}</th><th className="right">{t("操作")}</th></tr></thead><tbody>{data.data.map(item => <tr key={item.id}><td><div className="cloak-item-name"><span><ShieldCheck size={16} /></span><div><strong>{item.name}</strong><small>{date(item.updated_at)} {t(" 更新")}</small></div></div><div className="cloak-entry-link"><span>{item.entry_url}</span><button type="button" className="text-btn" aria-label={t("复制入口")} onClick={() => setSharing(item)}><Copy size={14} />{t("复制入口")}</button></div></td><td><span className="cloak-target-kind">{targetKind(item)}</span><p className="cloak-table-url">{targetName(item)}</p></td><td><div className="cloak-rule-tags">{item.blocked_languages.length > 0 && <span>{t("语言 ")}{item.blocked_languages.length}</span>}{item.blocked_uas.length > 0 && <span>UA {item.blocked_uas.length}</span>}{item.blocked_countries.length > 0 && <span>{t("国家 ")}{item.blocked_countries.length}</span>}{item.allowed_platforms.length > 0 && <span>{t("广告 ")}{item.allowed_platforms.length}</span>}{item.blocked_devices.length > 0 && <span>{t("设备 ")}{item.blocked_devices.length}</span>}{!ruleCount(item) && <span className="cloak-no-rule">{t("未设置条件")}</span>}</div></td><td><Badge tone={item.enabled ? 'blue' : 'gray'}>{item.enabled ? t("已开启") : t("已关闭")}</Badge></td><td><div className="row-actions wrap"><button className="text-btn" onClick={() => start(item)}>{t("编辑")}</button><button className="text-btn" disabled={busy} onClick={() => toggle(item)}>{item.enabled ? t("关闭拦截") : t("开启拦截")}</button><button className="text-btn danger-text" disabled={busy} onClick={() => { setMessage(''); setDeleting(item); }}>{t("删除")}</button></div></td></tr>)}</tbody></table></div>}</section>
     <p className="cloak-bottom-note"><ShieldOff size={14} />{t("未选择的拦截条件不生效；关闭拦截规则后，入口直接进入目标链接。")}</p>
+    {sharing && <DomainShareDrawer path={`/c/${sharing.slug}`} close={() => setSharing(undefined)} />}
     {deleting && <Modal title={t("删除斗篷？")} close={() => { if (!busy) setDeleting(undefined); }}><p>{t("删除「")}{deleting.name}{t("」后，斗篷入口将停止访问。")}</p><FormError>{message}</FormError><div className="modal-footer"><button className="btn secondary" disabled={busy} onClick={() => setDeleting(undefined)}>{t("取消")}</button><button className="btn danger" disabled={busy} onClick={remove}>{t("删除斗篷")}</button></div></Modal>}
   </div>;
 }

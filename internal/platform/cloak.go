@@ -34,6 +34,8 @@ type Cloak struct {
 	Enabled          bool              `json:"enabled"`
 	TargetType       string            `json:"target_type" gorm:"size:20;not null"`
 	TargetURL        string            `json:"target_url"`
+	TargetID         string            `json:"target_id" gorm:"size:32"`
+	AppTargetMode    string            `json:"app_target_mode" gorm:"size:10"`
 	TrafficPoolSlug  string            `json:"traffic_pool_slug" gorm:"size:32"`
 	SafeURL          string            `json:"safe_url"`
 	BlockedLanguages []string          `json:"blocked_languages" gorm:"serializer:json;type:text"`
@@ -50,6 +52,8 @@ type cloakInput struct {
 	Enabled          bool              `json:"enabled"`
 	TargetType       string            `json:"target_type"`
 	TargetURL        string            `json:"target_url"`
+	TargetID         string            `json:"target_id"`
+	AppTargetMode    string            `json:"app_target_mode"`
 	TrafficPoolSlug  string            `json:"traffic_pool_slug"`
 	SafeURL          string            `json:"safe_url"`
 	BlockedLanguages []string          `json:"blocked_languages"`
@@ -108,6 +112,18 @@ func (s *Server) saveCloak(w http.ResponseWriter, r *http.Request) {
 		if c.TargetType == "traffic_pool" {
 			var pool TrafficPool
 			if err := tx.First(&pool, "slug = ? AND user_id = ?", c.TrafficPoolSlug, u.ID).Error; err != nil {
+				return err
+			}
+		}
+		if c.TargetType == "app" {
+			var app Application
+			if err := tx.First(&app, "id = ? AND user_id = ?", c.TargetID, u.ID).Error; err != nil {
+				return err
+			}
+		}
+		if c.TargetType == "pwa" {
+			var app PWAApp
+			if err := tx.Select("id").First(&app, "id = ? AND user_id = ?", c.TargetID, u.ID).Error; err != nil {
 				return err
 			}
 		}
@@ -186,8 +202,8 @@ func normalizeCloak(in cloakInput) (Cloak, error) {
 	if c.Name == "" {
 		c.Name = "访问规则"
 	}
-	if c.TargetType != "url" && c.TargetType != "traffic_pool" {
-		return c, problem(400, "请选择分流链接或直接输入 URL")
+	if c.TargetType != "url" && c.TargetType != "traffic_pool" && c.TargetType != "app" && c.TargetType != "pwa" {
+		return c, problem(400, "请选择分流链接、PWA 或应用")
 	}
 	if c.SafeURL != "" && !validCloakURL(c.SafeURL) {
 		return c, problem(400, "请输入完整的 HTTP/HTTPS 安全页链接")
@@ -197,13 +213,28 @@ func normalizeCloak(in cloakInput) (Cloak, error) {
 			return c, problem(400, "请输入完整的 HTTP/HTTPS 目标页链接")
 		}
 		c.TrafficPoolSlug = ""
-	} else {
+	} else if c.TargetType == "traffic_pool" {
 		slug, err := normalizeAppSlug(c.TrafficPoolSlug)
 		if err != nil || c.TrafficPoolSlug == "" {
 			return c, problem(400, "请选择有效的分流链接")
 		}
 		c.TrafficPoolSlug = slug
 		c.TargetURL = ""
+	} else {
+		c.TargetID = strings.TrimSpace(in.TargetID)
+		if len(c.TargetID) != 32 || !hexKey.MatchString(c.TargetID) {
+			return c, problem(400, "请选择有效的应用")
+		}
+		if c.TargetType == "app" {
+			c.AppTargetMode = in.AppTargetMode
+			if c.AppTargetMode == "" {
+				c.AppTargetMode = "direct"
+			}
+			if c.AppTargetMode != "direct" && c.AppTargetMode != "info" {
+				return c, problem(400, "请选择直接下载或详情页")
+			}
+		}
+		c.TargetURL, c.TrafficPoolSlug = "", ""
 	}
 	var err error
 	c.BlockedLanguages, err = normalizeCloakStrings(in.BlockedLanguages, 100, func(v string) (string, bool) {
@@ -404,11 +435,19 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 	if !c.Enabled || !cloakBlocked(c, r, s.cloakRequestCountry(r)) {
 		candidate := c.TargetURL
 		if c.TargetType == "traffic_pool" {
+			// Execute the existing pool here; do not redirect to its /r/ entry
+			// or replace the pool's own destination with an inline app page.
 			var err error
 			candidate, err = s.trafficTarget(r, c.TrafficPoolSlug, c.UserID)
 			if err != nil {
 				candidate = ""
 			}
+		}
+		if c.TargetType == "app" || c.TargetType == "pwa" {
+			if s.renderCloakApp(w, r, c, owner) {
+				return
+			}
+			candidate = ""
 		}
 		if validCloakURL(candidate) {
 			loop, err := s.cloakLoop(s.DB, candidate, requestHost(r))

@@ -28,6 +28,8 @@ type Options = {
   unsubscribeFailures?: number;
   configFailure?: boolean;
   holdSubscribe?: Promise<void>;
+  runtime?: Record<string, any>;
+  showBrowserGuide?: () => boolean;
 };
 
 function start(options: Options = {}) {
@@ -62,8 +64,9 @@ function start(options: Options = {}) {
     if (url.endsWith('/unsubscribe') && unsubscribeFailures-- > 0) return new Response(JSON.stringify({ error: 'Temporary outage' }), { status: 503 });
     return new Response('{}');
   });
+  const runtimeWindow: Record<string, any> = { isSecureContext: true, Notification: {}, PushManager: {}, matchMedia: () => ({ matches: options.standalone || false }), addEventListener: vi.fn(), __APP_CONFIG__:options.runtime, showBrowserGuide:options.showBrowserGuide, location:{assign:vi.fn()} };
   runInNewContext(client, {
-    window: { isSecureContext: true, Notification: {}, PushManager: {}, matchMedia: () => ({ matches: options.standalone || false }), addEventListener: vi.fn() },
+    window: runtimeWindow,
     navigator: { userAgent: options.ios ? 'iPhone Safari' : 'Android Chrome', platform: options.ios ? 'iPhone' : 'Linux', maxTouchPoints: 1, serviceWorker: { register, ready: Promise.resolve(registration) } },
     Notification: notification, document, localStorage, fetch: fetcher, Uint8Array, atob,
   });
@@ -72,12 +75,30 @@ function start(options: Options = {}) {
   const status = () => document.getElementById('notification-status')!.textContent;
   const calls = (suffix = '/subscribe') => fetcher.mock.calls.filter(([url]) => url.endsWith(suffix));
   const saved = () => JSON.parse(localStorage.getItem(storeKey) || 'null');
-  return { notification, registration, register, subscribe, fetcher, enable, turnOff, status, calls, saved };
+  return { notification, registration, register, subscribe, fetcher, enable, turnOff, status, calls, saved, runtimeWindow };
 }
 
 beforeEach(() => localStorage.clear());
 
 describe('PWA subscription renewal follows the reference PWA', () => {
+  it('honors iOS compatibility and never sends an Android package to iOS from return-page installation',async()=>{
+    const runtime={iosRedirectUrl:'https://ios.example/install',app:{settings:{packagePriority:'w2a_only',apkUrl:'https://apk.example/app.apk',iosCompatible:false}}};
+    const c=start({ios:true,runtime});
+    expect(await c.runtimeWindow.D1ReturnFlowInstall()).toEqual({outcome:'unsupported'});
+    expect(c.runtimeWindow.location.assign).not.toHaveBeenCalled();
+    runtime.app.settings.iosCompatible=true;
+    expect(await c.runtimeWindow.D1ReturnFlowInstall()).toEqual({outcome:'ios_redirect'});
+    expect(c.runtimeWindow.location.assign).toHaveBeenCalledExactlyOnceWith(runtime.iosRedirectUrl);
+    expect(document.querySelector('iframe')).toBeNull();
+  });
+  it('checks the browser guide before any APK or iOS download action',async()=>{
+    const showBrowserGuide=vi.fn(()=>true);
+    const c=start({ios:true,showBrowserGuide,runtime:{iosRedirectUrl:'https://ios.example/install',app:{settings:{packagePriority:'w2a_only',apkUrl:'https://apk.example/app.apk',iosCompatible:true}}}});
+    await c.runtimeWindow.D1ReturnFlowInstall();
+    expect(showBrowserGuide).toHaveBeenCalledOnce();
+    expect(c.runtimeWindow.location.assign).not.toHaveBeenCalled();
+    expect(document.querySelector('iframe')).toBeNull();
+  });
   it('does not request permission on load and requests it directly on an explicit click', async () => {
     const c = start();
     await vi.waitFor(() => expect(c.enable.disabled).toBe(false));

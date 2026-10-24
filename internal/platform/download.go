@@ -49,6 +49,16 @@ func (s *Server) visitor(w http.ResponseWriter, r *http.Request) string {
 
 // Public share links follow the app's configured download or detail-page mode.
 func (s *Server) directDownload(w http.ResponseWriter, r *http.Request) {
+	s.appDownload(w, r, false)
+}
+
+// Explicit direct links bypass only the app's landing-page preference, not
+// access checks, attribution, ticket creation or download billing.
+func (s *Server) directAppDownload(w http.ResponseWriter, r *http.Request) {
+	s.appDownload(w, r, true)
+}
+
+func (s *Server) appDownload(w http.ResponseWriter, r *http.Request, forceDirect bool) {
 	if e := s.rate("download-start:"+s.clientIP(r), 1200, time.Minute); e != nil {
 		fail(w, e)
 		return
@@ -61,7 +71,7 @@ func (s *Server) directDownload(w http.ResponseWriter, r *http.Request) {
 	if s.rejectBlockedUA(w, r, a.UserID, r.UserAgent()) {
 		return
 	}
-	if a.DownloadMode == "info" {
+	if a.DownloadMode == "info" && !forceDirect {
 		target := "/a/" + a.Slug + "/info"
 		if r.URL.RawQuery != "" {
 			target += "?" + r.URL.RawQuery
@@ -116,6 +126,8 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
+	design = design.localized(r.Header.Get("Accept-Language"))
+	w.Header().Add("Vary", "Accept-Language")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if design.Layout == "google_play" || design.Layout == "custom" {
 		var out bytes.Buffer

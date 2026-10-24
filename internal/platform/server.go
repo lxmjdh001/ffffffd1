@@ -211,6 +211,7 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("DELETE /api/traffic-pools/{slug}", s.auth(s.deleteTrafficPool))
 	m.HandleFunc("GET /r/{slug}", s.routeTraffic)
 	m.Handle("GET /api/cloaks", s.auth(s.listCloaks))
+	m.Handle("GET /api/cloak-targets", s.auth(s.cloakTargetChoices))
 	m.Handle("POST /api/cloaks", s.auth(s.saveCloak))
 	m.Handle("PUT /api/cloaks/{id}", s.auth(s.saveCloak))
 	m.Handle("DELETE /api/cloaks/{id}", s.auth(s.deleteCloak))
@@ -253,6 +254,7 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("PUT /api/admin/settings", s.admin(s.saveSettings))
 	m.Handle("PUT /api/admin/usdt-wallet", s.admin(s.updateUSDTWallet))
 	m.HandleFunc("GET /a/{slug}", s.directDownload)
+	m.HandleFunc("GET /a/{slug}/direct", s.directAppDownload)
 	m.HandleFunc("GET /a/{slug}/info", s.downloadPage)
 	m.HandleFunc("POST /a/{slug}/return-flow/view", func(w http.ResponseWriter, r *http.Request) { s.returnFlowView(w, r, "apk") })
 	m.HandleFunc("POST /p/{slug}/return-flow/view", func(w http.ResponseWriter, r *http.Request) { s.returnFlowView(w, r, "pwa") })
@@ -298,7 +300,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if s.Config.Role == "download" && !strings.HasPrefix(r.URL.Path, "/a/") && !strings.HasPrefix(r.URL.Path, "/d/") {
+		if s.Config.Role == "download" && !strings.HasPrefix(r.URL.Path, "/a/") && !strings.HasPrefix(r.URL.Path, "/d/") && !strings.HasPrefix(r.URL.Path, "/p/") && !strings.HasPrefix(r.URL.Path, "/pwa-template-assets/") && !strings.HasPrefix(r.URL.Path, "/c/") {
 			http.NotFound(w, r)
 			return
 		}
@@ -314,7 +316,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		if host != s.Config.Host() {
 			if !s.Config.Production() && (host == "localhost" || host == "127.0.0.1") {
 			} else {
-				if !strings.HasPrefix(r.URL.Path, "/a/") && !strings.HasPrefix(r.URL.Path, "/d/") && !strings.HasPrefix(r.URL.Path, "/r/") && !strings.HasPrefix(r.URL.Path, "/c/") {
+				if !strings.HasPrefix(r.URL.Path, "/a/") && !strings.HasPrefix(r.URL.Path, "/d/") && !strings.HasPrefix(r.URL.Path, "/r/") && !strings.HasPrefix(r.URL.Path, "/c/") && !strings.HasPrefix(r.URL.Path, "/p/") && !strings.HasPrefix(r.URL.Path, "/pwa-template-assets/") {
 					http.NotFound(w, r)
 					return
 				}
@@ -338,7 +340,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		if r.Method != "GET" && r.Method != "HEAD" && r.URL.Path != "/api/payments/futoon/notify" && !strings.HasPrefix(r.URL.Path, "/api/sdk/") {
 			origin := r.Header.Get("Origin")
 			expected := s.Config.PublicURL
-			if strings.HasPrefix(r.URL.Path, "/a/") {
+			if strings.HasPrefix(r.URL.Path, "/a/") || strings.HasPrefix(r.URL.Path, "/p/") {
 				expected = "https://" + r.Host
 				if !s.Config.Production() {
 					expected = "http://" + r.Host

@@ -45,16 +45,37 @@ func (d PageDesign) LanguageCode() string {
 	if _, supported := pageLanguages[d.Language]; supported {
 		return d.Language
 	}
+	if apkLanguageButtons[apkLocaleCode(d.Language)] != "" {
+		return apkLocaleCode(d.Language)
+	}
 	return "zh-CN"
 }
 
-func (d PageDesign) Copy() pageLanguageCopy { return pageLanguages[d.LanguageCode()] }
+func (d PageDesign) Copy() pageLanguageCopy {
+	code := d.LanguageCode()
+	if copy, ok := pageLanguages[code]; ok {
+		return copy
+	}
+	if copy, ok := pageLanguages[strings.Split(code, "-")[0]]; ok {
+		return copy
+	}
+	return pageLanguages["en"]
+}
 
 func (d PageDesign) DownloadButtonText() string {
 	text := strings.TrimSpace(d.ButtonText)
+	defaultText := apkLanguageButtons[apkLocaleCode(d.Language)]
+	if defaultText == "" {
+		defaultText = d.Copy().DownloadButton
+	}
+	for _, copy := range apkLanguageButtons {
+		if text == copy {
+			return defaultText
+		}
+	}
 	for _, copy := range pageLanguages {
 		if text == copy.DownloadButton {
-			return d.Copy().DownloadButton
+			return defaultText
 		}
 	}
 	return d.ButtonText // Preserve a publisher's explicitly customized wording.
