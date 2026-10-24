@@ -20,8 +20,8 @@ import (
 
 // Queue ownership is stored in PostgreSQL/SQLite, so restarting the server does
 // not lose schedules. Web Push has no provider-side idempotency API: a crash
-// after provider acceptance can resend. The stable delivery tag lets the service
-// worker display only one notification, and events remain idempotent.
+// after provider acceptance can resend. The stable delivery tag replaces an
+// existing notification without re-alerting, and events remain idempotent.
 func (s *Server) RunPWAPushWorker(ctx context.Context) {
 	if s.pwaPushHTTP == nil {
 		s.pwaPushHTTP = s.securePWAPushClient()

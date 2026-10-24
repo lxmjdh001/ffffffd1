@@ -30,11 +30,10 @@ var pwaPageCSS string
 var pwaPageTemplate = template.Must(template.New("pwa-page").Parse(pwaPageHTML))
 
 type pwaPageData struct {
-	App          *PWAApp
-	Base         string
-	Launch       bool
-	Chinese      bool
-	TargetOrigin string
+	App     *PWAApp
+	Base    string
+	Launch  bool
+	Chinese bool
 }
 
 func pwaWantsChinese(r *http.Request) bool {
@@ -49,16 +48,23 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 		return
 	}
 	target, _ := url.Parse(a.TargetURL)
-	origin := target.Scheme + "://" + target.Host
-	data := pwaPageData{App: a, Base: "/p/" + a.Slug + "/", Launch: launch, Chinese: pwaWantsChinese(r), TargetOrigin: origin}
+	frameSources := "https:"
+	if !s.Config.Production() && target.Scheme == "http" {
+		// Normalized development targets can use one exact loopback origin.
+		// Never allow arbitrary insecure frames, including their redirects.
+		frameSources += " " + target.Scheme + "://" + target.Host
+	}
+	data := pwaPageData{App: a, Base: "/p/" + a.Slug + "/", Launch: launch, Chinese: pwaWantsChinese(r)}
 	var buf bytes.Buffer
 	if err = pwaPageTemplate.Execute(&buf, data); err != nil {
 		http.Error(w, "Page unavailable", 503)
 		return
 	}
-	// Target origins are normalized on write and read. Only these public PWA
-	// wrappers relax frame-src; the admin console retains its restrictive CSP.
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src "+origin+"; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
+	// H5 flows can redirect to another HTTPS login, payment or www origin.
+	// Every D1 response retains frame-ancestors 'none' and X-Frame-Options DENY,
+	// so redirects back to this origin cannot load a same-origin child document.
+	// Only public PWA wrappers relax frame-src; the console stays restrictive.
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src "+frameSources+"; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	w.Header().Set("Cache-Control", "no-store")

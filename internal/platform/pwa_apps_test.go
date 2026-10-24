@@ -10,6 +10,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -213,8 +215,8 @@ func TestPWAPublicPagesManifestScopeAndTenantAvailability(t *testing.T) {
 		t.Fatal("public name not safely escaped")
 	}
 	csp := page.Header().Get("Content-Security-Policy")
-	if !strings.Contains(csp, "frame-src https://example.com;") || !strings.Contains(csp, "script-src 'self';") || strings.Contains(csp, "unsafe-inline") {
-		t.Fatal("PWA page unexpectedly broadened CSP", csp)
+	if !strings.Contains(csp, "frame-src https:;") || !strings.Contains(csp, "script-src 'self';") || !strings.Contains(csp, "frame-ancestors 'none';") || strings.Contains(csp, "unsafe-inline") {
+		t.Fatal("PWA page compatibility or document isolation policy changed", csp)
 	}
 	zh := pwaPublicCall(t, s, base, "", "zh-CN")
 	requireCode(t, zh, 200)
@@ -223,8 +225,8 @@ func TestPWAPublicPagesManifestScopeAndTenantAvailability(t *testing.T) {
 	}
 	launch := pwaPublicCall(t, s, base+"launch", "", "")
 	requireCode(t, launch, 200)
-	if !strings.Contains(launch.Body.String(), "sandbox=") || !strings.Contains(launch.Body.String(), "iframe") || strings.Contains(launch.Body.String(), "allow-top-navigation") {
-		t.Fatal("unsafe runtime iframe permissions")
+	if !strings.Contains(launch.Body.String(), "sandbox=") || !strings.Contains(launch.Body.String(), "allow-top-navigation-by-user-activation") || strings.Contains(launch.Body.String(), "allow-top-navigation\"") || !strings.Contains(launch.Body.String(), `allow="fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write"`) {
+		t.Fatal("runtime iframe compatibility permissions changed")
 	}
 	manifest := pwaPublicCall(t, s, base+"manifest.webmanifest", "", "")
 	requireCode(t, manifest, 200)
@@ -249,7 +251,7 @@ func TestPWAPublicPagesManifestScopeAndTenantAvailability(t *testing.T) {
 		t.Fatal("push public config key exposure wrong")
 	}
 	root := pwaPublicCall(t, s, "/", "", "")
-	if strings.Contains(root.Header().Get("Content-Security-Policy"), "frame-src https://example.com") {
+	if !strings.Contains(root.Header().Get("Content-Security-Policy"), "frame-src 'none';") {
 		t.Fatal("PWA CSP leaked to console")
 	}
 	suffixes := []string{"", "launch", "manifest.webmanifest", "sw.js", "client.js", "style.css", "icon/192.png", "push-config"}
@@ -276,6 +278,69 @@ func TestPWAPublicPagesManifestScopeAndTenantAvailability(t *testing.T) {
 		requireCode(t, pwaPublicCall(t, s, base+suffix, "", ""), 404)
 	}
 }
+
+func TestPWARuntimeCrossOriginCompatibilityKeepsD1Unframeable(t *testing.T) {
+	s := testServer(t)
+	owner := seedUser(t, s, 0)
+	app := createPWAFixture(t, s, owner, "H5 runtime")
+	s.Config.WebDir = t.TempDir()
+	if err := os.MkdirAll(filepath.Join(s.Config.WebDir, "assets"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	for path, body := range map[string]string{"index.html": "<!doctype html><title>Console</title>", "assets/runtime-test.js": "console.log('static');"} {
+		if err := os.WriteFile(filepath.Join(s.Config.WebDir, path), []byte(body), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	base := "/p/" + app.Slug + "/"
+	// External H5 redirects may reach any HTTPS origin. A redirect back to D1
+	// must still be rejected as a frame before it can access its same-origin
+	// parent. Keep both protections on successful, private and error responses.
+	for _, tc := range []struct {
+		path   string
+		status int
+	}{
+		{"/", 200}, {"/index.html", 301}, {"/assets/runtime-test.js", 200},
+		{"/api/pwas", 401}, {"/api/does-not-exist", 404},
+		{base, 200}, {base + "launch", 200}, {base + "push-config", 200},
+		{base + "sw.js", 200}, {base + "icon/192.png", 200}, {"/p/invalid/launch", 404},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			r := httptest.NewRequest("GET", s.Config.PublicURL+tc.path, nil)
+			r.Header.Set("Sec-Fetch-Dest", "iframe")
+			w := httptest.NewRecorder()
+			s.Handler().ServeHTTP(w, r)
+			requireCode(t, w, tc.status)
+			if w.Header().Get("X-Frame-Options") != "DENY" || !strings.Contains(w.Header().Get("Content-Security-Policy"), "frame-ancestors 'none'") {
+				t.Fatalf("D1 document became frameable: %v", w.Header())
+			}
+		})
+	}
+	for _, tc := range []struct {
+		name, env, target, frameSources string
+		status                          int
+	}{
+		{"production HTTPS redirects", "production", "https://example.com/app", "https:", 200},
+		{"development HTTPS redirects", "test", "https://example.com/app", "https:", 200},
+		{"development IPv4 loopback", "test", "http://127.0.0.1:9999/app", "https: http://127.0.0.1:9999", 200},
+		{"unaccepted IPv6 target stays unavailable", "test", "http://[::1]:9999/app", "'none'", 404},
+		{"production rejects loopback", "production", "http://127.0.0.1:9999/app", "'none'", 404},
+		{"development rejects external HTTP", "test", "http://example.com/app", "'none'", 404},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s.Config.Env = tc.env
+			if err := s.DB.Model(&app).Update("target_url", tc.target).Error; err != nil {
+				t.Fatal(err)
+			}
+			w := pwaPublicCall(t, s, base+"launch", "", "")
+			requireCode(t, w, tc.status)
+			if csp := w.Header().Get("Content-Security-Policy"); !strings.Contains(csp, "frame-src "+tc.frameSources+";") || strings.Contains(csp, "frame-src https: http:;") {
+				t.Fatalf("unexpected frame source policy: %s", csp)
+			}
+		})
+	}
+}
+
 func TestPWAIconNormalizationAndLimits(t *testing.T) {
 	s := testServer(t)
 	owner := seedUser(t, s, 0)

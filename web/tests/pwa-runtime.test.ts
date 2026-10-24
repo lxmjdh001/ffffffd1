@@ -7,32 +7,27 @@ const worker = readFileSync(resolve(process.cwd(), '../internal/platform/templat
 const client = readFileSync(resolve(process.cwd(), '../internal/platform/templates/pwa-client.js'), 'utf8');
 const base = 'https://d1.example/p/0123456789abcdef/';
 
-function workerContext(cacheStore?: Map<string, Response>) {
+function workerContext(workerBase = base) {
   const listeners = new Map<string, (event: any) => void>();
   const fetcher = vi.fn().mockResolvedValue(new Response('{}'));
   const show = vi.fn().mockResolvedValue(undefined);
   const open = vi.fn().mockResolvedValue(undefined);
   const focus = vi.fn().mockResolvedValue(undefined);
+  const matchAll = vi.fn().mockResolvedValue([{ url: workerBase + 'launch', focus }]);
   const self = {
-    location: { href: base + 'sw.js' },
+    location: { href: workerBase + 'sw.js' },
     addEventListener: (name: string, handler: (event: any) => void) => listeners.set(name, handler),
     registration: { showNotification: show },
-    clients: { claim: vi.fn(), matchAll: vi.fn().mockResolvedValue([{ url: base + 'launch', focus }]), openWindow: open },
+    clients: { claim: vi.fn(), matchAll, openWindow: open },
     skipWaiting: vi.fn(),
   };
-  const caches = cacheStore ? { open: async () => ({
-    match: async (key: string) => cacheStore.get(String(key))?.clone(),
-    put: async (key: string, value: Response) => { cacheStore.set(String(key), value); },
-    keys: async () => [...cacheStore.keys()],
-    delete: async (key: string) => cacheStore.delete(String(key)),
-  }) } : undefined;
-  runInNewContext(worker, { self, URL, Response, fetch: fetcher, caches });
+  runInNewContext(worker, { self, URL, Response, fetch: fetcher });
   const dispatch = async (name: string, values: Record<string, any>) => {
     let pending: Promise<any> | undefined;
     listeners.get(name)!({ ...values, waitUntil: (value: Promise<any>) => { pending = value; } });
     await pending;
   };
-  return { listeners, fetcher, show, open, focus, dispatch };
+  return { listeners, fetcher, show, open, focus, matchAll, dispatch };
 }
 
 describe('PWA service worker boundaries and notifications', () => {
@@ -55,6 +50,7 @@ describe('PWA service worker boundaries and notifications', () => {
     expect(first[1].icon).toBe(base + 'icon/192.png');
     expect(first[1].data.url).toBe(base + 'launch');
     expect(first[1].tag).toBe(w.show.mock.calls[1][1].tag);
+    expect(first[1].renotify).toBe(false);
     expect(w.show.mock.invocationCallOrder[0]).toBeLessThan(w.fetcher.mock.invocationCallOrder[0]);
     const [url, request] = w.fetcher.mock.calls[0];
     expect(String(url)).toBe(base + 'event');
@@ -65,10 +61,11 @@ describe('PWA service worker boundaries and notifications', () => {
   it('focuses the installed app and reports clicks using its delivery capability', async () => {
     const w = workerContext();
     const close = vi.fn();
-    await w.dispatch('notificationclick', { notification: { close, data: { url: 'https://d1.example/#/admin/users', delivery_id: 'one', event_token: 'secret' } } });
+    await w.dispatch('notificationclick', { notification: { close, data: { url: base + 'launch', delivery_id: 'one', event_token: 'secret' } } });
     expect(close).toHaveBeenCalledOnce();
     expect(w.focus).toHaveBeenCalledOnce();
     expect(w.open).not.toHaveBeenCalled();
+    expect(w.matchAll).toHaveBeenCalledWith({ type: 'window', includeUncontrolled: true });
     expect(JSON.parse(w.fetcher.mock.calls[0][1].body).event).toBe('clicked');
   });
 
@@ -79,18 +76,82 @@ describe('PWA service worker boundaries and notifications', () => {
     expect(w.fetcher).not.toHaveBeenCalled();
   });
 
-  it('suppresses a repeated delivery even after the service worker restarts', async () => {
-    const receipts = new Map<string, Response>();
-    const first = workerContext(receipts);
+  it.each([null, [], 'invalid', 42, true].map(value => ({ value })))('displays a default notification for a non-object payload $value without reporting a delivery', async ({ value }) => {
+    const w = workerContext();
+    await w.dispatch('push', { data: { json: () => value } });
+    expect(w.show).toHaveBeenCalledExactlyOnceWith('New update', expect.objectContaining({ body: '', data: expect.objectContaining({ url: base + 'launch' }) }));
+    expect(w.fetcher).not.toHaveBeenCalled();
+  });
+
+  it('displays a default notification for malformed JSON without reporting a delivery', async () => {
+    const w = workerContext();
+    await w.dispatch('push', { data: { json: () => { throw new SyntaxError('malformed JSON'); } } });
+    expect(w.show).toHaveBeenCalledExactlyOnceWith('New update', expect.objectContaining({ body: '', data: expect.objectContaining({ url: base + 'launch' }) }));
+    expect(w.fetcher).not.toHaveBeenCalled();
+  });
+
+  it('displays a default notification for a push without a payload', async () => {
+    const w = workerContext();
+    await w.dispatch('push', {});
+    expect(w.show).toHaveBeenCalledExactlyOnceWith('New update', expect.objectContaining({ body: '', data: expect.objectContaining({ url: base + 'launch' }) }));
+    expect(w.fetcher).not.toHaveBeenCalled();
+  });
+
+  it('displays every push event with the same replacement tag and no repeated alert request after a restart', async () => {
+    const first = workerContext();
     const payload = { title: 'Only once', delivery_id: 'a'.repeat(32), event_token: 'proof' };
     await first.dispatch('push', { data: { json: () => payload } });
     expect(first.show).toHaveBeenCalledOnce();
-    const restarted = workerContext(receipts);
+    const restarted = workerContext();
     await restarted.dispatch('push', { data: { json: () => payload } });
-    expect(restarted.show).not.toHaveBeenCalled();
+    expect(restarted.show).toHaveBeenCalledOnce();
+    expect(restarted.show.mock.calls[0][1]).toMatchObject({ tag: first.show.mock.calls[0][1].tag, renotify: false });
     expect(JSON.parse(restarted.fetcher.mock.calls[0][1].body).event).toBe('displayed');
-    expect([...receipts.keys()]).toEqual([base + 'notification-receipt/' + payload.delivery_id]);
-    expect(await receipts.values().next().value!.clone().text()).toMatch(/^\d+$/);
+  });
+
+  it.each([
+    'https://d1.example/d/example',
+    'https://d1.example/s/example?from=push',
+    'https://d1.example/c/example#content',
+    'https://landing.example/offer?campaign=one#start',
+  ])('opens the configured HTTPS destination %s without focusing an unrelated app window', async target => {
+    const w = workerContext();
+    await w.dispatch('push', { data: { json: () => ({ title: 'A', url: target }) } });
+    expect(w.show.mock.calls[0][1].data.url).toBe(target);
+    await w.dispatch('notificationclick', { notification: { close: vi.fn(), data: w.show.mock.calls[0][1].data } });
+    expect(w.open).toHaveBeenCalledExactlyOnceWith(target);
+    expect(w.focus).not.toHaveBeenCalled();
+  });
+
+  it('focuses an exact configured business URL even when it is outside the worker scope', async () => {
+    const w = workerContext();
+    const target = 'https://d1.example/s/example';
+    const matchingFocus = vi.fn().mockResolvedValue(undefined);
+    w.matchAll.mockResolvedValue([{ url: base + 'launch', focus: w.focus }, { url: target, focus: matchingFocus }]);
+    await w.dispatch('notificationclick', { notification: { close: vi.fn(), data: { url: target } } });
+    expect(matchingFocus).toHaveBeenCalledOnce();
+    expect(w.focus).not.toHaveBeenCalled();
+    expect(w.open).not.toHaveBeenCalled();
+  });
+
+  it.each(['javascript:alert(1)', 'data:text/html,hello', 'http://landing.example/', 'https://user:password@landing.example/', 'https://[invalid', ''])('falls back to the app launch page for unsafe or empty destination %s', async target => {
+    const w = workerContext();
+    await w.dispatch('notificationclick', { notification: { close: vi.fn(), data: { url: target } } });
+    expect(w.focus).toHaveBeenCalledOnce();
+    expect(w.open).not.toHaveBeenCalled();
+  });
+
+  it('allows only the exact loopback HTTP origin during development', async () => {
+    const devBase = 'http://127.0.0.1:18088/p/0123456789abcdef/';
+    const w = workerContext(devBase);
+    const target = 'http://127.0.0.1:18088/s/example';
+    await w.dispatch('notificationclick', { notification: { close: vi.fn(), data: { url: target } } });
+    expect(w.open).toHaveBeenCalledExactlyOnceWith(target);
+    for (const unsafe of ['http://127.0.0.1:18089/s/example', 'http://127.0.0.1.attacker.example:18088/s/example']) {
+      await w.dispatch('notificationclick', { notification: { close: vi.fn(), data: { url: unsafe } } });
+    }
+    expect(w.open).toHaveBeenCalledOnce();
+    expect(w.focus).toHaveBeenCalledTimes(2);
   });
 });
 
