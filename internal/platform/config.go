@@ -80,9 +80,6 @@ func (c Config) paymentMethods() []string {
 	if c.USDTWallet != "" && (c.usdtProvider() != "uzf" || (c.USDTMonitorURL != "" && c.USDTMonitorSecret != "")) {
 		methods = append(methods, "usdt")
 	}
-	if c.futoonConfigured() {
-		methods = append(methods, "alipay")
-	}
 	return append(methods, "manual")
 }
 

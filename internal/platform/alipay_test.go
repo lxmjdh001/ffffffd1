@@ -16,6 +16,29 @@ func configureTestAlipay(s *Server) {
 	s.Config.FutoonKey = "test-only-merchant-key"
 }
 
+// Model an order issued before Alipay was retired. New orders must not go
+// through this channel, but historical notifications still need coverage.
+func seedExistingAlipayOrder(t *testing.T, s *Server, u User, key string, amount int64) Order {
+	t.Helper()
+	settings, err := getSettings(s.DB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fee, cents, err := alipayQuote(amount, settings.AlipayCNYRateMicros)
+	if err != nil {
+		t.Fatal(err)
+	}
+	o := Order{ID: randomHex(16), UserID: u.ID, IdempotencyKey: u.ID + ":" + key,
+		Method: "alipay", AmountMicros: amount, BonusMicros: rechargeBonus(amount, settings),
+		Status: "pending", PaymentCurrency: "CNY", AlipayRateMicros: settings.AlipayCNYRateMicros,
+		FeeMicros: fee, PayCNYCents: cents, CreatedAt: s.Now(), ExpiresAt: s.Now().Add(30 * time.Minute)}
+	o.PayURL = s.paymentURL(o, "127.0.0.1")
+	if err := s.DB.Create(&o).Error; err != nil {
+		t.Fatal(err)
+	}
+	return o
+}
+
 func alipayNotification(t *testing.T, s *Server, o Order, money, trade string, mutate func(map[string]string)) *httptest.ResponseRecorder {
 	t.Helper()
 	p := map[string]string{"pid": s.Config.FutoonPID, "type": "alipay", "out_trade_no": o.ID, "money": money, "trade_no": trade, "trade_status": "TRADE_SUCCESS", "sign_type": "MD5"}
@@ -52,7 +75,7 @@ func TestAlipayQuoteAndLockedOrder(t *testing.T) {
 	u := seedUser(t, s, 0)
 	cookie, csrf := sessionFor(t, s, u)
 	key := randomHex(16)
-	o := createBonusOrder(t, s, cookie, csrf, key, "100", "alipay")
+	o := seedExistingAlipayOrder(t, s, u, key, 100*Dollar)
 	if o.AmountMicros != 100*Dollar || o.PaymentCurrency != "CNY" || o.AlipayRateMicros != 6650000 || o.PayCNYCents != 69825 || o.FeeMicros != 5*Dollar || o.BonusMicros != 0 {
 		t.Fatal("order did not separate USD principal, fee, CNY payment and rate")
 	}
@@ -74,9 +97,18 @@ func TestAlipayQuoteAndLockedOrder(t *testing.T) {
 	if retry.ID != o.ID || retry.PayURL != o.PayURL || retry.PayCNYCents != 69825 || retry.AlipayRateMicros != 6650000 {
 		t.Fatal("retry or exchange-rate change rewrote the existing order")
 	}
-	newOrder := createBonusOrder(t, s, cookie, csrf, randomHex(16), "100", "alipay")
-	if newOrder.PayCNYCents != 73500 {
-		t.Fatal("new order did not use updated CNY rate independently of USDT rate")
+	r := httptest.NewRequest("POST", "http://localhost:8088/api/orders", strings.NewReader(`{"amount":"100","method":"alipay"}`))
+	r.AddCookie(cookie)
+	r.Header.Set("X-CSRF-Token", csrf)
+	r.Header.Set("Idempotency-Key", randomHex(16))
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, r)
+	requireCode(t, w, 400)
+	if !strings.Contains(w.Body.String(), "支付宝充值已停用") {
+		t.Fatal("new Alipay order was not rejected by the retired-channel guard")
+	}
+	if countRows(t, s, &Order{}) != 1 {
+		t.Fatal("retired channel created another order")
 	}
 	if countRows(t, s, &Ledger{}) != 0 {
 		t.Fatal("creating an unpaid order credited funds")
@@ -132,8 +164,7 @@ func TestAlipayInvitationRegistrationThreeLevelSettlementAndReplay(t *testing.T)
 	if err := s.DB.Save(&settings).Error; err != nil {
 		t.Fatal(err)
 	}
-	cookie, csrf := sessionFor(t, s, payer)
-	o := createBonusOrder(t, s, cookie, csrf, randomHex(16), "100", "alipay")
+	o := seedExistingAlipayOrder(t, s, payer, randomHex(16), 100*Dollar)
 	if o.PayCNYCents != 69825 || o.BonusMicros != 50*Dollar || o.FeeMicros != 5*Dollar {
 		t.Fatal("gift or fee was added to the wrong payment base")
 	}
@@ -179,7 +210,7 @@ func TestAlipayInvitationRegistrationThreeLevelSettlementAndReplay(t *testing.T)
 			t.Fatal("referral overview did not show one principal-only reward")
 		}
 	}
-	next := createBonusOrder(t, s, cookie, csrf, randomHex(16), "100", "alipay")
+	next := seedExistingAlipayOrder(t, s, payer, randomHex(16), 100*Dollar)
 	requireCode(t, alipayNotification(t, s, next, "735.00", "payment-bill", nil), 400)
 	if countRows(t, s, &ReferralReward{}) != 3 || countRows(t, s, &Ledger{}) != 5 {
 		t.Fatal("replayed gateway bill credited another order")
@@ -223,8 +254,7 @@ func TestAlipayRejectsForgedAndDuplicateFieldsAndAcceptsPOST(t *testing.T) {
 	s := testServer(t)
 	configureTestAlipay(s)
 	u := seedUser(t, s, 0)
-	cookie, csrf := sessionFor(t, s, u)
-	o := createBonusOrder(t, s, cookie, csrf, randomHex(16), "100", "alipay")
+	o := seedExistingAlipayOrder(t, s, u, randomHex(16), 100*Dollar)
 	params := map[string]string{"pid": s.Config.FutoonPID, "type": "alipay", "out_trade_no": o.ID, "money": "698.25", "trade_no": "post-payment-bill", "trade_status": "TRADE_SUCCESS", "sign_type": "MD5"}
 	params["sign"] = FutoonSign(params, s.Config.FutoonKey)
 	q := url.Values{}

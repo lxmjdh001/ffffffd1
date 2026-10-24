@@ -62,8 +62,8 @@ func TestRechargeBonusSettlementAllMethods(t *testing.T) {
 				t.Fatal("order did not snapshot principal and gift separately")
 			}
 			if method == "usdt" {
-				base := (o.AmountMicros*Dollar + o.RateMicros - 1) / o.RateMicros
-				if o.USDTUnits <= base || o.USDTUnits > base+9999 {
+				baseCents := (o.AmountMicros*100 + o.RateMicros - 1) / o.RateMicros
+				if o.USDTUnits%10000 != 0 || o.USDTUnits < (baseCents-99)*10000 || o.USDTUnits > (baseCents+10)*10000 {
 					t.Fatal("USDT payment amount included the gift")
 				}
 			}

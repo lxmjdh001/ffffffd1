@@ -128,12 +128,14 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	if e = s.rate("order:"+userOf(r).ID, 20, time.Hour); e != nil {
-		fail(w, e)
+	// Keep idempotent access to historical Alipay orders above, but never
+	// create another gateway order after the channel has been retired.
+	if in.Method == "alipay" {
+		fail(w, problem(400, "支付宝充值已停用，请选择 USDT 或人工充值"))
 		return
 	}
-	if in.Method == "alipay" && !s.Config.futoonConfigured() {
-		fail(w, problem(503, "支付宝支付尚未配置，请联系管理员"))
+	if e = s.rate("order:"+userOf(r).ID, 20, time.Hour); e != nil {
+		fail(w, e)
 		return
 	}
 	if in.Method == "usdt" {
@@ -179,15 +181,6 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		order = Order{ID: randomHex(16), UserID: u.ID, IdempotencyKey: idkey, Method: in.Method, AmountMicros: amount, Status: "pending", CreatedAt: s.Now(), ExpiresAt: s.Now().Add(30 * time.Minute)}
 		order.BonusMicros = rechargeBonus(amount, settings)
-		if in.Method == "alipay" {
-			order.PaymentCurrency = "CNY"
-			order.AlipayRateMicros = settings.AlipayCNYRateMicros
-			order.FeeMicros, order.PayCNYCents, e = alipayQuote(amount, order.AlipayRateMicros)
-			if e != nil {
-				return e
-			}
-			order.PayURL = s.paymentURL(order, s.clientIP(r))
-		}
 		if in.Method == "manual" {
 			order.ExpiresAt = s.Now().Add(7 * 24 * time.Hour)
 		}
@@ -211,18 +204,24 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 	jsonOut(w, 201, order)
 }
 func (s *Server) reserveUSDT(tx *gorm.DB, o *Order) error {
-	// One cent is added at most. Exact six decimal matching keeps the amount
-	// distinct without go7's random 0–3 USDT surcharge.
-	base := (o.AmountMicros*Dollar + o.RateMicros - 1) / o.RateMicros
-	for i := 0; i < 64; i++ {
-		n, e := rand.Int(rand.Reader, big.NewInt(9999))
-		if e != nil {
-			return e
-		}
-		units := base + n.Int64() + 1
-		if units%10000 == 0 {
-			continue // Keep distinct from go7's two-decimal payment amounts.
-		}
+	if o.RateMicros <= 0 {
+		return problem(400, "USDT 充值汇率无效")
+	}
+	// Allocate whole cents from base - 0.99U through base + 0.10U.
+	// For 500 USD at a 1:1 rate this is exactly 499.01–500.10 USDT.
+	// Keep immutable reservations, including historical six-decimal amounts,
+	// so a delayed payment can never be reassigned to a different D1 order.
+	baseCents := (o.AmountMicros*100 + o.RateMicros - 1) / o.RateMicros
+	low, high := max(int64(1), baseCents-99), baseCents+10
+	slots := high - low + 1
+	start, e := rand.Int(rand.Reader, big.NewInt(slots))
+	if e != nil {
+		return e
+	}
+	// Randomize the starting point, then visit every slot exactly once.
+	// A collision must not hide another available amount in the same range.
+	for i := int64(0); i < slots; i++ {
+		units := (low + (start.Int64()+i)%slots) * 10000
 		reservation := USDTReservation{Wallet: o.Wallet, Units: units, OrderID: o.ID}
 		res := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&reservation)
 		if res.Error != nil {

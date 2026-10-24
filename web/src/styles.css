@@ -11,7 +11,16 @@
 
 .amount-options button{position:relative}.recharge-gift-badge{position:absolute;right:-4px;top:-9px;display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:21px;padding:0 5px;border-radius:6px 6px 6px 0;background:#ef9365;color:#fff;font-size:11px;box-shadow:0 2px 5px #c97a4020}.recharge-promotion{margin:-4px 0 23px;font-size:12px;color:#a27650}.recharge-promotion>p{margin-bottom:10px}.recharge-gift-summary{padding:14px 17px;margin:0 0 20px;border:1px solid #f2e6d6;border-radius:8px;background:#fffbf5;font-size:12px;color:#937a5f}.recharge-gift-summary>div{display:flex;justify-content:space-between;gap:12px;line-height:1.8}.recharge-gift-summary>div+div{margin-top:6px}.recharge-gift-summary strong{color:#a77243;font-weight:600}.recharge-promotion>.recharge-gift-summary{margin-bottom:0}
 
-.payment-methods{border:0;padding:0;margin:0 0 24px;min-width:0}.payment-methods legend{padding:0;margin-bottom:12px;color:#7885a0;font-size:13px;font-weight:500}.payment-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.payment-options button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border:1px solid #e6eaf4;border-radius:7px;background:#fff;color:#8190ad}.payment-options button strong{font-size:13px;font-weight:500}.payment-options button small{font-size:10px;color:#9aa7bc}.payment-options button.selected{border-color:#9aa8e9;background:#f4f6ff;color:#788bd6}.payment-options button:disabled{background:#f8f9fc;color:#a3acbc;cursor:not-allowed}.payment-options button:focus-visible{outline:3px solid #aab5ff;outline-offset:2px}
+.payment-methods{border:0;padding:0;margin:0 0 24px;min-width:0}
+.payment-methods legend{padding:0;margin-bottom:12px;color:#7885a0;font-size:13px;font-weight:500}
+.payment-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.payment-options button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 12px;border:1px solid #e6eaf4;border-radius:7px;background:#fff;color:#8190ad}
+.payment-options button strong{font-size:13px;font-weight:500}
+.payment-options button small{font-size:10px;color:#9aa7bc}
+.payment-options button.selected{border-color:#9aa8e9;background:#f4f6ff;color:#788bd6}
+.payment-options button:disabled{background:#f8f9fc;color:#a3acbc;cursor:not-allowed}
+.payment-options button:focus-visible{outline:3px solid #aab5ff;outline-offset:2px}
+@media(max-width:650px){.payment-options{grid-template-columns:1fr}}
 
 .download-filters{padding:22px 23px;border-bottom:1px solid #edf0f5}.download-presets{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:18px}.download-presets button{padding:8px 13px;border:1px solid #e6eaf4;border-radius:6px;background:#fff;color:#8291ac;font-size:12px}.download-presets button.selected{background:#f1f3ff;border-color:#a4afed;color:#6d7cce}.download-presets>span{margin-left:auto}.download-date-fields{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}.download-date-fields .field{margin:0;min-width:160px;max-width:225px;flex:1}.download-date-fields .btn{min-height:42px}.download-filters>.form-error{margin:14px 0 0}@media(max-width:650px){.download-filters{padding:18px}.download-presets>span{width:100%;margin:5px 0 0;font-size:10px}.download-date-fields{gap:12px}.download-date-fields .field{min-width:0;max-width:none;flex-basis:calc(50% - 6px)}.download-date-fields .btn{width:100%}.download-date-fields input{min-width:0;padding:10px 8px}}
 

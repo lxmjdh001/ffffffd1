@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BillingPage } from '../src/billing';
 import { ConfigContext } from '../src/ui';
 import type { Config, Dashboard, Ledger, Order, Plan, User } from '../src/types';
-import { alipayQuote } from '../src/alipay';
 
 const free: Plan = { id: 'free', name: '免费套餐', price_micros: 0, app_limit: 10, download_limit: 1000, storage_bytes: 10 * 2 ** 30 };
 const account: User = { id: 'test-member', email: 'member@example.com', name: '测试用户', role: 'member', disabled: false, balance_micros: 0, held_micros: 0, pro_until: null, created_at: '2026-10-01T00:00:00Z' };
@@ -51,16 +50,12 @@ beforeEach(() => {
     if (path === '/api/orders' && options?.method === 'POST') {
       const body = JSON.parse(String(options.body)); submissions.push(body);
       createdOrder = { ...order, method: body.method, pay_url: 'https://payments.example/submit.php?order=test-order', usdt_units: 1000007123, wallet: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t' };
-      if (body.method === 'alipay') {
-        const amount = Math.round(Number(body.amount) * 1e6);
-        const quote = alipayQuote(amount, config.alipay_cny_rate_micros ?? 6650000)!;
-        Object.assign(createdOrder, { amount_micros: amount, bonus_micros: 0, payment_currency: 'CNY', alipay_rate_micros: config.alipay_cny_rate_micros ?? 6650000, fee_micros: quote.feeMicros, pay_cny_cents: quote.payCNYCents });
-      }
+      if (body.method === 'usdt') createdOrder.usdt_units = Math.round(Number(body.amount) * 1e6) - 990000;
       return json(createdOrder);
     }
     if (path === '/api/orders') return json({ data: existingOrders, total: existingOrders.length });
     if (path === '/api/ledger') return json({ data: existingLedger, total: existingLedger.length });
-    if (path === `/api/orders/${order.id}`) return json(createdOrder || order);
+    if (path === `/api/orders/${order.id}`) return json(createdOrder || existingOrders.find(o => o.id === order.id) || order);
     throw new Error(`Unexpected request: ${input}`);
   }));
 });
@@ -78,18 +73,18 @@ function openBilling() {
 }
 
 describe('recharge promotion', () => {
-  it('previews the 5% CNY charge, submits only principal and opens the locked Alipay order', async () => {
-    config.payment_methods = ['alipay', 'manual']; config.alipay_cny_rate_micros = 6650000;
+  it('retains historical Alipay payment instructions without offering new Alipay orders', async () => {
+    existingOrders = [{ ...order, method: 'alipay', amount_micros: 100000000, bonus_micros: 0,
+      payment_currency: 'CNY', alipay_rate_micros: 6650000, fee_micros: 5000000, pay_cny_cents: 69825,
+      pay_url: 'https://payments.example/submit.php?order=test-order' }];
     const user = openBilling();
-    await user.click(await screen.findByRole('button', { name: '充值余额' }));
-    expect(screen.getByText('¥698.25')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: '创建充值订单' }));
-    await waitFor(() => expect(submissions).toEqual([{ amount: '100', method: 'alipay' }]));
+    await user.click(await screen.findByRole('button', { name: /查看详情/ }));
     await screen.findByRole('heading', { name: '充值订单' });
     expect(screen.getByText('¥ 698.25')).toBeTruthy();
     expect(screen.getByText(/充值本金 \$100.00 · 手续费 5%（\$5.00）/)).toBeTruthy();
     expect(screen.getByRole('link', { name: '前往支付宝付款' }).getAttribute('href')).toBe('https://payments.example/submit.php?order=test-order');
     expect(screen.getByText(/订单汇率：1 USDT = ¥6.65/)).toBeTruthy();
+    expect(submissions).toEqual([]);
   });
   it('identifies referral credits in the ledger and retains fractional-cent rewards', async () => {
     existingLedger = [{ id: 'referral-ledger', kind: 'referral_reward', amount_micros: 20200, balance_micros: 20200, note: '二级邀请返利 · 好友充值 1.010000 USD', reference: 'referral:test-order:2', created_at: '2026-10-24T03:00:00Z' }];
@@ -118,14 +113,16 @@ describe('recharge promotion', () => {
     expect(screen.getByRole('heading', { name: '充值账户余额' })).toBeTruthy();
   });
 
-  it('offers Alipay when configured without enabling the legacy WeChat channel', async () => {
+  it('offers only USDT and manual even when cached config advertises retired channels', async () => {
     config.payment_methods = ['alipay', 'wechat', 'manual'];
     const user = openBilling();
     await user.click(await screen.findByRole('button', { name: '充值余额' }));
     const channels = within(screen.getByRole('group', { name: '支付方式' }));
-    expect(channels.getAllByRole('button')).toHaveLength(3);
+    expect(channels.getAllByRole('button')).toHaveLength(2);
     expect((channels.getByRole('button', { name: 'USDT' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(channels.getByRole('button', { name: '支付宝' }).getAttribute('aria-pressed')).toBe('true');
+    expect(channels.getByRole('button', { name: '人工充值' }).getAttribute('aria-pressed')).toBe('true');
+    expect(channels.queryByRole('button', { name: '支付宝' })).toBeNull();
+    expect(screen.queryByLabelText('支付宝付款预估')).toBeNull();
     expect(channels.queryByText(/微信/)).toBeNull();
   });
 
@@ -134,16 +131,17 @@ describe('recharge promotion', () => {
     const user = openBilling();
     await user.click(await screen.findByRole('button', { name: '充值余额' }));
     const channels = within(screen.getByRole('group', { name: '支付方式' }));
-    expect(channels.getAllByRole('button')).toHaveLength(3);
-    expect((channels.getByRole('button', { name: '支付宝' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(channels.getAllByRole('button')).toHaveLength(2);
+    expect(channels.queryByRole('button', { name: '支付宝' })).toBeNull();
     expect(channels.getByRole('button', { name: 'USDT' }).getAttribute('aria-pressed')).toBe('true');
     await user.click(screen.getByRole('button', { name: /^\$1000/ }));
     await user.click(screen.getByRole('button', { name: '创建充值订单' }));
     await waitFor(() => expect(submissions).toEqual([{ amount: '1000', method: 'usdt' }]));
     await screen.findByRole('heading', { name: '充值订单' });
     const payment = within(screen.getByRole('dialog'));
-    expect(payment.getByText('仅 TRON / TRC20')).toBeTruthy();
-    expect(payment.getByText('1,000.007123')).toBeTruthy();
+    expect(payment.queryByText(/TRON|TRC20/)).toBeNull();
+    expect(screen.getByRole('dialog').querySelector('svg[role="img"]')).toBeNull();
+    expect(payment.getByText('999.01')).toBeTruthy();
     expect(payment.getByText('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t')).toBeTruthy();
   });
 

@@ -1,7 +1,7 @@
 # D1 integration with the existing UZF service
 
 Only D1 is deployed or changed. The operator already runs UZF on a dedicated
-server. Do not modify UZF, deploy another copy, request OKX credentials, or reuse
+server. Do not modify UZF, deploy another copy, request OKX credentials, or alter
 go7 receiving addresses. go7 is a read-only reference for the client protocol.
 
 ## D1 configuration
@@ -34,7 +34,7 @@ accepted without floating-point conversion. The bill must match the complete
 order amount, USDT currency and original payment window. A bare `found=true`
 without a bill is not credited. These checks require no UZF modification.
 
-The globally unique `uzf:<bill_id>` settlement reference prevents the same bill
+The D1-wide unique `uzf:<bill_id>` settlement reference prevents the same bill
 funding another order or user. Principal and the order-snapshotted recharge bonus
 are credited atomically. Amount reservations are never reused for a receiving
 wallet. The worker automatically checks orders each minute; users can also check
@@ -42,6 +42,30 @@ manually. The original 30-minute payment window and 48-hour reconciliation windo
 remain. This follows the trusted UZF account-bill model, not independent on-chain
 confirmation. The configured receiving address must belong to the account
 actually monitored by that existing service.
+
+## Two-decimal payment amounts
+
+New orders allocate a cent-exact amount from the converted principal minus
+0.99 USDT through plus 0.10 USDT (inclusive), clamped to at least 0.01 USDT.
+The conversion is rounded up to a cent using integer arithmetic. At a 1:1
+rate, a 500 USD recharge therefore requests 499.01–500.10 USDT. Credits,
+promotion gifts and referral rewards still use the original order principal.
+Candidates are tried from a random starting point without replacement.
+
+The existing non-reusable receiving-wallet reservations remain: at most 110
+cent amounts exist in the same range, including previously allocated ones.
+If all are reserved, creation fails and asks for another recharge amount;
+it never silently reassigns a paid, expired or still-pending amount.
+Historical six-decimal orders keep their exact displayed/copied amount and
+settlement checks. The UI shows no QR code or prominent network badge, but
+retains a reminder to match the transfer network to the receiving address.
+This does not add support for arbitrary blockchain networks.
+
+The operator has explicitly accepted sharing the existing UZF/OKX account
+with go7 for this two-decimal scheme. D1's amount and bill-ID uniqueness are
+local to D1, not cross-project locks. The unchanged UZF endpoint only queries
+amount/currency; go7 and UZF are not modified. Separate accounts or a shared
+reservation protocol would be required for strict cross-project isolation.
 
 ## Administrator address and secondary password
 
@@ -69,5 +93,5 @@ checks without automatically restoring a live financial database.
 
 `go test ./...` covers the original UZF HTTP contract using D1-owned test doubles,
 wallet-password enforcement, worker settlement, retries and duplicate bills.
-No UZF process or source checkout is required. Real account verification remains
-pending until the operator supplies the existing query URL and secret.
+No UZF process or source checkout is required. A live signed-query check does
+not itself prove receipt of a real transfer; real-payment acceptance is separate.

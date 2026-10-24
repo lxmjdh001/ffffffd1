@@ -72,17 +72,21 @@ func TestPaymentChannelAvailabilityAndNewOrderRestrictions(t *testing.T) {
 		return w
 	}
 	channels([]string{"manual"})
-	requireCode(t, post("alipay"), 503)
+	requireCode(t, post("alipay"), 400)
 	requireCode(t, post("usdt"), 503)
 	s.Config.FutoonURL = "https://gateway.example/submit.php"
 	s.Config.FutoonPID = "test-merchant"
 	channels([]string{"manual"})
-	requireCode(t, post("alipay"), 503)
+	requireCode(t, post("alipay"), 400)
 	s.Config.FutoonKey = "test-secret"
 	s.Config.USDTWallet = usdtContract
-	channels([]string{"usdt", "alipay", "manual"})
+	channels([]string{"usdt", "manual"})
+	requireCode(t, post("alipay"), 400)
 	requireCode(t, post("wechat"), 400)
-	for _, method := range []string{"usdt", "alipay", "manual"} {
+	if countRows(t, s, &Order{}) != 0 || countRows(t, s, &Ledger{}) != 0 {
+		t.Fatal("retired payment channels created an order or credited funds")
+	}
+	for _, method := range []string{"usdt", "manual"} {
 		requireCode(t, post(method), 201)
 	}
 }
