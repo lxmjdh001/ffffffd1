@@ -1,0 +1,72 @@
+/* Installation feedback only: keep icon boxes and all button labels unchanged. */
+body[data-d1-pwa-installing] #app .app-main-info,
+body[data-d1-pwa-installing] #app .stay-prompt-app {
+ position: relative;
+}
+body[data-d1-pwa-installing] #app .app-icon-large,
+body[data-d1-pwa-installing] #app .stay-prompt-app-icon,
+body[data-d1-pwa-installing] .app-visual > .app-icon {
+ transform: scale(.68);
+ transform-origin: center;
+ transition: transform .22s ease;
+}
+body[data-d1-pwa-installing] #app .app-main-info::after,
+body[data-d1-pwa-installing] #app .stay-prompt-app::after,
+body[data-d1-pwa-installing] .app-visual::after {
+ content: "";
+ position: absolute;
+ box-sizing: border-box;
+ width: 80px;
+ height: 80px;
+ top: 0;
+ left: 0;
+ border: 3px solid #e1edff;
+ border-top-color: #4285f4;
+ border-right-color: #4285f4;
+ border-radius: 50%;
+ pointer-events: none;
+ animation: d1-pwa-install-spin .85s linear infinite;
+}
+body[data-d1-pwa-installing] #app .stay-prompt-app::after {
+ width: 72px;
+ height: 72px;
+ top: calc(50% - 36px);
+ left: 19px;
+}
+body[data-d1-pwa-installing] .app-visual::after {
+ width: 140px;
+ height: 140px;
+ top: calc(50% - 70px);
+ left: calc(50% - 70px);
+}
+@keyframes d1-pwa-install-spin {
+ to { transform: rotate(360deg); }
+}
+@media (max-width: 720px) {
+ body[data-d1-pwa-installing] .app-visual::after {
+  width: 105px;
+  height: 105px;
+  top: calc(50% - 52.5px);
+  left: calc(50% - 52.5px);
+ }
+}
+@media (max-width: 480px) {
+ body[data-d1-pwa-installing] #app .stay-prompt-app::after {
+  width: 60px;
+  height: 60px;
+  top: 17px;
+  left: 17px;
+ }
+}
+@media (prefers-reduced-motion: reduce) {
+ body[data-d1-pwa-installing] #app .app-icon-large,
+ body[data-d1-pwa-installing] #app .stay-prompt-app-icon,
+ body[data-d1-pwa-installing] .app-visual > .app-icon {
+  transition: none;
+ }
+ body[data-d1-pwa-installing] #app .app-main-info::after,
+ body[data-d1-pwa-installing] #app .stay-prompt-app::after,
+ body[data-d1-pwa-installing] .app-visual::after {
+  animation: none;
+ }
+}

@@ -27,6 +27,9 @@ var pwaSWJS string
 //go:embed templates/pwa-page.css
 var pwaPageCSS string
 
+//go:embed templates/pwa-install-animation.css
+var pwaInstallAnimationCSS string
+
 var pwaPageTemplate = template.Must(template.New("pwa-page").Parse(pwaPageHTML))
 
 // Called only after the host middleware has validated the configured host,
@@ -182,6 +185,9 @@ func (s *Server) pwaStyles(w http.ResponseWriter, r *http.Request) {
 	landing := storedPWALanding(a.LandingJSON)
 	if (landing.Template == "google_play" || landing.Template == "custom") && r.URL.Query().Get("launch") != "1" {
 		css = pwaLandingBaseCSS
+	}
+	if r.URL.Query().Get("launch") != "1" {
+		css += "\n" + pwaInstallAnimationCSS
 	}
 	s.pwaAsset(w, r, css+"\n"+returnFlowCSS+"\n"+pwaBrowserGuideCSS, "text/css; charset=utf-8")
 }

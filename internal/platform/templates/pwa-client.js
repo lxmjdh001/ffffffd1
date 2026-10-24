@@ -24,6 +24,91 @@
  const supported = window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+ const installStateKey = 'd1-pwa-installed:' + base;
+ const installSelector = '#install-button,#app .install-button,#app .stay-prompt-install';
+ const installPage = !!installButton || document.body.hasAttribute('data-d1-pwa-reference');
+ const installButtonStates = new WeakMap();
+ let installed = standalone;
+ let installPending = false;
+ let installAttempt = 0;
+ let installAnimationTimer;
+ // This is the last confirmed install for this origin + app, not a universal
+ // OS installation detector. A fresh browser install prompt invalidates it.
+ try { installed = installed || localStorage.getItem(installStateKey) === 'true'; } catch (_) {}
+ const pwaSettings = () => window.__APP_CONFIG__?.app?.settings || window.__APP_CONFIG__?.customApp?.otherSettings;
+ const usesPWAInstall = () => pwaSettings()?.packagePriority !== 'w2a_only';
+ const playObserver = installPage && typeof window.MutationObserver === 'function' ? new window.MutationObserver(syncInstallButtons) : null;
+ function stopInstallAnimation() {
+  if (installAnimationTimer !== undefined) clearTimeout(installAnimationTimer);
+  installAnimationTimer=undefined;
+  document.body.removeAttribute('data-d1-pwa-installing');
+ }
+ function startInstallAnimation() {
+  stopInstallAnimation();
+  if (!installPage || !usesPWAInstall()) return;
+  document.body.setAttribute('data-d1-pwa-installing','');
+  // Browsers do not expose download progress or a portable install-failure
+  // event. Bound the visual wait without ever treating the timeout as success.
+  installAnimationTimer=setTimeout(stopInstallAnimation,60000);
+ }
+ function syncInstallButtons() {
+  if (!installPage) return;
+  playObserver?.disconnect();
+  const play = installed && usesPWAInstall();
+  for (const button of document.querySelectorAll(installSelector)) {
+   let saved = installButtonStates.get(button);
+   const node = Array.from(button.childNodes).find(child => child.nodeType === 3);
+   if (!saved) {
+    saved = {node, text:node?.nodeValue, label:button.getAttribute('aria-label'), pendingDisabled:undefined};
+    installButtonStates.set(button, saved);
+   }
+   if (node !== saved.node) { saved.node=node; saved.text=node?.nodeValue; }
+   if (play) {
+    // Keep Vue's own text node, icons and listeners. Reapply after late mounts
+    // and locale changes without replacing button contents or touching APK UI.
+    if (node && node.nodeValue !== 'Play') { saved.text=node.nodeValue; node.nodeValue='Play'; }
+    if (button.getAttribute('aria-label') !== 'Play') { saved.label=button.getAttribute('aria-label'); button.setAttribute('aria-label','Play'); }
+    button.setAttribute('data-d1-pwa-action','play');
+   } else {
+    if (node && node.nodeValue === 'Play' && saved.text !== undefined) node.nodeValue=saved.text;
+    if (button.hasAttribute('data-d1-pwa-action')) {
+     if (saved.label === null) button.removeAttribute('aria-label'); else button.setAttribute('aria-label',saved.label);
+     button.removeAttribute('data-d1-pwa-action');
+    }
+   }
+   if (installPending && !play) {
+    if (saved.pendingDisabled === undefined) saved.pendingDisabled=button.disabled;
+    button.disabled=true;
+   } else if (saved.pendingDisabled !== undefined) {
+    button.disabled=saved.pendingDisabled; saved.pendingDisabled=undefined;
+   }
+  }
+  if (installed || installPending) playObserver?.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['disabled','aria-label']});
+ }
+ function saveInstallState(value) {
+  installed=value;
+  try { if (value) localStorage.setItem(installStateKey,'true'); else localStorage.removeItem(installStateKey); } catch (_) {}
+  syncInstallButtons();
+ }
+ function openInstalledApp() {
+  const target=base+'launch';
+  if (standalone) window.location.assign(target);
+  else {
+   // A user-activated, non-auxiliary navigation lets supporting browsers launch
+   // the installed PWA. Others open this same-domain app entry in a browser tab.
+   const link=document.createElement('a'); link.href=target; link.target='_blank'; link.rel='noopener'; link.hidden=true;
+   document.body.appendChild(link); link.click(); link.remove();
+  }
+  return {outcome:'opened'};
+ }
+ // A capture listener also handles custom templates whose Vue click handler
+ // normally redirects to H5/APK. Only confirmed PWA Play buttons are intercepted.
+ document.addEventListener('click', event => {
+  if (!installPage || !installed || !usesPWAInstall()) return;
+  const button=event.target?.closest?.(installSelector);
+  if (!button || button.disabled) return;
+  event.preventDefault(); event.stopImmediatePropagation(); void installApp();
+ }, true);
  function showGuide() {
   const modal=document.getElementById('d1-pwa-status');if(modal)modal.hidden=false;
   const message = isIOS
@@ -32,8 +117,8 @@
   if (guide && guideText) { guide.hidden = false; guideText.textContent = message; }
   setStatus(installStatus, message);
  }
- window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); installPrompt = event; if (installButton) installButton.disabled = false; });
- window.addEventListener('appinstalled', () => { installPrompt = null; setStatus(installStatus, text('App installed. Open it from your home screen.', '应用已安装，可以从桌面打开。')); });
+ window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); installPrompt = event; installAttempt++; installPending=false; stopInstallAnimation(); saveInstallState(false); if (installButton) installButton.disabled = false; });
+ window.addEventListener('appinstalled', () => { installPrompt = null; installAttempt++; installPending=false; stopInstallAnimation(); saveInstallState(true); setStatus(installStatus, text('App installed. Tap Play to open it.', '应用已安装，点击 Play 打开。')); });
  if (standalone) setStatus(installStatus, text('You are using the installed app.', '你正在使用桌面应用。'));
  function downloadInCurrentPage(url) {
   const frame=document.createElement('iframe');frame.name='d1-pwa-download-'+Date.now();frame.hidden=true;document.body.appendChild(frame);
@@ -41,8 +126,10 @@
  }
  if(document.body.hasAttribute('data-d1-pwa-reference'))window.downloadInCurrentPage=downloadInCurrentPage;
  async function installApp(options = {}) {
-  const settings=window.__APP_CONFIG__?.app?.settings;
+  const settings=pwaSettings();
   if (window.showBrowserGuide && window.showBrowserGuide()) return;
+  if (installed && usesPWAInstall()) return openInstalledApp();
+  if (installPending) return {outcome:'pending'};
   if(!options.forcePwa && settings?.packagePriority==='w2a_only' && settings.apkUrl) {
    // Match both source templates: APK/W2A is Android-only; iOS follows
    // its configured compatible destination, never the Android package.
@@ -55,9 +142,17 @@
    downloadInCurrentPage(settings.apkUrl);return {outcome:'apk_download'};
   }
   if (!installPrompt) { showGuide(); return; }
-  const prompt = installPrompt; installPrompt = null; if (installButton) installButton.disabled = true;
-  try { await prompt.prompt(); const choice = await prompt.userChoice; setStatus(installStatus, choice.outcome === 'accepted' ? text('Installation started. Look for the app on your home screen.', '已开始安装，请在桌面查看应用。') : text('Installation canceled. You can install it later.', '已取消安装，你可以随时重新安装。')); }
-  catch (_) { showGuide(); } finally { if (installButton) installButton.disabled = false; }
+  const prompt = installPrompt, attempt=++installAttempt; installPrompt = null; installPending=true; startInstallAnimation(); syncInstallButtons();
+  try {
+   await prompt.prompt(); const choice = await prompt.userChoice;
+   if (!installed && attempt === installAttempt) {
+    if (choice.outcome === 'accepted') startInstallAnimation(); else stopInstallAnimation();
+    setStatus(installStatus, choice.outcome === 'accepted' ? text('Installation started. Look for the app on your home screen.', '已开始安装，请在桌面查看应用。') : text('Installation canceled. You can install it later.', '已取消安装，你可以随时重新安装。'));
+   }
+   return choice;
+  }
+  catch (_) { if (!installed && attempt === installAttempt) { stopInstallAnimation(); showGuide(); } }
+  finally { if (attempt === installAttempt) { installPending=false; syncInstallButtons(); } }
  }
  window.D1ReturnFlowInstall = installApp;
  if (installButton) installButton.addEventListener('click', installApp);
@@ -178,5 +273,6 @@
   finally {busy=false;unsubscribeButton.disabled=false;}
  });
  const closeGuide=document.getElementById('install-guide-close');if(closeGuide)closeGuide.addEventListener('click',()=>{document.getElementById('d1-pwa-status').hidden=true;});
+ syncInstallButtons();
  setup();
 })();

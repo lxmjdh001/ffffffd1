@@ -10,6 +10,33 @@ import (
 func landingFixture() PWALandingConfig {
 	return PWALandingConfig{Template: "google_play", StartupBgColor: "#ffffff", StartupThemeColor: "#01875f", DisplayMode: "fullscreen", PWAOrientation: "portrait", EnableGoogleBadge: true, EnableOfficialVerify: true, LanguagePriority: []string{"en-US", "zh-CN"}, StoreInfos: []PWALandingLanguage{{Language: "en-US", AppName: "North Studio", DeveloperName: "North", AppSummary: "A useful app", DownloadCount: "1M+", ReviewCount: "200", DetailImages: []string{"https://images.example/screen.png"}, Reviews: []PWALandingReview{{Nickname: "Reviewer", Comment: "Great", Rating: 5}}}, {Language: "zh-CN", AppName: "北方工作室", AppSummary: "欢迎使用", CustomImages: []string{"https://images.example/custom.png"}, ShowInstallButton: true, ButtonText: "安装", ButtonPosition: "bottom"}}, Settings: PWALandingSettings{PackagePriority: "pwa", IOSCompatible: true, EnableIframeEmbed: true}}
 }
+func TestPWAInstallAnimationStylesStayOnInstallPages(t *testing.T) {
+	s := testServer(t)
+	owner := seedUser(t, s, 0)
+	app := createPWAFixture(t, s, owner, "Install animation")
+	base := "/p/" + app.Slug + "/"
+	for _, layout := range []string{"google_play", "custom", "legacy"} {
+		c := landingFixture()
+		c.Template = layout
+		raw, _ := json.Marshal(c)
+		if err := s.DB.Model(&app).Update("landing_json", string(raw)).Error; err != nil {
+			t.Fatal(err)
+		}
+		styles := pwaPublicCall(t, s, base+"style.css", "", "")
+		requireCode(t, styles, 200)
+		if !strings.Contains(styles.Body.String(), "d1-pwa-install-spin") || !strings.Contains(styles.Body.String(), "prefers-reduced-motion: reduce") {
+			t.Fatalf("%s install page is missing icon feedback styles", layout)
+		}
+		launchStyles := pwaPublicCall(t, s, base+"style.css?launch=1", "", "")
+		requireCode(t, launchStyles, 200)
+		if strings.Contains(launchStyles.Body.String(), "d1-pwa-install-spin") {
+			t.Fatal("installation animation leaked into application runtime")
+		}
+	}
+	if countRows(t, s, &Ledger{}) != 0 {
+		t.Fatal("animation assets changed billing")
+	}
+}
 func TestPWALandingConfigRoundTripTemplatesAndLanguage(t *testing.T) {
 	s := testServer(t)
 	owner := seedUser(t, s, 0)
