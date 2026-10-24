@@ -59,11 +59,28 @@ describe('public landing page', () => {
     expect(screen.getByRole('heading', {name:'什么是 PWA？'})).toBeTruthy();
     expect(document.querySelector('.home-push-copy')?.textContent).toContain('用户自主订阅');
     expect(screen.getByText(/iOS 通常需从主屏幕打开/)).toBeTruthy();
-    expect(document.querySelectorAll('.home-solution-grid article')).toHaveLength(5);
+    expect(document.querySelectorAll('.home-solution-grid article')).toHaveLength(8);
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('回流页');
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('广告回传');
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('斗篷');
     expect(screen.getByRole('img', { name: /APK 与 PWA 两大产品/ })).toBeTruthy();
     expect(document.querySelector('.home-cover img')).toBeNull();
+  });
+
+  it('highlights automatic domain safety without exposing the internal schedule', () => {
+    openLanding();
+    const safety = document.getElementById('home-security')!;
+    expect(safety).toBeTruthy();
+    expect(within(safety).getByRole('heading', {name:'域名安全检测，风险自动退出分流'})).toBeTruthy();
+    expect(safety.textContent).toContain('Google Web Risk');
+    expect(safety.textContent).toContain('自动检测');
+    expect(safety.textContent).not.toContain('120');
+    expect(safety.textContent).not.toContain('分钟');
+    expect(safety.textContent).toContain('有效付费会员');
+    expect(safety.textContent).toContain('不主动扫描主站根地址');
+    expect(safety.textContent).toContain('命中风险的域名自动停止参与分流');
+    expect(document.querySelector('.home-capability-strip button')?.textContent).toBe('自动检查域名安全');
+    expect(screen.getByRole('heading', {name:'自定义域名与免费 SSL'})).toBeTruthy();
+    expect(screen.getByRole('heading', {name:'下载记录与来源统计'})).toBeTruthy();
   });
 });
