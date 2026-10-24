@@ -88,3 +88,13 @@ it('allows administrators to save multiple domains with independent audience per
   expect(screen.queryByRole('combobox', { name: '分配方式' })).toBeNull();
   expect(screen.queryByRole('button', { name: '保存全部设置' })).toBeNull();
 });
+
+it('lets administrators retain old links without offering the domain to customers', async () => {
+  role = 'admin';
+  settings.settings.download_domain_rules = [{ url: 'https://test.d1apk.com', audience: 'all', legacy_only: true }];
+  const user = open('/admin/settings');
+  const toggle = await screen.findByRole('checkbox', { name: /仅保留旧链接/ });
+  expect((toggle as HTMLInputElement).checked).toBe(true);
+  await user.click(screen.getByRole('button', { name: '保存域名配置' }));
+  await waitFor(() => expect(saved?.settings.download_domain_rules[0].legacy_only).toBe(true));
+});

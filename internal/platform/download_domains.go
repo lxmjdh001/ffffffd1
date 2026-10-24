@@ -11,9 +11,13 @@ import (
 
 func (x Settings) assignedDownloadURL(planID string) string {
 	for _, rule := range x.DownloadDomainRules {
-		if rule.Audience == "all" || (rule.Audience == "paid" && planID == "pro") {
+		if !rule.LegacyOnly && (rule.Audience == "all" || (rule.Audience == "paid" && planID == "pro")) {
 			return rule.URL
 		}
+	}
+	// Configured rules are authoritative. Never fall back to a retired URL.
+	if len(x.DownloadDomainRules) > 0 {
+		return ""
 	}
 	if x.DownloadDomainMode == "separate" {
 		if planID == "pro" {

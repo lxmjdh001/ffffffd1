@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Copy, Plus } from 'lucide-react';
 import { api, send } from './api';
-import { Badge, CopyButton, date, Empty, ErrorState, errorText, Field, FormError, Modal, PageHeader, Spinner } from './ui';
+import { DomainShareDrawer } from './domain-share-drawer';
+import { Badge, date, Empty, ErrorState, errorText, Field, FormError, Modal, PageHeader, Spinner } from './ui';
 
 type TrafficLink = { id: string; url: string; status: string; error: string; checked_at: string | null; position: number };
 type TrafficItem = { pool: { name: string; mode: 'random' | 'sequential'; enabled: boolean; risk_enabled: boolean; slug: string }; links: TrafficLink[]; entry_url: string };
@@ -21,6 +22,7 @@ export function TrafficPage() {
  const { data, error, refetch } = useQuery({ queryKey: ['traffic-pools'], queryFn: () => api<TrafficResponse>('/traffic-pools'), refetchInterval: 15000 });
  const [draft, setDraft] = useState<Draft>(); const [details, setDetails] = useState<string>(); const [deleting, setDeleting] = useState<TrafficItem>();
  const [busy, setBusy] = useState(false); const [message, setMessage] = useState('');
+ const [sharing, setSharing] = useState<TrafficItem>();
  const refresh = async () => { await refetch(); };
  const edit = (item: TrafficItem) => { setMessage(''); setDraft({ slug: item.pool.slug, identifier: item.pool.slug, name: item.pool.name, mode: item.pool.mode || 'random', enabled: item.pool.enabled, risk_enabled: item.pool.risk_enabled && data?.paid === true, text: item.links.map(l => l.url).join('\n') }); };
  const save = async (e: FormEvent) => {
@@ -38,8 +40,9 @@ export function TrafficPage() {
  {!data.configured && <div className="notice">Google 安全检测暂未配置，普通分流可正常使用。</div>}
  {!draft && !deleting && <FormError>{message}</FormError>}
  <section className="panel"><div className="panel-heading"><h2>分流列表</h2><span className="muted small">共 {data.data.length} 个分流</span></div>
- {!data.data.length ? <Empty title="暂无分流" detail="点击新建分流，在弹窗中输入下载链接，每行一条。" action={<button className="btn secondary" onClick={() => { setMessage(''); setDraft(emptyDraft()); }}><Plus size={15} />新建分流</button>} /> : <div className="table-wrap"><table><thead><tr><th>分流名称 / 入口</th><th>展示方式</th><th>链接数 / 可用</th><th>状态</th><th>Google 安全检测</th><th className="right">操作</th></tr></thead><tbody>{data.data.map(item => <tr key={item.pool.slug}><td><strong>{item.pool.name}</strong><small className="cell-sub mono" style={{ overflowWrap: 'anywhere' }}>{item.entry_url}</small><CopyButton value={item.entry_url} label="复制入口" /></td><td>{item.pool.mode === 'sequential' ? '顺序展示' : '随机展示'}</td><td>{item.links.length} / {item.links.filter(l => isEligible(l, item, data.paid)).length}</td><td><Badge tone={item.pool.enabled ? 'green' : 'gray'}>{item.pool.enabled ? '已开启' : '已暂停'}</Badge></td><td>{item.pool.risk_enabled && data.paid ? '已开启' : item.pool.risk_enabled ? '会员到期，已停用' : '未开启'}</td><td><div className="row-actions wrap"><button className="text-btn" onClick={() => setDetails(item.pool.slug)}>风险检测</button><button className="text-btn" onClick={() => edit(item)}>编辑</button><button className="text-btn" disabled={busy} onClick={() => toggle(item)}>{item.pool.enabled ? '关闭' : '开启'}</button><button className="text-btn danger-text" onClick={() => { setMessage(''); setDeleting(item); }}>删除</button></div></td></tr>)}</tbody></table></div>}
+ {!data.data.length ? <Empty title="暂无分流" detail="点击新建分流，在弹窗中输入下载链接，每行一条。" action={<button className="btn secondary" onClick={() => { setMessage(''); setDraft(emptyDraft()); }}><Plus size={15} />新建分流</button>} /> : <div className="table-wrap"><table><thead><tr><th>分流名称 / 入口</th><th>展示方式</th><th>链接数 / 可用</th><th>状态</th><th>Google 安全检测</th><th className="right">操作</th></tr></thead><tbody>{data.data.map(item => <tr key={item.pool.slug}><td><strong>{item.pool.name}</strong><small className="cell-sub mono" style={{ overflowWrap: 'anywhere' }}>{item.entry_url || '暂无可用域名'}</small><button type="button" className="copy-btn" onClick={() => setSharing(item)}><Copy size={14} />复制入口</button></td><td>{item.pool.mode === 'sequential' ? '顺序展示' : '随机展示'}</td><td>{item.links.length} / {item.links.filter(l => isEligible(l, item, data.paid)).length}</td><td><Badge tone={item.pool.enabled ? 'green' : 'gray'}>{item.pool.enabled ? '已开启' : '已暂停'}</Badge></td><td>{item.pool.risk_enabled && data.paid ? '已开启' : item.pool.risk_enabled ? '会员到期，已停用' : '未开启'}</td><td><div className="row-actions wrap"><button className="text-btn" onClick={() => setDetails(item.pool.slug)}>风险检测</button><button className="text-btn" onClick={() => edit(item)}>编辑</button><button className="text-btn" disabled={busy} onClick={() => toggle(item)}>{item.pool.enabled ? '关闭' : '开启'}</button><button className="text-btn danger-text" onClick={() => { setMessage(''); setDeleting(item); }}>删除</button></div></td></tr>)}</tbody></table></div>}
  </section>
+ {sharing && <DomainShareDrawer key={sharing.pool.slug} path={`/r/${sharing.pool.slug}`} title="选择域名复制分流入口" close={() => setSharing(undefined)} />}
  {draft && <Modal title={draft.slug ? '编辑分流' : '新建分流'} close={() => { if (!busy) setDraft(undefined); }} wide><form onSubmit={save}>
  <Field label="分流名称"><input maxLength={60} placeholder="例如：应用下载分流" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} /></Field>
  <Field label="分流标识" hint={draft.slug ? '可修改，1–32 位字母、数字、短横线或下划线；修改后旧入口失效。' : '留空自动生成 8 位随机标识，也可手动填写，全平台不可重复。'}><input required={!!draft.slug} maxLength={32} pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{0,31}" value={draft.identifier} placeholder="例如：my-app 或留空随机生成" onChange={e => setDraft({ ...draft, identifier: e.target.value.toLowerCase() })} /></Field>

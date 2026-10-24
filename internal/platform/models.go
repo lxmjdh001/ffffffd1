@@ -42,9 +42,10 @@ type RechargeTier struct {
 	Percent         int64 `json:"percent"`
 }
 type DownloadDomainRule struct {
-	URL      string `json:"url"`
-	Audience string `json:"audience"`
-	Remark   string `json:"remark"`
+	URL        string `json:"url"`
+	Audience   string `json:"audience"`
+	Remark     string `json:"remark"`
+	LegacyOnly bool   `json:"legacy_only,omitempty"`
 }
 
 func defaultRechargeTiers() []RechargeTier {
