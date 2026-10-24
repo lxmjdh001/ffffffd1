@@ -17,8 +17,12 @@
 .payment-options button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 12px;border:1px solid #e6eaf4;border-radius:7px;background:#fff;color:#8190ad}
 .payment-options button strong{font-size:13px;font-weight:500}
 .payment-options button small{font-size:10px;color:#9aa7bc}
+.payment-option-icon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px;width:22px;height:22px;border-radius:6px}
+.payment-option-icon.usdt{background:#e8f7f1;color:#269d7c}
+.payment-option-icon.manual{background:#edf0ff;color:#7485d8}
 .payment-options button.selected{border-color:#9aa8e9;background:#f4f6ff;color:#788bd6}
 .payment-options button:disabled{background:#f8f9fc;color:#a3acbc;cursor:not-allowed}
+.payment-options button:disabled .payment-option-icon{background:#eef1f6;color:#a3acbc}
 .payment-options button:focus-visible{outline:3px solid #aab5ff;outline-offset:2px}
 @media(max-width:650px){.payment-options{grid-template-columns:1fr}}
 

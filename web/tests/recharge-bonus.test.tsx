@@ -126,6 +126,24 @@ describe('recharge promotion', () => {
     expect(channels.queryByText(/微信/)).toBeNull();
   });
 
+  it('shows distinct decorative payment icons and preserves channel switching', async () => {
+    config.payment_methods = ['usdt', 'manual'];
+    const user = openBilling();
+    await user.click(await screen.findByRole('button', { name: '充值余额' }));
+    const channels = within(screen.getByRole('group', { name: '支付方式' }));
+    const usdt = channels.getByRole('button', { name: 'USDT', exact: true });
+    const manual = channels.getByRole('button', { name: '人工充值', exact: true });
+    expect(usdt.querySelector('.payment-option-icon.usdt[aria-hidden="true"] svg.lucide-coins')).toBeTruthy();
+    expect(manual.querySelector('.payment-option-icon.manual[aria-hidden="true"] svg.lucide-headset')).toBeTruthy();
+    expect(channels.queryByRole('img')).toBeNull();
+    await user.click(manual);
+    expect(manual.getAttribute('aria-pressed')).toBe('true');
+    expect(usdt.getAttribute('aria-pressed')).toBe('false');
+    await user.click(usdt);
+    expect(usdt.getAttribute('aria-pressed')).toBe('true');
+    expect(submissions).toEqual([]);
+  });
+
   it('submits USDT principal only and shows exact on-chain payment instructions', async () => {
     config.payment_methods = ['usdt', 'manual'];
     const user = openBilling();
