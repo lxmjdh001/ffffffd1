@@ -189,7 +189,7 @@ func normalizeCloak(in cloakInput) (Cloak, error) {
 	if c.TargetType != "url" && c.TargetType != "traffic_pool" {
 		return c, problem(400, "请选择分流链接或直接输入 URL")
 	}
-	if !validCloakURL(c.SafeURL) {
+	if c.SafeURL != "" && !validCloakURL(c.SafeURL) {
 		return c, problem(400, "请输入完整的 HTTP/HTTPS 安全页链接")
 	}
 	if c.TargetType == "url" {
@@ -237,7 +237,7 @@ func normalizeCloak(in cloakInput) (Cloak, error) {
 		return v, v == "tiktok" || v == "facebook" || v == "google" || v == "bigo"
 	})
 	if err != nil {
-		return c, problem(400, "平台允许配置无效")
+		return c, problem(400, "广告允许配置无效")
 	}
 	c.BlockedDevices = []CloakDeviceRule{}
 	if len(in.BlockedDevices) > 3 {
@@ -415,6 +415,10 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+	}
+	if strings.TrimSpace(target) == "" {
+		s.cloakNotFound(w, r)
+		return
 	}
 	loop, err := s.cloakLoop(s.DB, target, requestHost(r))
 	if !validCloakURL(target) || err != nil || loop {

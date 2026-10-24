@@ -64,6 +64,10 @@
 .cloak-target-preview{display:flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid #e8eef8;background:#f8fbff;border-radius:6px;font-size:10px;color:#7290b8;margin-top:-6px;line-height:1.8}
 .cloak-target-preview svg{flex-shrink:0}
 .cloak-target-preview>span{overflow-wrap:anywhere;min-width:0}
+.cloak-default-safe-preview{display:flex;align-items:center;gap:18px;padding:18px 20px;background:linear-gradient(120deg,#f3f7ff,#fbfdff);border:1px solid #dfe9f8;border-radius:10px}
+.cloak-default-safe-preview>span{font-size:38px;font-weight:600;letter-spacing:-2px;line-height:1;color:#9fb8df}
+.cloak-default-safe-preview h3{font-size:14px;font-weight:550;color:#4d6687;line-height:1.6;margin:0}
+.cloak-default-safe-preview p{font-size:11px;line-height:1.9;color:#62748e;margin:4px 0 0}
 .cloak-rule-tabs{display:flex;gap:3px;border-bottom:1px solid #e6edf7;margin:-2px -8px 0;padding:0 0 0}
 .cloak-rule-tabs>button{display:flex;align-items:center;justify-content:center;gap:5px;flex:1;padding:13px 5px 15px;background:transparent;border-bottom:2px solid transparent;font-size:10px;color:#7f92ac;white-space:nowrap}
 .cloak-rule-tabs>button.active{color:#597fc4;border-bottom-color:#7496d2}
@@ -97,7 +101,7 @@
 .cloak-platform-mark{display:grid;place-items:center;width:32px;height:34px;background:#f0f3f9;border-radius:8px;color:#7d8faa;font-family:Arial,sans-serif;font-size:19px;font-weight:600;flex-shrink:0}
 .platform-facebook,.platform-google{background:#edf4ff;color:#7b9ed7}
 .platform-bigo{background:#edf8f7;color:#7faea9}
-.cloak-platform-choice>span:nth-last-child(2){flex:1}
+.cloak-platform-choice>span:nth-last-child(2){flex:1;align-self:center}
 .cloak-platform-choice strong{font-size:12px;color:#5d7494;font-weight:550;display:block}
 .cloak-platform-choice small{font-size:9px;color:#8a9db9;display:block;margin-top:7px;line-height:1.9}
 .cloak-platform-choice code{font-size:9px;color:#7894bd}

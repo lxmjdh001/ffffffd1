@@ -59,11 +59,11 @@ async function showPage() {
   await screen.findByRole('heading', { name: '斗篷管理' });
   return userEvent.setup();
 }
-async function newEditor(user: ReturnType<typeof userEvent.setup>) {
+async function newEditor(user: ReturnType<typeof userEvent.setup>, safeURL = 'https://brand.example/help') {
   await user.click(screen.getByRole('button', { name: '新建斗篷', exact: true }));
   await screen.findByRole('heading', { name: '新建斗篷' });
   await user.type(screen.getByRole('textbox', { name: '斗篷名称', exact: true }), '  海外应用推广  ');
-  await user.type(screen.getByRole('textbox', { name: /安全页 URL/ }), 'https://brand.example/help');
+  if (safeURL) await user.type(screen.getByRole('textbox', { name: /安全页 URL/ }), safeURL);
 }
 async function chooseURL(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('radio', { name: /直接输入 URL/ }));
@@ -95,11 +95,56 @@ describe('cloak editor API integration', () => {
     await user.clear(search); await user.type(search, '未知地区');
     await user.click(screen.getByRole('checkbox', { name: /未知地区/ }));
     expect(screen.getByLabelText('已选国家或地区')).toBeTruthy();
-    await openTab(user, '平台允许');
+    const platformPanel = await openTab(user, '广告允许');
+    expect(platformPanel.textContent).toContain('选择允许的广告平台，可多选；不选则不限制。');
+    expect(platformPanel.textContent).not.toMatch(/点击参数|链接参数|ttclid|fbclid|gclid|bbg/);
+    expect(within(platformPanel).getByRole('group', { name: '允许广告平台' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: /^平台允许/ })).toBeNull();
     await user.click(screen.getByRole('checkbox', { name: /TikTok/ }));
     await user.click(screen.getByRole('checkbox', { name: /Facebook/ }));
     await saveNew(user);
     expect(mutations).toEqual([{ path: '/api/cloaks', method: 'POST', body: { ...baseDraft, target_type: 'traffic_pool', target_url: '', traffic_pool_slug: 'launch-route', blocked_languages: ['zh', 'en'], blocked_uas: ['curl', 'HeadlessChrome'], blocked_countries: ['CN', 'XX'], allowed_platforms: ['tiktok', 'facebook'] } }]);
+  });
+
+  it('creates and edits with an empty safe URL, preserving the default English 404 page', async () => {
+    const user = await showPage();
+    await newEditor(user, ''); await chooseURL(user);
+    const safeInput = screen.getByRole('textbox', { name: /安全页 URL/ }) as HTMLInputElement;
+    expect(safeInput.required).toBe(false);
+    expect(safeInput.checkValidity()).toBe(true);
+    const preview = within(screen.getByRole('region', { name: '默认安全页预览' }));
+    expect(preview.getByRole('heading', { name: 'Account not found' })).toBeTruthy();
+    expect(preview.getByText('Please contact customer support for assistance.')).toBeTruthy();
+    const summary = within(screen.getByRole('complementary'));
+    expect(summary.getByText('默认 404 页面')).toBeTruthy();
+    expect(summary.getByText('Account not found')).toBeTruthy();
+    await saveNew(user);
+    expect(mutations[0]).toEqual({ path: '/api/cloaks', method: 'POST', body: { ...baseDraft, safe_url: '' } });
+
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    expect((screen.getByRole('textbox', { name: /安全页 URL/ }) as HTMLInputElement).value).toBe('');
+    expect(within(screen.getByRole('complementary')).getByText('默认 404 页面')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[1]).toEqual({ path: '/api/cloaks/11111111111111111111111111111111', method: 'PUT', body: { ...baseDraft, safe_url: '' } });
+    expect(Object.keys(mutations[1].body!).sort()).toEqual(editableKeys);
+  });
+
+  it('previews custom safe URLs and lets an existing cloak switch back to the default 404 page', async () => {
+    rows = [fixture()];
+    const user = await showPage();
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    const summary = within(screen.getByRole('complementary'));
+    expect(summary.getByText('自定义安全页')).toBeTruthy();
+    expect(summary.getByText(baseDraft.safe_url)).toBeTruthy();
+    expect(screen.queryByRole('region', { name: '默认安全页预览' })).toBeNull();
+    await user.clear(screen.getByRole('textbox', { name: /安全页 URL/ }));
+    expect(summary.getByText('默认 404 页面')).toBeTruthy();
+    expect(summary.queryByText('自定义安全页')).toBeNull();
+    expect(screen.getByRole('region', { name: '默认安全页预览' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[0]).toEqual({ path: '/api/cloaks/11111111111111111111111111111111', method: 'PUT', body: { ...baseDraft, safe_url: '' } });
   });
 
   it('clears the inactive target when switching between direct URL and traffic targets', async () => {

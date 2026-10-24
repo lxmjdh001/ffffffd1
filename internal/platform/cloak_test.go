@@ -151,6 +151,190 @@ func TestCloakInputValidationAndTrafficOwnership(t *testing.T) {
 	}
 }
 
+func TestCloakOptionalSafeURLSave(t *testing.T) {
+	s := testServer(t)
+	owner := seedUser(t, s, 0)
+	cookie, csrf := sessionFor(t, s, owner)
+	for _, safe := range []string{"", " \t\r\n "} {
+		body := cloakFixture()
+		body["safe_url"] = safe
+		c := createTestCloak(t, s, owner, body)
+		if c.SafeURL != "" {
+			t.Fatal("blank safe URL was not normalized")
+		}
+		body["safe_url"] = " https://safe.example/contact "
+		w := call(t, s, "PUT", "/api/cloaks/"+c.ID, body, cookie, csrf)
+		requireCode(t, w, 200)
+		var updated cloakView
+		if err := json.Unmarshal(w.Body.Bytes(), &updated); err != nil || updated.SafeURL != "https://safe.example/contact" {
+			t.Fatalf("safe URL update was not normalized: %v", err)
+		}
+		body["safe_url"] = safe
+		w = call(t, s, "PUT", "/api/cloaks/"+c.ID, body, cookie, csrf)
+		requireCode(t, w, 200)
+		if err := json.Unmarshal(w.Body.Bytes(), &updated); err != nil || updated.SafeURL != "" {
+			t.Fatalf("safe URL could not be cleared: %v", err)
+		}
+		body["safe_url"] = "javascript:alert(1)"
+		requireCode(t, call(t, s, "PUT", "/api/cloaks/"+c.ID, body, cookie, csrf), 400)
+		var saved Cloak
+		if err := s.DB.First(&saved, "id = ?", c.ID).Error; err != nil || saved.SafeURL != "" {
+			t.Fatal("invalid update changed the saved safe URL")
+		}
+	}
+	body := cloakFixture()
+	delete(body, "safe_url")
+	if c := createTestCloak(t, s, owner, body); c.SafeURL != "" {
+		t.Fatal("omitted optional URL did not default to blank")
+	}
+}
+
+func TestCloakDefault404Routing(t *testing.T) {
+	s := testServer(t)
+	owner := seedUser(t, s, 0)
+	body := cloakFixture()
+	body["safe_url"] = ""
+	body["allowed_platforms"] = []string{"tiktok"}
+	c := createTestCloak(t, s, owner, body)
+	for _, tc := range []struct {
+		name, method, language, query string
+		code                          int
+	}{
+		{"allowed visitor", "GET", "en", "ttclid=click", 302},
+		{"language blocked", "GET", "zh-CN", "ttclid=click", 404},
+		{"platform not allowed", "GET", "en", "", 404},
+		{"head blocked", "HEAD", "zh", "ttclid=click", 404},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(tc.method, c.EntryURL+"?"+tc.query, nil)
+			r.Header.Set("Accept-Language", tc.language)
+			w := httptest.NewRecorder()
+			s.Handler().ServeHTTP(w, r)
+			requireCode(t, w, tc.code)
+			if w.Header().Get("Cache-Control") != "no-store" {
+				t.Fatal("cloak response can be cached")
+			}
+			if tc.code == 302 {
+				if !strings.HasPrefix(w.Header().Get("Location"), "https://target.example/path?") {
+					t.Fatal("allowed request did not reach the target")
+				}
+				return
+			}
+			if w.Header().Get("Location") != "" || w.Header().Get("Content-Type") != "text/html; charset=utf-8" || w.Header().Get("X-Robots-Tag") != "noindex, nofollow" {
+				t.Fatal("default 404 response has incorrect headers")
+			}
+			if tc.method == "HEAD" {
+				if w.Body.Len() != 0 {
+					t.Fatal("HEAD included a response body")
+				}
+			} else if !strings.Contains(w.Body.String(), "<h1>Account not found</h1>") || !strings.Contains(w.Body.String(), "Please contact customer support for assistance.") || !strings.Contains(w.Body.String(), `<html lang="en">`) {
+				t.Fatal("default page is missing the requested English copy")
+			}
+		})
+	}
+	if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Update("enabled", false).Error; err != nil {
+		t.Fatal(err)
+	}
+	r := httptest.NewRequest("GET", c.EntryURL, nil)
+	r.Header.Set("Accept-Language", "zh-CN")
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, r)
+	requireCode(t, w, 302)
+	if !strings.HasPrefix(w.Header().Get("Location"), "https://target.example/path?") {
+		t.Fatal("disabled filtering did not bypass the default 404")
+	}
+	if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Updates(map[string]any{"enabled": true, "safe_url": "https://safe.example/help?fixed=yes"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	w = call(t, s, "GET", "/c/"+c.Slug+"?private=never-forward", nil, nil, "")
+	requireCode(t, w, 302)
+	if w.Header().Get("Location") != "https://safe.example/help?fixed=yes" {
+		t.Fatal("configured safe URL was not preserved")
+	}
+	if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Update("safe_url", "javascript:alert(1)").Error; err != nil {
+		t.Fatal(err)
+	}
+	requireCode(t, call(t, s, "GET", "/c/"+c.Slug, nil, nil, ""), 503)
+}
+
+func TestCloakDefault404UnavailableTraffic(t *testing.T) {
+	s := testServer(t)
+	owner := seedUser(t, s, 0)
+	pool := TrafficPool{Slug: randomHex(4), UserID: owner.ID, Enabled: true, Mode: "sequential"}
+	if err := s.DB.Create(&pool).Error; err != nil {
+		t.Fatal(err)
+	}
+	body := cloakFixture()
+	body["target_type"], body["traffic_pool_slug"], body["safe_url"] = "traffic_pool", pool.Slug, ""
+	c := createTestCloak(t, s, owner, body)
+	for _, state := range []string{"empty", "disabled", "deleted"} {
+		t.Run(state, func(t *testing.T) {
+			if state == "disabled" {
+				if err := s.DB.Model(&pool).Update("enabled", false).Error; err != nil {
+					t.Fatal(err)
+				}
+			}
+			if state == "deleted" {
+				if err := s.DB.Delete(&pool).Error; err != nil {
+					t.Fatal(err)
+				}
+			}
+			w := call(t, s, "GET", "/c/"+c.Slug, nil, nil, "")
+			requireCode(t, w, 404)
+			if !strings.Contains(w.Body.String(), "<h1>Account not found</h1>") || w.Header().Get("Location") != "" {
+				t.Fatal("unavailable traffic did not use the default 404")
+			}
+		})
+	}
+}
+
+func TestCloakDefault404PrivacyAndSupport(t *testing.T) {
+	s := testServer(t)
+	owner := seedUser(t, s, 0)
+	body := cloakFixture()
+	body["name"], body["safe_url"] = "<script>private-rule</script>", ""
+	body["target_url"] = "https://private-target.example/confidential?token=destination-secret"
+	body["blocked_uas"] = []string{"private-rule-agent"}
+	c := createTestCloak(t, s, owner, body)
+	for _, tc := range []struct {
+		name, email string
+		link        bool
+	}{
+		{"not configured", "", false},
+		{"valid mailbox", " Help@Example.com ", true},
+		{"valid unusual mailbox", "help?subject=forged#fragment@example.com", true},
+		{"invalid HTML mailbox", `<img src=x onerror="alert(1)">`, false},
+		{"invalid protocol", "javascript:alert(1)", false},
+		{"invalid header injection", "help@example.com\r\nBcc: attacker@example.com", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := s.DB.Model(&Settings{}).Where("id = 1").Update("support_email", tc.email).Error; err != nil {
+				t.Fatal(err)
+			}
+			r := httptest.NewRequest("GET", c.EntryURL+"?visitor-token=private-visitor-secret&payload=%3Cscript%3Ealert(1)%3C/script%3E", nil)
+			r.Header.Set("User-Agent", "private-rule-agent")
+			w := httptest.NewRecorder()
+			s.Handler().ServeHTTP(w, r)
+			requireCode(t, w, 404)
+			html := w.Body.String()
+			if got := strings.Contains(html, `class="support"`); got != tc.link {
+				t.Fatalf("support link=%v want %v", got, tc.link)
+			}
+			if tc.link {
+				email, _ := normalizeEmail(tc.email)
+				if !strings.Contains(html, `href="mailto:`+url.PathEscape(email)+`"`) || !strings.Contains(html, "Contact support</a>") {
+					t.Fatal("support link was not safely encoded")
+				}
+			}
+			for _, private := range []string{c.Name, c.TargetURL, c.Slug, owner.Email, "private-visitor-secret", "private-rule-agent", "<script>", "<img", "onerror=", "?subject=forged", "#fragment@example.com"} {
+				if private != "" && strings.Contains(html, private) {
+					t.Fatalf("default 404 exposed private or unsafe data: %q", private)
+				}
+			}
+		})
+	}
+}
+
 func TestCloakRuleMatching(t *testing.T) {
 	for _, tc := range []struct {
 		name, language, ua, query, country string
