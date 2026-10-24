@@ -138,12 +138,13 @@ func TestDownloadUABlockListMarksAllMatchingRecordsWithinOwner(t *testing.T) {
 	matching := seedUADownload(t, s, u, a, "Brow\nser/1")
 	otherUA := seedUADownload(t, s, u, a, "browser/1")
 	empty := seedUADownload(t, s, u, a, "")
-	foreign := seedUADownload(t, s, other, a, blocked.UserAgent)
+	foreignApp := seedApp(t, s, other, 10)
+	foreign := seedUADownload(t, s, other, foreignApp, blocked.UserAgent)
 	setTestUABlock(t, s, u, blocked, true)
-	check := func(owner User, want map[string]bool) {
+	check := func(owner User, appID string, want map[string]bool) {
 		t.Helper()
 		cookie, _ := sessionFor(t, s, owner)
-		w := call(t, s, "GET", "/api/downloads?per_page=50&app_id="+a.ID, nil, cookie, "")
+		w := call(t, s, "GET", "/api/downloads?per_page=50&app_id="+appID, nil, cookie, "")
 		requireCode(t, w, 200)
 		var response struct {
 			Data  []Download `json:"data"`
@@ -165,10 +166,10 @@ func TestDownloadUABlockListMarksAllMatchingRecordsWithinOwner(t *testing.T) {
 			t.Fatal("unblocked status must be explicit")
 		}
 	}
-	check(u, map[string]bool{blocked.ID: true, matching.ID: true, otherUA.ID: false, empty.ID: false})
-	check(other, map[string]bool{foreign.ID: false})
+	check(u, a.ID, map[string]bool{blocked.ID: true, matching.ID: true, otherUA.ID: false, empty.ID: false})
+	check(other, foreignApp.ID, map[string]bool{foreign.ID: false})
 	setTestUABlock(t, s, u, matching, false)
-	check(u, map[string]bool{blocked.ID: false, matching.ID: false, otherUA.ID: false, empty.ID: false})
+	check(u, a.ID, map[string]bool{blocked.ID: false, matching.ID: false, otherUA.ID: false, empty.ID: false})
 }
 
 func seedUATraffic(t *testing.T, s *Server, u User) TrafficPool {
