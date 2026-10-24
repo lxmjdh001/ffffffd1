@@ -243,9 +243,24 @@ func TestVisitStatisticsMigrationPreservesRoutingIdentityAndBalances(t *testing.
 		t.Fatal(e)
 	}
 	s.DB.Where("version = ?", 18).Delete(&Migration{})
-	if e := Migrate(s.DB); e != nil {
-		t.Fatal(e)
+	migrateAfterRestart := func() {
+		t.Helper()
+		if s.DB.Dialector.Name() == "postgres" {
+			// Startup uses fresh connections. This test deliberately changes the
+			// SELECT * shape; do not reuse pgx's pre-DDL prepared query cache.
+			db, err := OpenDB(s.Config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sqlDB, _ := db.DB()
+			t.Cleanup(func() { _ = sqlDB.Close() })
+			s.DB = db
+		}
+		if e := Migrate(s.DB); e != nil {
+			t.Fatal(e)
+		}
 	}
+	migrateAfterRestart()
 	var after TrafficPool
 	s.DB.First(&after, "slug = ?", p.Slug)
 	afterJSON, _ := json.Marshal(after)
@@ -253,9 +268,7 @@ func TestVisitStatisticsMigrationPreservesRoutingIdentityAndBalances(t *testing.
 		t.Fatalf("migration changed existing routing or failed to initialize identity: %s %s", beforeJSON, afterJSON)
 	}
 	first := after.StatisticsID
-	if e := Migrate(s.DB); e != nil {
-		t.Fatal(e)
-	}
+	migrateAfterRestart()
 	s.DB.First(&after, "slug = ?", p.Slug)
 	var owner User
 	s.DB.First(&owner, "id = ?", u.ID)
