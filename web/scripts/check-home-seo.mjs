@@ -18,6 +18,9 @@ assert.equal(document.querySelector('meta[name="twitter:description"]')?.content
 
 const main = document.querySelector('#root main');
 assert.ok(main, 'homepage product content must exist before JavaScript runs');
+const media = JSON.parse(await readFile(new URL('../src/home-media.json', import.meta.url), 'utf8'));
+assert.equal(main.querySelector('.home-phone-image')?.getAttribute('src'), media.phoneImage, 'prerender uses the same R2 image as the interactive homepage');
+assert.equal(new URL(media.phoneImage).origin, 'https://img.okkpwa.com', 'homepage image is served by the configured R2 public host');
 assert.equal(main.querySelectorAll('h1').length, 1);
 assert.equal(main.querySelector('h1')?.textContent, content.hero.lines.join(''));
 assert.ok(main.textContent.includes(content.hero.description));

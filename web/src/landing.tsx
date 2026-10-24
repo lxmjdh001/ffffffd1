@@ -4,6 +4,7 @@ import { Brand } from './auth';
 import { localizedPlanName, t, translateContent, useLocale } from './i18n';
 import { bytes, money, number, useConfig } from './ui';
 import originalHomeContent from './home-content.json';
+import homeMedia from './home-media.json';
 import { HomeNavigation } from './home-navigation';
 import './landing.css';
 
@@ -26,7 +27,7 @@ export function LandingPage() {
     <main>
       <section className="home-width home-hero">
         <div className="home-edition"><span>D1 / DIGITAL PUBLISHING</span><span>{content.hero.kicker}</span><span>VOL. 01 — THE CONNECTION ISSUE</span></div>
-        <div className="home-hero-layout"><div className="home-hero-copy"><h1>{content.hero.lines[0]}<br /><span>{content.hero.lines[1]}</span></h1><div className="home-hero-aside"><p>{content.hero.description}</p><div className="home-hero-actions"><Link className="home-button" to={startPath}>{config.registration_open ? t('免费创建账户') : t('登录控制台')}<ArrowUpRight size={17} /></Link><button className="home-text-button" onClick={() => scrollToSection('home-solutions')} aria-label={t('看看如何开始')}><ArrowDownRight size={24} /></button></div><small>{config.registration_open ? t('免费开启你的第一个应用 · 随时按需升级') : t('注册暂未开放 · 已有账户可登录')}</small></div></div><figure className="home-phone-visual"><img className="home-phone-image" src="/images/home-phone-v1.png" alt={t('APK 下载、PWA 安装与安全检测的卡通手机示意')} width="1280" height="1280" fetchPriority="high" /><figcaption>APK / PWA / CONNECT</figcaption></figure></div>
+        <div className="home-hero-layout"><div className="home-hero-copy"><h1>{content.hero.lines[0]}<br /><span>{content.hero.lines[1]}</span></h1><div className="home-hero-aside"><p>{content.hero.description}</p><div className="home-hero-actions"><Link className="home-button" to={startPath}>{config.registration_open ? t('免费创建账户') : t('登录控制台')}<ArrowUpRight size={17} /></Link><button className="home-text-button" onClick={() => scrollToSection('home-solutions')} aria-label={t('看看如何开始')}><ArrowDownRight size={24} /></button></div><small>{config.registration_open ? t('免费开启你的第一个应用 · 随时按需升级') : t('注册暂未开放 · 已有账户可登录')}</small></div></div><figure className="home-phone-visual"><img className="home-phone-image" src={homeMedia.phoneImage} alt={t('APK 下载、PWA 安装与安全检测的卡通手机示意')} width="1280" height="1280" fetchPriority="high" /><figcaption>APK / PWA / CONNECT</figcaption></figure></div>
         <div className="home-capability-strip"><button onClick={() => scrollToSection('home-security')}><ShieldCheck size={19}/><span>{t('自动检查域名安全')}</span><ArrowDownRight size={15}/></button><span><RotateCcw size={17}/>{t('回流页')}</span><span><Radio size={17}/>{t('广告回传')}</span><span><Monitor size={17}/>{t('下载统计')}</span></div>
       </section>
 
