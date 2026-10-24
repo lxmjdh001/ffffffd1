@@ -31,6 +31,7 @@ func (s *Server) maintenance(ctx context.Context) {
 	if e := s.rate("worker-lease", 1, time.Minute); e != nil {
 		return
 	}
+	s.cleanupVisitStatistics(ctx)
 	now := s.Now()
 	var expired []Ticket
 	if e := s.DB.WithContext(ctx).Where("reserved = ? AND charged = ? AND released = ? AND expires_at < ?", true, false, false, now).Limit(1000).Find(&expired).Error; e == nil {

@@ -428,11 +428,14 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	outcome := "blocked"
+	defer func() { s.recordAccess(r, c.UserID, "cloaks", c.ID, outcome) }()
 	if s.rejectBlockedUA(w, r, c.UserID, r.UserAgent()) {
 		return
 	}
 	target := c.SafeURL
 	if !c.Enabled || !cloakBlocked(c, r, s.cloakRequestCountry(r)) {
+		outcome = "allowed"
 		candidate := c.TargetURL
 		if c.TargetType == "traffic_pool" {
 			// Execute the existing pool here; do not redirect to its /r/ entry

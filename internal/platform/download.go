@@ -69,6 +69,7 @@ func (s *Server) appDownload(w http.ResponseWriter, r *http.Request, forceDirect
 		return
 	}
 	if s.rejectBlockedUA(w, r, a.UserID, r.UserAgent()) {
+		s.recordAccess(r, a.UserID, "apps", a.ID, "blocked")
 		return
 	}
 	if a.DownloadMode == "info" && !forceDirect {
@@ -85,6 +86,7 @@ func (s *Server) appDownload(w http.ResponseWriter, r *http.Request, forceDirect
 		s.serveDownloadFile(w, r, a, Ticket{})
 		return
 	}
+	s.recordAccess(r, a.UserID, "apps", a.ID, "allowed")
 	visitor := s.visitor(w, r)
 	attr, _, e := s.prepareAttribution(w, r, a, visitor)
 	if e != nil {
@@ -106,12 +108,14 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.rejectBlockedUA(w, r, a.UserID, r.UserAgent()) {
+		s.recordAccess(r, a.UserID, "apps", a.ID, "blocked")
 		return
 	}
 	if e = s.rate("landing:"+s.clientIP(r), 1200, time.Minute); e != nil {
 		fail(w, e)
 		return
 	}
+	s.recordAccess(r, a.UserID, "apps", a.ID, "allowed")
 	visitor := s.visitor(w, r)
 	attr, token, e := s.prepareAttribution(w, r, a, visitor)
 	if e != nil {

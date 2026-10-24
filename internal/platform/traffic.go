@@ -17,17 +17,24 @@ import (
 )
 
 type TrafficPool struct {
-	UserID      string    `json:"-" gorm:"index;size:32"`
-	Slug        string    `json:"slug" gorm:"primaryKey;size:32"`
-	Enabled     bool      `json:"enabled"`
-	RiskEnabled bool      `json:"risk_enabled" gorm:"not null;default:false"`
-	Name        string    `json:"name"`
-	Mode        string    `json:"mode" gorm:"not null;default:random"`
-	Cursor      int64     `json:"-"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	StatisticsID string    `json:"-" gorm:"size:32;not null;default:''"`
+	UserID       string    `json:"-" gorm:"index;size:32"`
+	Slug         string    `json:"slug" gorm:"primaryKey;size:32"`
+	Enabled      bool      `json:"enabled"`
+	RiskEnabled  bool      `json:"risk_enabled" gorm:"not null;default:false"`
+	Name         string    `json:"name"`
+	Mode         string    `json:"mode" gorm:"not null;default:random"`
+	Cursor       int64     `json:"-"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 func (TrafficPool) TableName() string { return "traffic_groups" }
+func (p *TrafficPool) BeforeCreate(_ *gorm.DB) error {
+	if p.StatisticsID == "" {
+		p.StatisticsID = randomHex(16)
+	}
+	return nil
+}
 
 type TrafficLink struct {
 	PoolSlug  string     `json:"-" gorm:"index;size:32"`
@@ -81,6 +88,9 @@ func (s *Server) deleteTrafficPool(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		if err := tx.Where("pool_slug = ?", p.Slug).Delete(&TrafficLink{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ? AND kind = ? AND resource_id = ?", p.UserID, "traffic", p.StatisticsID).Delete(&AccessVisit{}).Error; err != nil {
 			return err
 		}
 		if err := tx.Delete(&p).Error; err != nil {
@@ -275,6 +285,7 @@ func (s *Server) routeTraffic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.rejectBlockedUA(w, r, p.UserID, r.UserAgent()) {
+		s.recordAccess(r, p.UserID, "traffic", p.StatisticsID, "blocked")
 		return
 	}
 	target, err := s.trafficTarget(r, p.Slug, p.UserID)
@@ -288,6 +299,8 @@ func (s *Server) routeTraffic(w http.ResponseWriter, r *http.Request) {
 // Traffic and cloaks share eligibility and cursor updates under the owner lock.
 func (s *Server) trafficTarget(r *http.Request, slug, ownerID string) (string, error) {
 	target := ""
+	visited := false
+	statisticsID := ""
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
 		owner, err := lockUser(tx, ownerID)
 		if err != nil {
@@ -303,6 +316,8 @@ func (s *Server) trafficTarget(r *http.Request, slug, ownerID string) (string, e
 		if err := tx.First(&p, "slug = ? AND user_id = ? AND enabled = ?", slug, owner.ID, true).Error; err != nil {
 			return err
 		}
+		visited = true
+		statisticsID = p.StatisticsID
 		var links []TrafficLink
 		if err := tx.Where("pool_slug = ? AND user_id = ?", p.Slug, owner.ID).Order("position, id").Find(&links).Error; err != nil {
 			return err
@@ -337,6 +352,13 @@ func (s *Server) trafficTarget(r *http.Request, slug, ownerID string) (string, e
 		target = candidates[index].URL
 		return nil
 	})
+	if visited {
+		outcome := "allowed"
+		if err != nil {
+			outcome = "unavailable"
+		}
+		s.recordAccess(r, ownerID, "traffic", statisticsID, outcome)
+	}
 	return target, err
 }
 

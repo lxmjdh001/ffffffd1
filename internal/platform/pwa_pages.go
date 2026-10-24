@@ -77,6 +77,7 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 		http.Error(w, "Page unavailable", 503)
 		return
 	}
+	s.recordAccess(r, a.UserID, "pwas", a.ID, "allowed")
 	// H5 flows can redirect to another HTTPS login, payment or www origin.
 	// Public runtime documents retain frame-ancestors 'none' and X-Frame-Options DENY,
 	// so redirects back to this origin cannot load a same-origin child document.

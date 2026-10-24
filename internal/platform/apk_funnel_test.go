@@ -194,6 +194,9 @@ func TestAPKLandingPaidFunnelDeduplicatesHTTPAndRecovery(t *testing.T) {
 			if e != nil || len(journal) != 0 {
 				t.Fatalf("replayed journal not cleared: %v", e)
 			}
+			if countRows(t, s, &AccessVisit{}) != 1 {
+				t.Fatal("download retries or return-flow requests inflated page visits")
+			}
 			var record Download
 			s.DB.First(&record)
 			if record.AmountMicros != 3000 || record.Bytes != a.Size || record.Device != "手机" || record.OS != "Android" || record.CompletedAt.IsZero() {

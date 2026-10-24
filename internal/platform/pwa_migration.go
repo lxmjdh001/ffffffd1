@@ -30,7 +30,10 @@ func migratePWA(tx *gorm.DB) error {
 	if err := migratePWALanding(tx); err != nil {
 		return err
 	}
-	return migrateReturnFlowBilling(tx)
+	if err := migrateReturnFlowBilling(tx); err != nil {
+		return err
+	}
+	return migrateVisitStatistics(tx)
 }
 
 func migratePWAPushRichContent(tx *gorm.DB) error {

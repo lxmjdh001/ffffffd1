@@ -150,6 +150,7 @@ func (s *Server) rate(key string, limit int64, window time.Duration) error {
 }
 func (s *Server) Handler() http.Handler {
 	m := http.NewServeMux()
+	m.Handle("GET /api/visit-statistics/{kind}/{id}", s.auth(s.visitStatistics))
 	s.registerPWARoutes(m)
 	s.registerReturnFlowRoutes(m)
 	s.registerPWAPushRoutes(m)
