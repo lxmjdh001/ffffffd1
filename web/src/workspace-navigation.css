@@ -1,0 +1,6 @@
+.workspace-label{transition:background .15s,border-color .15s}
+.workspace-label:hover{background:#2c3950;border-color:#53617c}
+.workspace-label.active{background:#2d3856;border-color:#6979e6;box-shadow:inset 0 0 0 1px #6979e633}
+.workspace-label.active .workspace-mark{background:#6979e6;color:#fff}
+.workspace-label.active>div{color:#eef1ff}
+.workspace-label.active small{color:#adb8e8}
