@@ -1,6 +1,6 @@
 // i18n: static UI literals
 import { t, useLocale } from './i18n';
-import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, ExternalLink, ImagePlus, Monitor, RotateCcw, Smartphone, Trash2 } from 'lucide-react';
@@ -28,7 +28,7 @@ export function PageDesigner() {
  const { id } = useParams(); const navigate = useNavigate(); const cache = useQueryClient(); const { config } = useConfig(); const { data: assigned } = useDownloadDomain();
  const { data, error, refetch } = useQuery({ queryKey: ['page-design', id], queryFn: () => api<DesignResponse>(`/apps/${id}/page-design`) });
  const [document, setDocument] = useState<PageDesign>();const [activeLanguage,setActiveLanguage]=useState<string>();
- const draft=document?activeAPKDesign(document,activeLanguage):undefined;
+ const draft=useMemo(()=>document?activeAPKDesign(document,activeLanguage):undefined,[document,activeLanguage]);
  const setDraft=(action:PageDesign|undefined|((previous:PageDesign|undefined)=>PageDesign|undefined))=>setDocument(previous=>{const current=previous?activeAPKDesign(previous,activeLanguage):undefined;const next=typeof action==='function'?action(current):action;return next&&previous?replaceAPKLocale(previous,activeLanguage,next):next;}); const [dirty, setDirty] = useState(false); const [busy, setBusy] = useState(false); const [imageBusy, setImageBusy] = useState(false); const [message, setMessage] = useState(''); const [saved, setSaved] = useState(false);
  const [html, setHTML] = useState(''); const [previewError, setPreviewError] = useState(''); const [previewBusy, setPreviewBusy] = useState(false); const [desktop, setDesktop] = useState(false); const revision = useRef(0);
  useEffect(() => { setDocument(undefined); setActiveLanguage(undefined); setDirty(false); }, [id]);

@@ -72,6 +72,9 @@ func (d PageDesign) localized(requested string) PageDesign {
 	selected := pwaLandingLanguage(c, strings.TrimSpace(requested)).Language
 	for _, v := range d.Localizations {
 		if apkLocaleCode(v.Language) == selected {
+			// Like PWA, return-flow behavior is app-wide, not per language.
+			// Keep the rendered switch consistent with its existing billing gate.
+			v.ReturnFlowConfig = d.ReturnFlowConfig
 			return v
 		}
 	}

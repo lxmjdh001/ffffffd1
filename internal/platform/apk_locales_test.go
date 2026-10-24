@@ -29,6 +29,12 @@ func TestAPKMultipleLanguagesMatchPWAAndPreserveContent(t *testing.T) {
 	d := zh
 	d.Localizations = []PageDesign{zh, en, fr}
 	d.LanguagePriority = []string{"en-US", "fr-FR", "zh-CN"}
+	flow := defaultReturnFlowConfig()
+	flow.Enabled = true
+	d.ReturnFlowConfig = &flow
+	if localized := d.localized("en-GB"); localized.ReturnFlowConfig == nil || !localized.ReturnFlowConfig.Enabled {
+		t.Fatal("language selection changed the shared return-flow switch")
+	}
 	path := "/api/apps/" + app.ID + "/page-design"
 	requireCode(t, call(t, s, "PUT", path, d, cookie, csrf), 200)
 	read := call(t, s, "GET", path, nil, cookie, "")
