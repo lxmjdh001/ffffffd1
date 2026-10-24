@@ -6,7 +6,7 @@ import { Brand } from './auth';
 import { bytes, money, number, useConfig } from './ui';
 import originalHomeContent from './home-content.json';
 import { translateContent } from './i18n';
-import { LanguageSelector } from './language-selector';
+import { HomeNavigation } from './home-navigation';
 import './landing.css';
 
 function scrollToSection(id: string) {
@@ -49,11 +49,7 @@ export function LandingPage() {
   const inviteQuery = invite === null ? '' : `?invite=${encodeURIComponent(invite.trim())}`;
   const startPath = `${config.registration_open ? '/register' : '/login'}${inviteQuery}`;
   return <div className="home">
-    <header className="home-header"><nav className="home-width home-nav" aria-label={t("首页导航")}>
-      <Link to={`/welcome${inviteQuery}`} aria-label={t("{0} 首页", { 0: config.site_name })}><Brand /></Link>
-      <div className="home-nav-sections"><button onClick={() => scrollToSection('home-solutions')}>{t("产品功能")}</button><button onClick={() => scrollToSection('home-how')}>{t("如何开始")}</button><button onClick={() => scrollToSection('home-pricing')}>{t("套餐价格")}</button><button onClick={() => scrollToSection('home-faq')}>{t("常见问题")}</button></div>
-      <div className="home-nav-actions"><LanguageSelector /><Link className="home-login" to={`/login${inviteQuery}`}>{t("登录")}</Link><Link className="home-button home-button-small" to={startPath}>{config.registration_open ? t("免费开始") : t("进入控制台")}<ArrowUpRight size={15} /></Link></div>
-    </nav></header>
+    <HomeNavigation inviteQuery={inviteQuery} startPath={startPath} />
     <main>
       <section className="home-hero">
         <div className="home-hero-wash" />

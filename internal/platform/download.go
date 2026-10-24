@@ -125,8 +125,8 @@ var pageTemplateFunctions = template.FuncMap{"imageURL": func(raw string) templa
 	return ""
 }}
 
-var downloadTemplate = template.Must(template.New("download").Funcs(pageTemplateFunctions).Parse(strings.Replace(downloadPageHTML, "/*BUTTON_STYLE*/", downloadButtonCSS, 1)))
-var googlePlayTemplate = template.Must(template.New("google-play").Funcs(pageTemplateFunctions).Parse(strings.Replace(googlePlayHTML, "/*SOURCE_STYLE*/", googlePlayCSS+"\n"+downloadButtonCSS, 1)))
+var downloadTemplate = template.Must(template.New("download").Funcs(pageTemplateFunctions).Parse(strings.Replace(downloadPageHTML, "/*BUTTON_STYLE*/", downloadButtonCSS+"\n"+ratingStarsCSS, 1) + ratingStarsHTML))
+var googlePlayTemplate = template.Must(template.New("google-play").Funcs(pageTemplateFunctions).Parse(strings.Replace(googlePlayHTML, "/*SOURCE_STYLE*/", googlePlayCSS+"\n"+downloadButtonCSS+"\n"+ratingStarsCSS, 1) + ratingStarsHTML))
 
 func downloadPageTemplate(layout string) *template.Template {
 	if layout == "google_play" {

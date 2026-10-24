@@ -141,6 +141,7 @@ func TestPageLanguageVisualFixtures(t *testing.T) {
 			d := defaultPageDesign(a)
 			d.Language, d.Layout = language, layout
 			d.Developer, d.Description = "Example Studio", "Your app description stays unchanged when the template language changes."
+			d.DisplayRating = "4.8"
 			var out bytes.Buffer
 			if err := downloadPageTemplate(layout).Execute(&out, map[string]any{"App": a, "Design": d, "Preview": true, "Size": "12.8 MB"}); err != nil {
 				t.Fatal(err)

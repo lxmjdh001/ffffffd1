@@ -1,0 +1,9 @@
+/* A complete five-star scale; clipped fill supports tenths such as 4.8. */
+.d1-rating-stars{display:inline-flex;align-items:center;gap:1px;flex-shrink:0;vertical-align:middle;line-height:1}
+.d1-rating-star{display:block;position:relative;width:12px;height:12px;flex:0 0 12px}
+.d1-rating-star svg{display:block;width:12px;height:12px;fill:#d8e1dc}
+.d1-rating-star-fill{display:block;position:absolute;inset:0 auto 0 0;overflow:hidden}
+.d1-rating-star-fill svg{fill:var(--accent,#01875f);max-width:none}
+.stat-main:has(>.d1-rating-stars){flex-wrap:wrap;justify-content:center;column-gap:4px;row-gap:3px}
+.metrics strong>.d1-rating-stars{display:flex;width:max-content;margin-top:4px}
+.minimal .metrics strong>.d1-rating-stars{margin-inline:auto}

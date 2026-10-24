@@ -30,6 +30,12 @@ var googlePlayCSS string
 //go:embed templates/download-button.css
 var downloadButtonCSS string
 
+//go:embed templates/rating-stars.html
+var ratingStarsHTML string
+
+//go:embed templates/rating-stars.css
+var ratingStarsCSS string
+
 type PageDesign struct {
 	Layout               string   `json:"layout"`
 	Language             string   `json:"language"`
@@ -71,6 +77,19 @@ func (s *Server) pageDesign(a Application) (PageDesign, error) {
 
 var pageColor = regexp.MustCompile(`^#[a-fA-F0-9]{6}$`)
 var pageRating = regexp.MustCompile(`^(?:[0-4](?:\.[0-9])?|5(?:\.0)?)$`)
+
+// Five bounded percentages render fractional ratings without changing the score.
+func (d PageDesign) RatingStars() [5]int {
+	var stars [5]int
+	if !pageRating.MatchString(d.DisplayRating) {
+		return stars
+	}
+	rating, _ := strconv.ParseFloat(d.DisplayRating, 64)
+	for i := range stars {
+		stars[i] = min(100, max(0, int(rating*100-float64(i*100)+0.5)))
+	}
+	return stars
+}
 
 // Marketing display values never change Application.Downloads or accounting.
 // Empty display downloads retain the existing real-counter behavior.
