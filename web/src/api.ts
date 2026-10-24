@@ -9,21 +9,24 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   if (csrf) headers.set('X-CSRF-Token', csrf);
   const response = await fetch(`/api${path}`, { ...options, headers, credentials: 'same-origin' });
   const payload = await response.json().catch(() => ({ error: '服务器响应格式异常' }));
+  // A cancelled identity request may finish after a new session is established.
+  // Ignore its payload before it can restore an old CSRF token.
+  options.signal?.throwIfAborted();
   if (!response.ok) throw new APIError(payload.error || '请求失败', response.status);
   if (payload.csrf_token) csrf = payload.csrf_token;
   return payload as T;
 }
 export const send = <T>(path: string, body: unknown, method = 'POST', key?: string) => api<T>(path, { method, body: JSON.stringify(body), headers: key ? { 'Idempotency-Key': key } : {} });
 export const newKey = () => crypto.randomUUID().replaceAll('-', '');
-export const getMe = () => api<{ user: User; plan: Plan; csrf_token: string }>('/me');
+export const getMe = (options: { signal?: AbortSignal } = {}) => api<{ user: User; plan: Plan; csrf_token: string }>('/me', { signal: options.signal });
 export const authProvider: AuthProvider = {
-  login: async params => { await send('/auth/login', params); },
+  login: async ({ action, ...params }) => send<{ user: User; csrf_token: string }>(action === 'register' ? '/auth/register' : '/auth/login', params),
   logout: async () => { try { await api('/auth/logout', { method: 'POST' }); } catch (e) { if (!(e instanceof APIError) || e.status !== 401) throw e; } finally { csrf = ''; } },
-  checkAuth: async () => { await getMe(); },
+  checkAuth: async params => { await getMe(params); },
   checkError: async error => { if (error.status === 401) throw error; },
-  getIdentity: async () => { const { user } = await getMe(); return { ...user, fullName: user.name }; },
-  getPermissions: async () => {
-    try { return (await getMe()).user.role; }
+  getIdentity: async params => { const { user } = await getMe(params); return { ...user, fullName: user.name }; },
+  getPermissions: async params => {
+    try { return (await getMe(params)).user.role; }
     catch (error) {
       // React Admin also queries permissions on public noLayout routes. An
       // anonymous visitor has no role; rejecting here would log them out and
