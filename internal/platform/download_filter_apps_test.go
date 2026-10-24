@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestDownloadFilterAppsIncludeAllOwnedAppsAndDeletedHistory(t *testing.T) {
+func TestDownloadFilterAppsExcludeDeletedAppsWithoutChangingHistory(t *testing.T) {
 	s := testServer(t)
 	u, other := seedUser(t, s, 0), seedUser(t, s, 0)
 	cookie, _ := sessionFor(t, s, u)
@@ -23,7 +23,7 @@ func TestDownloadFilterAppsIncludeAllOwnedAppsAndDeletedHistory(t *testing.T) {
 	if err := s.DB.Create(&foreign).Error; err != nil {
 		t.Fatal(err)
 	}
-	// The legacy soft-deleted row must behave like a hard-deleted app in history.
+	// Neither legacy soft-deleted rows nor hard-deleted historical apps belong in the picker.
 	legacy := Application{ID: "legacy", UserID: u.ID, Name: "旧字段名称", Slug: "legacy-app"}
 	if err := s.DB.Create(&legacy).Error; err != nil {
 		t.Fatal(err)
@@ -56,7 +56,7 @@ func TestDownloadFilterAppsIncludeAllOwnedAppsAndDeletedHistory(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
 		t.Fatal(err)
 	}
-	if len(out.Data) != 107 {
+	if len(out.Data) != 105 {
 		t.Fatalf("application picker truncated or leaked rows: %+v", out.Data)
 	}
 	byID := map[string]downloadFilterApp{}
@@ -66,22 +66,20 @@ func TestDownloadFilterAppsIncludeAllOwnedAppsAndDeletedHistory(t *testing.T) {
 	if len(byID) != len(out.Data) {
 		t.Fatal("duplicate application options")
 	}
-	if byID[current[0].ID].Name != current[0].Name || byID[current[0].ID].Deleted {
+	if byID[current[0].ID].Name != current[0].Name {
 		t.Fatal("current name was replaced by an old download snapshot")
-	}
-	if byID["hard-deleted"].Name != "删除前的名称" || !byID["hard-deleted"].Deleted {
-		t.Fatal("deleted app did not use its latest owned download name")
-	}
-	if byID["legacy"].Name != "历史快照名称" || !byID["legacy"].Deleted {
-		t.Fatal("legacy app history missing")
 	}
 	if _, ok := byID[current[104].ID]; !ok {
 		t.Fatal("apps beyond the first 100 are missing")
 	}
-	for _, id := range []string{"foreign", "other-deleted"} {
+	for _, id := range []string{"foreign", "other-deleted", "hard-deleted", "legacy"} {
 		if _, exists := byID[id]; exists {
-			t.Fatal("cross-account option exposed")
+			t.Fatal("deleted or cross-account option exposed")
 		}
+	}
+	var historyCount int64
+	if err := s.DB.Model(&Download{}).Where("user_id = ?", u.ID).Count(&historyCount).Error; err != nil || historyCount != 4 {
+		t.Fatal("picker changed historical download records")
 	}
 	empty := seedUser(t, s, 0)
 	emptyCookie, _ := sessionFor(t, s, empty)
@@ -89,5 +87,31 @@ func TestDownloadFilterAppsIncludeAllOwnedAppsAndDeletedHistory(t *testing.T) {
 	requireCode(t, w, 200)
 	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil || out.Data == nil || len(out.Data) != 0 {
 		t.Fatal("empty account should get an empty list")
+	}
+}
+
+func TestDeletedApplicationCannotBeFilteredButAllHistoryRemains(t *testing.T) {
+	s := testServer(t)
+	u := seedUser(t, s, 0)
+	cookie, csrf := sessionFor(t, s, u)
+	a := seedApp(t, s, u, 10)
+	now := s.Now()
+	d := Download{ID: randomHex(16), TicketHash: randomHex(32), UserID: u.ID, AppID: a.ID, AppName: a.Name, CreatedAt: now, StartedAt: now, CompletedAt: now}
+	if err := s.DB.Create(&d).Error; err != nil {
+		t.Fatal(err)
+	}
+	requireCode(t, call(t, s, "DELETE", "/api/apps/"+a.ID, nil, cookie, csrf), 200)
+	for _, tc := range []struct {
+		path  string
+		total int
+	}{{"/api/downloads", 1}, {"/api/downloads?app_id=" + a.ID, 0}} {
+		w := call(t, s, "GET", tc.path, nil, cookie, "")
+		requireCode(t, w, 200)
+		var out struct {
+			Total int `json:"total"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil || out.Total != tc.total {
+			t.Fatalf("incorrect history/filter result: %s", w.Body.String())
+		}
 	}
 }

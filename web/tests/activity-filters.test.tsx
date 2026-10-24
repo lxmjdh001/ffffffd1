@@ -78,7 +78,8 @@ it('applies a custom inclusive 30-day range and blocks invalid or longer queries
 it('combines application and date filters, preserves them when paging, and resets the page when changing apps', async () => {
   const user = await open();
   const picker = screen.getByRole('combobox', { name: '应用', exact: true });
-  await screen.findByRole('option', { name: '旧应用（已删除）' });
+  await screen.findByRole('option', { name: '应用一' });
+  expect(screen.queryByRole('option', { name: /旧应用|已删除/ })).toBeNull();
   expect((picker as HTMLSelectElement).value).toBe('');
   await user.selectOptions(picker, 'app-one');
   expect(requests).toHaveLength(1);
@@ -92,9 +93,6 @@ it('combines application and date filters, preserves them when paging, and reset
   await expectRequest('2026-10-07', '2026-10-07', '1', 'app-two');
   await user.click(screen.getByRole('button', { name: '最近 7 天' }));
   await expectRequest('2026-10-01', '2026-10-07', '1', 'app-two');
-  await user.selectOptions(picker, 'app-deleted');
-  await user.click(screen.getByRole('button', { name: '查询', exact: true }));
-  await expectRequest('2026-10-01', '2026-10-07', '1', 'app-deleted');
   expect(screen.getByText('所选条件暂无下载记录')).toBeTruthy();
   await user.selectOptions(picker, '');
   await user.click(screen.getByRole('button', { name: '查询', exact: true }));

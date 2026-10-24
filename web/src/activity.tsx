@@ -7,7 +7,7 @@ import { Badge, bytes, date, Empty, errorText, ErrorState, Field, FormError, Mod
 import './activity.css';
 
 type DateRange = { start: string; end: string };
-type FilterApp = { id: string; name: string; deleted: boolean };
+type FilterApp = { id: string; name: string; deleted?: boolean };
 const dayMillis = 86400000;
 // Match the server's UTC+8 calendar, independent of the visitor's timezone.
 const todayInShanghai = () => new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
@@ -60,7 +60,9 @@ export function ActivityPage() {
     finally { uaSubmitting.current = false; setUABusy(false); }
   };
   const isToday = sameRange(range, presetRange(1)) && !appID;
-  const selectedApp = apps?.data.find(app => app.id === appID);
+  // Ignore legacy cached responses that used to include deleted-app snapshots.
+  const availableApps = apps?.data.filter(app => !app.deleted) || [];
+  const selectedApp = availableApps.find(app => app.id === appID);
 
   return <>
     <PageHeader eyebrow="DOWNLOAD ACTIVITY" title="下载记录" subtitle="完整下载的设备、来源与费用，一目了然。" />
@@ -76,7 +78,7 @@ export function ActivityPage() {
         <div className="download-date-fields">
           <Field label="应用"><select className="download-app-filter" value={draftAppID} disabled={!apps && !appsError} onChange={e => setDraftAppID(e.target.value)}>
             <option value="">全部应用</option>
-            {apps?.data.map(app => <option key={app.id} value={app.id}>{app.name || app.id}{app.deleted ? '（已删除）' : ''}</option>)}
+            {availableApps.map(app => <option key={app.id} value={app.id}>{app.name || app.id}</option>)}
           </select></Field>
           <Field label="开始日期"><input type="date" required max={todayInShanghai()} value={draft.start} onChange={e => { setDraft({ ...draft, start: e.target.value }); setFormError(''); }} /></Field>
           <Field label="结束日期"><input type="date" required max={todayInShanghai()} value={draft.end} onChange={e => { setDraft({ ...draft, end: e.target.value }); setFormError(''); }} /></Field>
@@ -85,7 +87,7 @@ export function ActivityPage() {
         <FormError>{formError}</FormError>
         {appsError && <div className="download-app-error" role="status"><span>应用列表加载失败，仍可查询全部记录。</span><button type="button" className="text-btn" onClick={() => void refetchApps()}>重试应用列表</button></div>}
       </form>
-      <div className="panel-heading"><div><h2>{isToday ? '今日下载' : '筛选结果'}</h2><p>{range.start === range.end ? range.start : `${range.start} 至 ${range.end}`}{selectedApp ? ` · ${selectedApp.name || selectedApp.id}${selectedApp.deleted ? '（已删除）' : ''}` : ''}</p></div><span className="muted small">只展示完整传输成功的下载，分段自动合并</span></div>
+      <div className="panel-heading"><div><h2>{isToday ? '今日下载' : '筛选结果'}</h2><p>{range.start === range.end ? range.start : `${range.start} 至 ${range.end}`}{selectedApp ? ` · ${selectedApp.name || selectedApp.id}` : ''}</p></div><span className="muted small">只展示完整传输成功的下载，分段自动合并</span></div>
       {error ? <ErrorState error={error} retry={() => refetch()} /> : !data ? <Spinner /> : !data.data.length ? <Empty title="所选条件暂无下载记录" detail="可以切换应用或日期范围查看其他下载记录。" /> : <div className="table-wrap"><table><thead><tr><th>应用名称</th><th>IP / 设备</th><th>来源</th><th>计费方式</th><th>本次费用</th><th>完成时间 / 用时</th></tr></thead><tbody>{data.data.map(d => <tr key={d.id}><td className="semibold">{d.app_name}</td><td><strong className="mono small">{d.ip}</strong><small className="cell-sub">{d.device} · {d.os} · {d.browser}</small><details className="ua-detail"><summary>查看 UA</summary><p className="download-ua-value">{d.user_agent || '此记录未提供 UA'}</p><div className="download-ua-actions">{d.ua_blocked && <Badge tone="red">已拉黑</Badge>}<button type="button" className={`text-btn ${d.ua_blocked ? '' : 'danger-text'}`} disabled={uaBusy || !d.user_agent.trim()} onClick={() => { setUAAction({ download: d, blocked: !d.ua_blocked }); setUAError(''); }}><Ban size={13} />{d.ua_blocked ? '解除拉黑' : '拉黑 UA'}</button></div>{!d.user_agent.trim() && <small className="download-ua-empty">无法拉黑未提供 UA 的记录。</small>}</details></td><td className="source-cell" title={d.source}>{d.source || "直接访问 / 未提供"}</td><td><Badge tone={d.amount_micros > 0 ? 'amber' : 'green'}>{d.amount_micros > 0 ? '余额扣费' : '免费额度 / 零单价'}</Badge></td><td>$ {money(d.amount_micros, 6)}</td><td>{date(d.completed_at, true)}<small className="cell-sub">{bytes(d.bytes)} · {Math.max(0, (new Date(d.completed_at).getTime() - new Date(d.started_at).getTime()) / 1000).toFixed(1)} 秒</small></td></tr>)}</tbody></table></div>}
       <Pager page={page} total={data?.total || 0} setPage={setPage} />
     </section>

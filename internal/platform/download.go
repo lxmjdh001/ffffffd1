@@ -370,6 +370,7 @@ func (s *Server) listDownloads(w http.ResponseWriter, r *http.Request) {
 	q := s.DB.Model(&Download{}).Where("user_id = ? AND created_at >= ? AND created_at < ?", userOf(r).ID, start, end)
 	if appID := r.URL.Query().Get("app_id"); appID != "" {
 		q = q.Where("app_id = ?", appID)
+		q = q.Where("app_id IN (?)", s.DB.Model(&Application{}).Select("id").Where("user_id = ?", userOf(r).ID))
 	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
