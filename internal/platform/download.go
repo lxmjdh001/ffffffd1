@@ -72,6 +72,10 @@ func (s *Server) appDownload(w http.ResponseWriter, r *http.Request, forceDirect
 		s.recordAccess(r, a.UserID, "apps", a.ID, "blocked")
 		return
 	}
+	if e = s.chargeUsageUV(r, a.UserID, "apk_uv", a.ID); e != nil {
+		fail(w, e)
+		return
+	}
 	if a.DownloadMode == "info" && !forceDirect {
 		target := "/a/" + a.Slug + "/info"
 		if r.URL.RawQuery != "" {
@@ -112,6 +116,10 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if e = s.rate("landing:"+s.clientIP(r), 1200, time.Minute); e != nil {
+		fail(w, e)
+		return
+	}
+	if e = s.chargeUsageUV(r, a.UserID, "apk_uv", a.ID); e != nil {
 		fail(w, e)
 		return
 	}
@@ -213,9 +221,13 @@ func (s *Server) startDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createDownloadTicket(r *http.Request, a Application, visitor, key string, attr Attribution) (string, error) {
+	if err := s.chargeUsageUV(r, a.UserID, "apk_uv", a.ID); err != nil {
+		return "", err
+	}
 	token := s.mac("download:" + a.ID + ":" + a.FileKey + ":" + visitor + ":" + key)
 	device, system, browser := classifyDevice(r.UserAgent())
 	t := Ticket{IP: s.clientIP(r), UserAgent: cleanText(r.UserAgent(), 2048), Source: attr.Source, Device: device, OS: system, Browser: browser, AttributionID: attr.ID, Hash: hashString(token), AppID: a.ID, UserID: a.UserID, FileKey: a.FileKey, VisitorHash: s.mac(visitor), Host: requestHost(r), ExpiresAt: s.Now().Add(24 * time.Hour)}
+	t.Metered = meteredEnabled(s.DB)
 	e := s.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&t).Error
 	return token, e
 }

@@ -121,7 +121,7 @@ func (s *Server) visitStatistics(w http.ResponseWriter, r *http.Request) {
 		id = pool.StatisticsID
 	}
 	ranges := []string{"today", "7d"}
-	paid := owner.PlanID(s.Now()) == "pro"
+	paid := meteredEnabled(s.DB) || owner.PlanID(s.Now()) == "pro"
 	if paid {
 		ranges = append(ranges, "30d")
 	}

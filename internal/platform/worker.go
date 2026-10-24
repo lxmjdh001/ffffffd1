@@ -32,6 +32,9 @@ func (s *Server) maintenance(ctx context.Context) {
 		return
 	}
 	s.cleanupVisitStatistics(ctx)
+	if e := s.cleanupMeteredUsage(ctx); e != nil {
+		slog.Error("usage reservation cleanup failed", "error", e)
+	}
 	now := s.Now()
 	var expired []Ticket
 	if e := s.DB.WithContext(ctx).Where("reserved = ? AND charged = ? AND released = ? AND expires_at < ?", true, false, false, now).Limit(1000).Find(&expired).Error; e == nil {

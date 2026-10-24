@@ -79,6 +79,14 @@ function openBilling() {
 }
 
 describe('recharge promotion', () => {
+  it('shows all five usage rates and a single shared gift without subscriptions', async () => {
+    Object.assign(config,{metered_billing:true,download_price_micros:3000,pwa_install_price_micros:30000,cloak_uv_price_micros:1000,return_flow_price_micros:1000,pwa_push_price_micros:1000,registration_gift_limit:1000});
+    config.plans=[{...free,name:'按量计费'}];
+    openBilling();await screen.findByRole('heading',{name:'用量与账单'});
+    const rates=await screen.findByRole('region',{name:'按量计费'});
+    expect(within(rates).getByText('$0.003')).toBeTruthy();expect(within(rates).getByText('$0.03')).toBeTruthy();expect(within(rates).getAllByText('$0.001')).toHaveLength(3);expect(within(rates).getByText('APK 访问与 PWA 安装共用 1,000 次赠送额度。')).toBeTruthy();
+    expect(screen.queryByText('选择适合你的套餐')).toBeNull();expect(screen.queryByRole('button',{name:/开通|续费/})).toBeNull();expect(screen.getByRole('button',{name:'充值余额'})).toBeTruthy();
+  });
   it('retains historical Alipay payment instructions without offering new Alipay orders', async () => {
     existingOrders = [{ ...order, method: 'alipay', amount_micros: 100000000, bonus_micros: 0,
       payment_currency: 'CNY', alipay_rate_micros: 6650000, fee_micros: 5000000, pay_cny_cents: 69825,

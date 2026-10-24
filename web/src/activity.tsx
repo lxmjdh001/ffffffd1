@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ban, Search } from 'lucide-react';
 import { api, send } from './api';
 import type { Download, Page } from './types';
-import { Badge, bytes, date, Empty, errorText, ErrorState, Field, FormError, Modal, money, PageHeader, Pager, Spinner } from './ui';
+import { Badge, bytes, date, Empty, errorText, ErrorState, Field, FormError, Modal, money, PageHeader, Pager, Spinner, useConfig } from './ui';
 import './activity.css';
 
 type DateRange = { start: string; end: string };
@@ -21,7 +21,7 @@ function presetRange(days: number): DateRange {
 }
 
 export function ActivityPage() {
-  useLocale();
+  useLocale(); const config=useConfig()?.config;
   const [page, setPage] = useState(1);
   const [range, setRange] = useState<DateRange>(() => presetRange(1));
   const [draft, setDraft] = useState<DateRange>(range);
@@ -91,7 +91,7 @@ export function ActivityPage() {
         {appsError && <div className="download-app-error" role="status"><span>{t("应用列表加载失败，仍可查询全部记录。")}</span><button type="button" className="text-btn" onClick={() => void refetchApps()}>{t("重试应用列表")}</button></div>}
       </form>
       <div className="panel-heading"><div><h2>{isToday ? t("今日下载") : t("筛选结果")}</h2><p>{range.start === range.end ? range.start : t("{0} 至 {1}", { 0: range.start, 1: range.end })}{selectedApp ? ` · ${selectedApp.name || selectedApp.id}` : ''}</p></div><span className="muted small">{t("只展示完整传输成功的下载，分段自动合并")}</span></div>
-      {error ? <ErrorState error={error} retry={() => refetch()} /> : !data ? <Spinner /> : !data.data.length ? <Empty title={t("所选条件暂无下载记录")} detail={t("可以切换应用或日期范围查看其他下载记录。")} /> : <div className="table-wrap"><table><thead><tr><th>{t("应用名称")}</th><th>{t("IP / 设备")}</th><th>{t("来源")}</th><th>{t("计费方式")}</th><th>{t("本次费用")}</th><th>{t("完成时间 / 用时")}</th></tr></thead><tbody>{data.data.map(d => <tr key={d.id}><td className="semibold">{d.app_name}</td><td><strong className="mono small">{d.ip}</strong><small className="cell-sub">{d.device} · {d.os} · {d.browser}</small><details className="ua-detail"><summary>{t("查看 UA")}</summary><p className="download-ua-value">{d.user_agent || t("此记录未提供 UA")}</p><div className="download-ua-actions">{d.ua_blocked && <Badge tone="red">{t("已拉黑")}</Badge>}<button type="button" className={`text-btn ${d.ua_blocked ? '' : 'danger-text'}`} disabled={uaBusy || !d.user_agent.trim()} onClick={() => { setUAAction({ download: d, blocked: !d.ua_blocked }); setUAError(''); }}><Ban size={13} />{d.ua_blocked ? t("解除拉黑") : t("拉黑 UA")}</button></div>{!d.user_agent.trim() && <small className="download-ua-empty">{t("无法拉黑未提供 UA 的记录。")}</small>}</details></td><td className="source-cell" title={d.source}>{d.source || t("直接访问 / 未提供")}</td><td><Badge tone={d.amount_micros > 0 ? 'amber' : 'green'}>{d.amount_micros > 0 ? t("余额扣费") : t("免费额度 / 零单价")}</Badge></td><td>$ {money(d.amount_micros, 6)}</td><td>{date(d.completed_at, true)}<small className="cell-sub">{bytes(d.bytes)} · {Math.max(0, (new Date(d.completed_at).getTime() - new Date(d.started_at).getTime()) / 1000).toFixed(1)} {t(" 秒")}</small></td></tr>)}</tbody></table></div>}
+      {error ? <ErrorState error={error} retry={() => refetch()} /> : !data ? <Spinner /> : !data.data.length ? <Empty title={t("所选条件暂无下载记录")} detail={t("可以切换应用或日期范围查看其他下载记录。")} /> : <div className="table-wrap"><table><thead><tr><th>{t("应用名称")}</th><th>{t("IP / 设备")}</th><th>{t("来源")}</th><th>{t("计费方式")}</th><th>{t("本次费用")}</th><th>{t("完成时间 / 用时")}</th></tr></thead><tbody>{data.data.map(d => <tr key={d.id}><td className="semibold">{d.app_name}</td><td><strong className="mono small">{d.ip}</strong><small className="cell-sub">{d.device} · {d.os} · {d.browser}</small><details className="ua-detail"><summary>{t("查看 UA")}</summary><p className="download-ua-value">{d.user_agent || t("此记录未提供 UA")}</p><div className="download-ua-actions">{d.ua_blocked && <Badge tone="red">{t("已拉黑")}</Badge>}<button type="button" className={`text-btn ${d.ua_blocked ? '' : 'danger-text'}`} disabled={uaBusy || !d.user_agent.trim()} onClick={() => { setUAAction({ download: d, blocked: !d.ua_blocked }); setUAError(''); }}><Ban size={13} />{d.ua_blocked ? t("解除拉黑") : t("拉黑 UA")}</button></div>{!d.user_agent.trim() && <small className="download-ua-empty">{t("无法拉黑未提供 UA 的记录。")}</small>}</details></td><td className="source-cell" title={d.source}>{d.source || t("直接访问 / 未提供")}</td><td><Badge tone={d.amount_micros > 0 ? 'amber' : 'green'}>{d.metered ? t("APK 访问 UV") : d.amount_micros > 0 ? t("余额扣费") : t("免费额度 / 零单价")}</Badge></td><td>{d.metered ? "—" : "$ " + money(d.amount_micros, 6)}</td><td>{date(d.completed_at, true)}<small className="cell-sub">{bytes(d.bytes)} · {Math.max(0, (new Date(d.completed_at).getTime() - new Date(d.started_at).getTime()) / 1000).toFixed(1)} {t(" 秒")}</small></td></tr>)}</tbody></table></div>}
       <Pager page={page} total={data?.total || 0} setPage={setPage} />
     </section>
     {uaAction && <Modal title={uaAction.blocked ? t("拉黑此 UA？") : t("解除此 UA 的拉黑？")} close={() => { if (!uaBusy) setUAAction(undefined); }}>
@@ -100,6 +100,6 @@ export function ActivityPage() {
       <FormError>{uaError}</FormError>
       <div className="modal-footer"><button type="button" className="btn secondary" disabled={uaBusy} onClick={() => setUAAction(undefined)}>{t("取消")}</button><button type="button" className={`btn ${uaAction.blocked ? 'danger' : 'primary'}`} disabled={uaBusy} onClick={() => void saveUABlock()}>{uaBusy ? t("处理中…") : uaAction.blocked ? t("确认拉黑") : t("确认解除")}</button></div>
     </Modal>}
-    <p className="bottom-hint">{t("开始下载时预留额度或余额，服务端完整传输文件后才结算。断点续传合并字节范围，下载凭证过期仍未完成则释放预留。成功表示服务端完整传输，不代表客户端安装或注册成功。")}</p>
+    <p className="bottom-hint">{config?.metered_billing ? t("APK 按每个应用的独立访客计费，同一访客滚动 24 小时只计一次；打开详情页后下载不会重复扣费。PWA 仅在浏览器确认安装成功后计费，取消安装不扣费。") : t("开始下载时预留额度或余额，服务端完整传输文件后才结算。断点续传合并字节范围，下载凭证过期仍未完成则释放预留。成功表示服务端完整传输，不代表客户端安装或注册成功。")}</p>
   </>;
 }

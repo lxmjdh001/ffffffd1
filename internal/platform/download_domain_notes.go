@@ -62,7 +62,7 @@ func (s *Server) downloadDomainsFor(u User) ([]availableDomain, error) {
 	plan := u.PlanID(s.Now())
 	if len(x.DownloadDomainRules) > 0 {
 		for _, rule := range x.DownloadDomainRules {
-			if !rule.LegacyOnly && (rule.Audience == "all" || rule.Audience == "paid" && plan == "pro") {
+			if !rule.LegacyOnly && (x.MeteredBilling || rule.Audience == "all" || rule.Audience == "paid" && plan == "pro") {
 				add(rule.URL, rule.Remark, "platform", rule.Audience, "")
 			}
 		}

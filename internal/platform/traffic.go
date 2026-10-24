@@ -75,7 +75,12 @@ func (s *Server) getTrafficPool(w http.ResponseWriter, r *http.Request) {
 		}
 		data = append(data, map[string]any{"pool": p, "links": links, "entry_url": entryURL})
 	}
-	jsonOut(w, 200, map[string]any{"data": data, "paid": userOf(r).PlanID(s.Now()) == "pro", "configured": os.Getenv("GOOGLE_WEB_RISK_API_KEY") != ""})
+	eligible, e := s.riskEligible(s.DB, userOf(r))
+	if e != nil {
+		fail(w, e)
+		return
+	}
+	jsonOut(w, 200, map[string]any{"data": data, "paid": eligible, "risk_eligible": eligible, "configured": os.Getenv("GOOGLE_WEB_RISK_API_KEY") != ""})
 }
 
 func (s *Server) deleteTrafficPool(w http.ResponseWriter, r *http.Request) {
@@ -162,8 +167,14 @@ func (s *Server) saveTrafficPool(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
-		if u.PlanID(s.Now()) != "pro" && in.RiskEnabled {
-			return problem(403, "Google 安全检测仅限有效付费会员使用")
+		if in.RiskEnabled {
+			eligible, e := s.riskEligible(tx, u)
+			if e != nil {
+				return e
+			}
+			if !eligible {
+				return problem(403, "需要可用余额或赠送额度才能开启安全检测")
+			}
 		}
 		if in.RiskEnabled && os.Getenv("GOOGLE_WEB_RISK_API_KEY") == "" {
 			return problem(503, "管理员尚未配置 Google Web Risk API")
@@ -323,7 +334,13 @@ func (s *Server) trafficTarget(r *http.Request, slug, ownerID string) (string, e
 			return err
 		}
 		candidates := links
-		if p.RiskEnabled && owner.PlanID(s.Now()) == "pro" {
+		eligible, e := s.riskEligible(tx, owner)
+		if e != nil {
+			return e
+		}
+		// Running out of credit pauses fresh lookups, never restores a URL that
+		// has already been flagged as unsafe.
+		if p.RiskEnabled && (eligible || meteredEnabled(tx)) {
 			candidates = eligibleTrafficLinks(links, s.Now())
 		}
 		if len(candidates) == 0 {
@@ -412,7 +429,11 @@ func (s *Server) checkTrafficRisk(ctx context.Context) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	for _, p := range pools {
 		var owner User
-		if s.DB.First(&owner, "id = ?", p.UserID).Error != nil || owner.Disabled || owner.PlanID(s.Now()) != "pro" {
+		if s.DB.First(&owner, "id = ?", p.UserID).Error != nil || owner.Disabled {
+			continue
+		}
+		eligible, e := s.riskEligible(s.DB, owner)
+		if e != nil || !eligible {
 			continue
 		}
 		var links []TrafficLink

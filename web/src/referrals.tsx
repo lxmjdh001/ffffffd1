@@ -6,7 +6,7 @@ import { Check, Copy, Gift, Link2, Users, Wallet } from 'lucide-react';
 import { api } from './api';
 import type { Referrals } from './types';
 import { rechargeMoney } from './recharge';
-import { Badge, date, Empty, ErrorState, Field, FormError, number, PageHeader, Pager, Spinner } from './ui';
+import { Badge, date, Empty, ErrorState, Field, FormError, number, PageHeader, Pager, Spinner, useConfig } from './ui';
 import './referrals.css';
 import { ReferralWithdrawals } from './referral-withdrawals';
 
@@ -14,7 +14,7 @@ const pageSize = 10;
 const levelNames = () => [t("一级"), t("二级"), t("三级")];
 
 export function ReferralsPage() {
-  useLocale();
+  useLocale(); const config=useConfig()?.config;
   const [rewardsPage, setRewardsPage] = useState(1);
   const [membersPage, setMembersPage] = useState(1);
   const [copyMessage, setCopyMessage] = useState('');
@@ -53,7 +53,7 @@ export function ReferralsPage() {
     <section className="panel padded referral-rules">
       <h2>{t("返利规则")}</h2>
       <div className="referral-rates">{data.rates.map((rate, index) => <div key={index}><span>{levelNames()[index]}{t("好友充值")}</span><strong>{rate}<small>%</small></strong><p>{index === 0 ? t("你直接邀请的好友") : index === 1 ? t("一级好友邀请的好友") : t("二级好友邀请的好友")} · {number(data.level_counts[index])} {t(" 人")}</p></div>)}</div>
-      <p className="muted">{t("邀请关系长期有效。好友每次充值到账后，按实付充值本金计算返利，自动加入你的可消费余额；充值赠送额度不参与返利。返利额度长期有效，可用于会员购买和下载扣费。")}</p>
+      <p className="muted">{config?.metered_billing ? t("好友充值到账后按实付本金计算返利，返利加入可消费余额，可用于用量扣费。") : t("邀请关系长期有效。好友每次充值到账后，按实付充值本金计算返利，自动加入你的可消费余额；充值赠送额度不参与返利。返利额度长期有效，可用于会员购买和下载扣费。")}</p>
       <div className="notice compact">{t("例如：一级好友充值 $100，你获得 $")}{rechargeMoney(100000000 * data.rates[0] / 100)}{t("；二级或三级好友充值 $100，你分别获得 $")}{rechargeMoney(100000000 * data.rates[1] / 100)}、${rechargeMoney(100000000 * data.rates[2] / 100)} {t(" 额度。")}</div>
     </section>
     {error && <ErrorState error={error} retry={() => refetch()} />}

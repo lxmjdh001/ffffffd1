@@ -93,7 +93,9 @@ func (s *Server) returnFlowView(w http.ResponseWriter, r *http.Request, kind str
 		return
 	}
 	var in struct {
-		Token string `json:"token"`
+		Token   string `json:"token"`
+		EventID string `json:"event_id"`
+		Action  string `json:"action"`
 	}
 	if e := decode(w, r, &in); e != nil {
 		fail(w, e)
@@ -108,6 +110,7 @@ func (s *Server) returnFlowView(w http.ResponseWriter, r *http.Request, kind str
 		fail(w, e)
 		return
 	}
+	confirmationRequired := false
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
 		u, e := lockUser(tx, owner)
 		if e != nil {
@@ -137,6 +140,33 @@ func (s *Server) returnFlowView(w http.ResponseWriter, r *http.Request, kind str
 			}
 			name = a.Name
 		}
+		x, e := getSettings(tx)
+		if e != nil {
+			return e
+		}
+		if x.MeteredBilling {
+			if !hexKey.MatchString(in.EventID) {
+				return problem(400, "缺少展示事件编号")
+			}
+			if in.Action != "" && in.Action != "reserve" && in.Action != "complete" && in.Action != "cancel" {
+				return problem(400, "展示动作无效")
+			}
+			event, e := reserveMetered(tx, &u, x, s.Now(), s.mac("return-flow-event:"+owner+":"+kind+":"+id+":"+in.Token+":"+in.EventID), "return_flow", id, kind, s.Now().Add(5*time.Minute))
+			if e != nil {
+				return e
+			}
+			if in.Action == "reserve" {
+				confirmationRequired = true
+				return nil
+			}
+			if in.Action != "cancel" && event.State == "released" {
+				return problem(410, "展示凭证已释放")
+			}
+			if in.Action == "complete" && event.State == "pending" && !event.ExpiresAt.After(s.Now()) {
+				return problem(410, "展示凭证已过期")
+			}
+			return settleMetered(tx, &u, &event, s.Now(), in.Action != "cancel")
+		}
 		key := s.mac("return-flow-charge:" + owner + ":" + kind + ":" + id + ":" + ip)
 		var guard ReturnFlowViewCharge
 		e = tx.First(&guard, "key = ?", key).Error
@@ -158,5 +188,5 @@ func (s *Server) returnFlowView(w http.ResponseWriter, r *http.Request, kind str
 		fail(w, e)
 		return
 	}
-	jsonOut(w, 200, map[string]bool{"allowed": true})
+	jsonOut(w, 200, map[string]bool{"allowed": true, "confirmation_required": confirmationRequired})
 }

@@ -7,20 +7,26 @@ import {afterEach, describe, expect, it, vi} from 'vitest';
 const client=readFileSync(resolve(process.cwd(),'../internal/platform/templates/pwa-client.js'),'utf8');
 const appBase='/p/0123456789abcdef/';
 const documents:JSDOM[]=[];
-type Options={layout?:'google_play'|'custom'|'legacy';origin?:string;base?:string;cached?:boolean;standalone?:boolean;storageBlocked?:boolean;runtime?:Record<string,any>;lateMount?:boolean;browserGuide?:()=>boolean;storage?:Record<string,string>};
+type Options={layout?:'google_play'|'custom'|'legacy';origin?:string;base?:string;cached?:boolean;standalone?:boolean;storageBlocked?:boolean;runtime?:Record<string,any>;lateMount?:boolean;browserGuide?:()=>boolean;storage?:Record<string,string>;billing?:boolean;billingFailure?:boolean;completeFailure?:boolean};
 function start(options:Options={}){
  const layout=options.layout||'google_play',base=options.base||appBase,origin=options.origin||'https://chosen.example';
  const controls=layout==='legacy'?'<button id="install-button">Install app <span>↓</span></button>':layout==='custom'?'<button class="install-button">Install now</button>':'<button class="install-button">Install <svg aria-hidden="true"></svg></button><button class="stay-prompt-install">Install</button>';
  const body=`<body ${layout==='legacy'?'':'data-d1-pwa-reference'} data-base="${base}" data-locale="en" data-push-enabled="false">${layout==='legacy'?controls:`<div id="app">${options.lateMount?'':controls}</div>`}<p id="install-status"></p><section id="install-guide" hidden><p id="install-guide-text"></p></section><button id="notification-button">Enable notifications</button><p id="notification-status"></p><button id="other">Other action</button></body>`;
  const dom=new JSDOM(body,{url:origin+'/c/chosen-cloak',pretendToBeVisual:true});documents.push(dom);
  const win=dom.window,document=win.document,key='d1-pwa-installed:'+base;
+ if(options.billing)document.body.dataset.returnFlowToken='signed-proof';
  for(const [k,v] of Object.entries(options.storage||{}))win.localStorage.setItem(k,v);
  if(options.cached)win.localStorage.setItem(key,'true');
  const opened:{url:string;target:string;rel:string}[]=[];
  vi.spyOn(win.HTMLAnchorElement.prototype,'click').mockImplementation(function(this:HTMLAnchorElement){opened.push({url:this.href,target:this.target,rel:this.rel});});
- const location={assign:vi.fn()},permission=vi.fn(),fetcher=vi.fn();
+ let completionFailures=options.completeFailure?1:0;
+ const location={assign:vi.fn()},permission=vi.fn(),fetcher=vi.fn(async(url:string)=>{
+  if(options.billingFailure&&url.endsWith('/start'))return new Response(JSON.stringify({error:'Insufficient credit'}),{status:402});
+  if(url.endsWith('/complete')&&completionFailures-->0)throw Error('offline');
+  return new Response(JSON.stringify({state:url.endsWith('/start')?'pending':url.endsWith('/complete')?'charged':'released'}));
+ });
  const runtime=options.runtime||{app:{settings:{packagePriority:'pwa'}}};
- const facade:Record<string,any>={isSecureContext:true,matchMedia:(query:string)=>({matches:!!options.standalone&&query==='(display-mode: standalone)'}),MutationObserver:win.MutationObserver,addEventListener:win.addEventListener.bind(win),removeEventListener:win.removeEventListener.bind(win),__APP_CONFIG__:runtime,location,showBrowserGuide:options.browserGuide};
+ const facade:Record<string,any>={crypto:win.crypto,isSecureContext:true,matchMedia:(query:string)=>({matches:!!options.standalone&&query==='(display-mode: standalone)'}),MutationObserver:win.MutationObserver,addEventListener:win.addEventListener.bind(win),removeEventListener:win.removeEventListener.bind(win),__APP_CONFIG__:runtime,location,showBrowserGuide:options.browserGuide};
  const storage=options.storageBlocked?{getItem:()=>{throw Error('blocked');},setItem:()=>{throw Error('blocked');},removeItem:()=>{throw Error('blocked');}}:win.localStorage;
  let nextTimer=0;const timers=new Map<number,{callback:()=>void;delay:number}>();
  const schedule=vi.fn((callback:()=>void,delay:number)=>{const id=++nextTimer;timers.set(id,{callback,delay});return id;});
@@ -38,6 +44,23 @@ function start(options:Options={}){
 afterEach(()=>{for(const dom of documents)dom.window.close();documents.length=0;vi.restoreAllMocks();});
 
 describe('PWA Install to Play',()=>{
+ it('reserves before prompting, charges only appinstalled, and retries with the same event ID',async()=>{
+  const c=start({billing:true,completeFailure:true});const prompt=c.offer('accepted');await c.install();
+  expect(prompt).toHaveBeenCalledOnce();expect(c.fetcher).toHaveBeenCalledTimes(1);expect(c.fetcher.mock.calls[0][0]).toBe(appBase+'install/start');expect(c.button().textContent).toContain('Install');
+  c.confirm();await vi.waitFor(()=>expect(c.fetcher).toHaveBeenCalledTimes(2));expect(c.button().textContent).toContain('Play');
+  c.win.dispatchEvent(new c.win.Event('online'));await vi.waitFor(()=>expect(c.fetcher).toHaveBeenCalledTimes(3));
+  const calls=c.fetcher.mock.calls as unknown as [string,RequestInit][];const bodies=calls.map(([,r])=>JSON.parse(String(r.body)));expect(bodies[0]).toEqual({key:expect.stringMatching(/^[a-f0-9]{32}$/),token:'signed-proof'});expect(bodies[1]).toEqual(bodies[0]);expect(bodies[2]).toEqual(bodies[0]);
+  c.confirm();await c.flush();expect(c.fetcher).toHaveBeenCalledTimes(3);
+  // A fresh browser offer represents a separate installation, not a retry.
+  c.offer('accepted');await c.install();c.confirm();await vi.waitFor(()=>expect(c.fetcher).toHaveBeenCalledTimes(5));expect(JSON.parse(String(calls[3][1].body)).key).not.toBe(bodies[0].key);
+ });
+ it('releases cancelled installation without completion or Play',async()=>{
+  const c=start({billing:true});c.offer('dismissed');await c.install();expect(c.fetcher.mock.calls.map(([url])=>url)).toEqual([appBase+'install/start',appBase+'install/cancel']);expect(c.button().textContent).toContain('Install');expect(c.win.localStorage.getItem(c.key)).toBeNull();
+ });
+ it('shows insufficient credit, keeps the native prompt available, and never starts installation',async()=>{
+  const c=start({billing:true,billingFailure:true}),prompt=c.offer('accepted');await c.install();expect(prompt).not.toHaveBeenCalled();expect(c.document.getElementById('install-guide')!.hidden).toBe(false);expect(c.document.getElementById('install-guide-text')!.textContent).toBe('Insufficient credit');expect(c.button().textContent).toContain('Install');
+  await c.install();expect(prompt).not.toHaveBeenCalled();expect(c.fetcher.mock.calls.filter(([url])=>url.endsWith('/start'))).toHaveLength(2);
+ });
  it.each(['google_play','custom','legacy'] as const)('%s switches only on confirmed installation and opens the selected domain',async layout=>{
   const c=start({layout,origin:'https://domain-b.example'}),button=c.button(),before=button.textContent,icon=button.querySelector('svg,span');
   const prompt=c.offer('accepted');await c.install();

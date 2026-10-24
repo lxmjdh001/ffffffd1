@@ -60,6 +60,11 @@ func testServer(t *testing.T) *Server {
 	if err = Migrate(db); err != nil {
 		t.Fatal(err)
 	}
+	// Historical fixtures retain legacy behavior to verify old reservations and
+	// migrations. Metered tests explicitly enable the current production mode.
+	if err = db.Model(&Settings{}).Where("id = 1").Update("metered_billing", false).Error; err != nil {
+		t.Fatal(err)
+	}
 	sql, _ := db.DB()
 	t.Cleanup(func() { _ = sql.Close() })
 	s := NewServer(db, c)

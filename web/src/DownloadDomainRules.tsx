@@ -15,9 +15,9 @@ export function DownloadDomainRules({ form, setForm, footer }: { form: SettingsR
     {rules.map((rule, i) => <div key={i}>
       <div className="form-grid domain-rules-grid">
         <Field label={t("域名 {0}", { 0: i + 1 })}><input placeholder="https://www.a.com" value={rule.url} onChange={e => update(rules.map((x, j) => j === i ? { ...x, url: e.target.value } : x))} /></Field>
-        <Field label={t("备注")}><input maxLength={120} placeholder={t("例如：主域名 / 付费专线")} value={rule.remark || ''} onChange={e => update(rules.map((x, j) => j === i ? { ...x, remark: e.target.value } : x))} /></Field>
+        <Field label={t("备注")}><input maxLength={120} placeholder={t("备注")} value={rule.remark || ''} onChange={e => update(rules.map((x, j) => j === i ? { ...x, remark: e.target.value } : x))} /></Field>
         <Field label={t("权限")}><div style={{ display: 'flex', gap: 8 }}>
-          <select value={rule.audience} onChange={e => update(rules.map((x, j) => j === i ? { ...x, audience: e.target.value as 'all' | 'paid' } : x))}><option value="all">{t("所有用户")}</option><option value="paid">{t("付费用户")}</option></select>
+          <select value={rule.audience} onChange={e => update(rules.map((x, j) => j === i ? { ...x, audience: e.target.value as 'all' | 'paid' } : x))}><option value="all">{t("所有用户")}</option>{!form.settings.metered_billing && <option value="paid">{t("付费用户")}</option>}</select>
           <button type="button" className="btn secondary" aria-label={t("删除域名 {0}", { 0: i + 1 })} onClick={() => update(rules.filter((_, j) => j !== i))}><Trash2 size={15} /></button>
         </div></Field>
       </div>

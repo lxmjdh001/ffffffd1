@@ -129,7 +129,22 @@ func (s *Server) reserveDownload(t Ticket) error {
 		if ticket.Charged || ticket.Reserved {
 			return nil
 		}
-		p, e := getPlan(tx, u, s.Now())
+		if ticket.Metered {
+			now := s.Now()
+			ticket.Reserved = true
+			ticket.Period = period(now)
+			ticket.StartedAt = &now
+			ticket.Size = app.Size
+			ticket.AppName = app.Name
+			if ticket.ExpiresAt.Before(now.Add(40 * time.Minute)) {
+				ticket.ExpiresAt = now.Add(40 * time.Minute)
+			}
+			return tx.Save(&ticket).Error
+		}
+		// Tickets issued before the cutover retain their original settlement
+		// rules, even though all newly issued tickets use UV billing.
+		var p Plan
+		e = tx.First(&p, "id = ?", u.PlanID(s.Now())).Error
 		if e != nil {
 			return e
 		}
@@ -211,35 +226,37 @@ func (s *Server) finishRange(t Ticket, start, end int64) error {
 		if len(ranges) != 1 || ranges[0].Start != 0 || ranges[0].End != ticket.Size-1 {
 			return tx.Save(&ticket).Error
 		}
-		var usage Usage
-		if e = tx.First(&usage, "user_id = ? AND period = ?", u.ID, ticket.Period).Error; e != nil {
-			return e
-		}
-		if ticket.Free {
-			if usage.FreeReserved < 1 {
-				return errors.New("invalid quota reservation")
-			}
-			if e = settleGiftGrant(tx, ticket, true); e != nil {
+		if !ticket.Metered {
+			var usage Usage
+			if e = tx.First(&usage, "user_id = ? AND period = ?", u.ID, ticket.Period).Error; e != nil {
 				return e
 			}
-			usage.FreeReserved--
-			usage.FreeUsed++
-		} else {
-			if u.HeldMicros < ticket.PriceMicros {
-				return errors.New("invalid balance reservation")
+			if ticket.Free {
+				if usage.FreeReserved < 1 {
+					return errors.New("invalid quota reservation")
+				}
+				if e = settleGiftGrant(tx, ticket, true); e != nil {
+					return e
+				}
+				usage.FreeReserved--
+				usage.FreeUsed++
+			} else {
+				if u.HeldMicros < ticket.PriceMicros {
+					return errors.New("invalid balance reservation")
+				}
+				u.HeldMicros -= ticket.PriceMicros
+				if e = tx.Model(&u).Update("held_micros", u.HeldMicros).Error; e != nil {
+					return e
+				}
+				if e = changeBalance(tx, &u, -ticket.PriceMicros, "download:"+ticket.Hash, "download", "成功下载 · "+ticket.AppName); e != nil {
+					return e
+				}
+				usage.PaidUsed++
+				usage.SpentMicros += ticket.PriceMicros
 			}
-			u.HeldMicros -= ticket.PriceMicros
-			if e = tx.Model(&u).Update("held_micros", u.HeldMicros).Error; e != nil {
+			if e = tx.Save(&usage).Error; e != nil {
 				return e
 			}
-			if e = changeBalance(tx, &u, -ticket.PriceMicros, "download:"+ticket.Hash, "download", "成功下载 · "+ticket.AppName); e != nil {
-				return e
-			}
-			usage.PaidUsed++
-			usage.SpentMicros += ticket.PriceMicros
-		}
-		if e = tx.Save(&usage).Error; e != nil {
-			return e
 		}
 		ticket.Charged = true
 		if e = tx.Save(&ticket).Error; e != nil {
@@ -252,7 +269,7 @@ func (s *Server) finishRange(t Ticket, start, end int64) error {
 		if ticket.StartedAt != nil {
 			started = *ticket.StartedAt
 		}
-		record := Download{ID: randomHex(16), TicketHash: ticket.Hash, UserID: u.ID, AppID: ticket.AppID, AppName: ticket.AppName, AmountMicros: ticket.PriceMicros, IP: ticket.IP, UserAgent: ticket.UserAgent, Source: ticket.Source, Device: ticket.Device, OS: ticket.OS, Browser: ticket.Browser, Bytes: ticket.Size, AttributionID: ticket.AttributionID, StartedAt: started, CompletedAt: s.Now(), CreatedAt: s.Now()}
+		record := Download{Metered: ticket.Metered, ID: randomHex(16), TicketHash: ticket.Hash, UserID: u.ID, AppID: ticket.AppID, AppName: ticket.AppName, AmountMicros: ticket.PriceMicros, IP: ticket.IP, UserAgent: ticket.UserAgent, Source: ticket.Source, Device: ticket.Device, OS: ticket.OS, Browser: ticket.Browser, Bytes: ticket.Size, AttributionID: ticket.AttributionID, StartedAt: started, CompletedAt: s.Now(), CreatedAt: s.Now()}
 		if e = tx.Create(&record).Error; e != nil {
 			return e
 		}
@@ -271,6 +288,9 @@ func (s *Server) releaseTicket(pre Ticket) error {
 		}
 		if !t.Reserved || t.Charged || t.Released || t.ExpiresAt.After(s.Now()) {
 			return nil
+		}
+		if t.Metered {
+			return tx.Model(&t).Update("released", true).Error
 		}
 		if t.Free {
 			if e = settleGiftGrant(tx, t, false); e != nil {

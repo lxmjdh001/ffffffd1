@@ -40,6 +40,10 @@ func idempotency(r *http.Request) (string, error) {
 	return k, nil
 }
 func (s *Server) buySubscription(w http.ResponseWriter, r *http.Request) {
+	if meteredEnabled(s.DB) {
+		fail(w, problem(410, "会员套餐已取消，全部功能按用量计费"))
+		return
+	}
 	key, e := idempotency(r)
 	if e != nil {
 		fail(w, e)
@@ -131,6 +135,19 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 	} else if err != gorm.ErrRecordNotFound {
 		fail(w, err)
 		return
+	}
+	x, err := getSettings(s.DB)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	if x.MeteredBilling {
+		quotaLimit, quotaUsed, quotaReserved, err = meteredGiftTotals(s.DB, u, x, s.Now())
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		quotaExpiry, renewsAt = nil, nil
 	}
 	var appCount, storage, downloads, domains int64
 	checks := []error{s.DB.Model(&Application{}).Where("user_id = ?", u.ID).Count(&appCount).Error, s.DB.Model(&Application{}).Where("user_id = ?", u.ID).Select("COALESCE(SUM(size),0)").Scan(&storage).Error, s.DB.Model(&Download{}).Where("user_id = ?", u.ID).Count(&downloads).Error, s.DB.Model(&Domain{}).Where("user_id = ? AND verified_at > ?", u.ID, s.Now().Add(-48*time.Hour)).Count(&domains).Error}

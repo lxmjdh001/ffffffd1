@@ -53,24 +53,32 @@ func defaultRechargeTiers() []RechargeTier {
 }
 
 type Settings struct {
-	ID                   uint                 `json:"id" gorm:"primaryKey"`
-	SiteName             string               `json:"site_name"`
-	DownloadBaseURL      string               `json:"download_base_url"`
-	DownloadDomainMode   string               `json:"download_domain_mode" gorm:"not null;default:unified"`
-	FreeDownloadBaseURL  string               `json:"free_download_base_url"`
-	PaidDownloadBaseURL  string               `json:"paid_download_base_url"`
-	DownloadDomainRules  []DownloadDomainRule `json:"download_domain_rules" gorm:"serializer:json;type:text"`
-	RegistrationOpen     bool                 `json:"registration_open"`
-	DownloadPriceMicros  int64                `json:"download_price_micros"`
-	MaxUploadBytes       int64                `json:"max_upload_bytes"`
-	DomainLimit          int64                `json:"domain_limit"`
-	USDTRateMicros       int64                `json:"usdt_rate_micros"`
-	AlipayCNYRateMicros  int64                `json:"alipay_cny_rate_micros" gorm:"not null;default:6650000"`
-	USDTWallet           *string              `json:"usdt_wallet"`
-	SupportEmail         string               `json:"support_email"`
-	RechargeBonusEnabled bool                 `json:"recharge_bonus_enabled" gorm:"not null;default:true"`
-	RechargeBonusTiers   []RechargeTier       `json:"recharge_bonus_tiers" gorm:"serializer:json;type:text"`
-	UpdatedAt            time.Time            `json:"updated_at"`
+	ID                    uint                 `json:"id" gorm:"primaryKey"`
+	SiteName              string               `json:"site_name"`
+	DownloadBaseURL       string               `json:"download_base_url"`
+	DownloadDomainMode    string               `json:"download_domain_mode" gorm:"not null;default:unified"`
+	FreeDownloadBaseURL   string               `json:"free_download_base_url"`
+	PaidDownloadBaseURL   string               `json:"paid_download_base_url"`
+	DownloadDomainRules   []DownloadDomainRule `json:"download_domain_rules" gorm:"serializer:json;type:text"`
+	RegistrationOpen      bool                 `json:"registration_open"`
+	DownloadPriceMicros   int64                `json:"download_price_micros"`
+	MeteredBilling        bool                 `json:"metered_billing"`
+	PWAInstallPriceMicros int64                `json:"pwa_install_price_micros"`
+	CloakUVPriceMicros    int64                `json:"cloak_uv_price_micros"`
+	ReturnFlowPriceMicros int64                `json:"return_flow_price_micros"`
+	PWAPushPriceMicros    int64                `json:"pwa_push_price_micros"`
+	RegistrationGiftLimit int64                `json:"registration_gift_limit"`
+	AppLimit              int64                `json:"app_limit"`
+	StorageLimitBytes     int64                `json:"storage_limit_bytes"`
+	MaxUploadBytes        int64                `json:"max_upload_bytes"`
+	DomainLimit           int64                `json:"domain_limit"`
+	USDTRateMicros        int64                `json:"usdt_rate_micros"`
+	AlipayCNYRateMicros   int64                `json:"alipay_cny_rate_micros" gorm:"not null;default:6650000"`
+	USDTWallet            *string              `json:"usdt_wallet"`
+	SupportEmail          string               `json:"support_email"`
+	RechargeBonusEnabled  bool                 `json:"recharge_bonus_enabled" gorm:"not null;default:true"`
+	RechargeBonusTiers    []RechargeTier       `json:"recharge_bonus_tiers" gorm:"serializer:json;type:text"`
+	UpdatedAt             time.Time            `json:"updated_at"`
 }
 type Session struct {
 	Hash      string `gorm:"primaryKey;size:64"`
@@ -145,6 +153,7 @@ type DownloadGrant struct {
 	ExpiresAt time.Time `gorm:"index"`
 }
 type Ticket struct {
+	Metered       bool
 	Hash          string `gorm:"primaryKey;size:64"`
 	AppID         string `gorm:"index;size:32"`
 	UserID        string `gorm:"size:32"`
@@ -172,6 +181,7 @@ type Ticket struct {
 	ExpiresAt     time.Time `gorm:"index"`
 }
 type Download struct {
+	Metered       bool      `json:"metered"`
 	ID            string    `json:"id" gorm:"primaryKey;size:32"`
 	TicketHash    string    `json:"-" gorm:"uniqueIndex;size:64"`
 	UserID        string    `json:"user_id" gorm:"index:idx_download_owner_time,priority:1;size:32"`

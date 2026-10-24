@@ -11,7 +11,7 @@ import (
 
 func (x Settings) assignedDownloadURL(planID string) string {
 	for _, rule := range x.DownloadDomainRules {
-		if !rule.LegacyOnly && (rule.Audience == "all" || (rule.Audience == "paid" && planID == "pro")) {
+		if !rule.LegacyOnly && (x.MeteredBilling || rule.Audience == "all" || (rule.Audience == "paid" && planID == "pro")) {
 			return rule.URL
 		}
 	}
@@ -39,6 +39,9 @@ func (x Settings) assignedDownloadURL(planID string) string {
 func (x Settings) managedDownloadHosts(activeOnly bool) map[string]string {
 	hosts := map[string]string{}
 	add := func(raw, audience string) {
+		if x.MeteredBilling {
+			audience = "all"
+		}
 		u, err := url.Parse(raw)
 		if err != nil || u.Hostname() == "" {
 			return

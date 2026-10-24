@@ -32,6 +32,44 @@
  let installPending = false;
  let installAttempt = 0;
  let installAnimationTimer;
+ let installUsageAttempt;
+ let installationObserved = false;
+ function showInstallMessage(message) {
+  setStatus(installStatus,message);
+  const modal=document.getElementById('d1-pwa-status');if(modal)modal.hidden=false;
+  if(guide&&guideText){guideText.textContent=message;guide.hidden=false;}
+ }
+ async function installUsageRequest(attempt, action) {
+  const response=await fetch(base+'install/'+action,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:attempt.key,token:attempt.token})});
+  let result={};try{result=await response.json();}catch(_){}
+  if(!response.ok){const error=new Error(result.error||text('Installation is temporarily unavailable.','暂时无法安装，请稍后重试。'));error.billing=true;throw error;}
+  attempt.state=result.state;return result;
+ }
+ async function prepareInstallUsage() {
+  const token=document.body.dataset.returnFlowToken;
+  if(!installPage||!token||!usesPWAInstall())return;
+  if(!installUsageAttempt){
+   const bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);
+   installUsageAttempt={key:Array.from(bytes,v=>v.toString(16).padStart(2,'0')).join(''),token};
+  }
+  const attempt=installUsageAttempt;
+  if(attempt.state==='pending'||attempt.state==='charged')return attempt;
+  if(!attempt.preparing)attempt.preparing=installUsageRequest(attempt,'start').finally(()=>{attempt.preparing=undefined;});
+  await attempt.preparing;return attempt;
+ }
+ async function cancelInstallUsage() {
+  const attempt=installUsageAttempt;if(!attempt||attempt.state==='charged')return;
+  try{await attempt.preparing;await installUsageRequest(attempt,'cancel');}catch(_){}
+ }
+ async function reportSuccessfulInstall() {
+  if(!installationObserved||!usesPWAInstall())return;
+  try{
+   const attempt=await prepareInstallUsage();if(!attempt||attempt.state==='charged')return;
+   if(!attempt.completing)attempt.completing=installUsageRequest(attempt,'complete').finally(()=>{attempt.completing=undefined;});
+   await attempt.completing;
+  }catch(_){} // A retry uses the same event, never a new visitor/installation.
+ }
+ window.addEventListener('online',()=>{void reportSuccessfulInstall();});
  // This is the last confirmed install for this origin + app, not a universal
  // OS installation detector. A fresh browser install prompt invalidates it.
  try { installed = installed || localStorage.getItem(installStateKey) === 'true'; } catch (_) {}
@@ -117,8 +155,17 @@
   if (guide && guideText) { guide.hidden = false; guideText.textContent = message; }
   setStatus(installStatus, message);
  }
- window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); installPrompt = event; installAttempt++; installPending=false; stopInstallAnimation(); saveInstallState(false); if (installButton) installButton.disabled = false; });
- window.addEventListener('appinstalled', () => { installPrompt = null; installAttempt++; installPending=false; stopInstallAnimation(); saveInstallState(true); setStatus(installStatus, text('App installed. Tap Play to open it.', '应用已安装，点击 Play 打开。')); });
+ window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault(); installPrompt=event; installAttempt++; installPending=false;
+  if(installUsageAttempt&&installUsageAttempt.state!=='charged')void cancelInstallUsage();
+  installUsageAttempt=undefined;installationObserved=false;
+  stopInstallAnimation();saveInstallState(false);if(installButton)installButton.disabled=false;
+ });
+ window.addEventListener('appinstalled', () => {
+  installPrompt=null;installAttempt++;installPending=false;installationObserved=true;
+  stopInstallAnimation();saveInstallState(true);setStatus(installStatus,text('App installed. Tap Play to open it.','应用已安装，点击 Play 打开。'));
+  void reportSuccessfulInstall();
+ });
  if (standalone) setStatus(installStatus, text('You are using the installed app.', '你正在使用桌面应用。'));
  function downloadInCurrentPage(url) {
   const frame=document.createElement('iframe');frame.name='d1-pwa-download-'+Date.now();frame.hidden=true;document.body.appendChild(frame);
@@ -144,14 +191,22 @@
   if (!installPrompt) { showGuide(); return; }
   const prompt = installPrompt, attempt=++installAttempt; installPrompt = null; installPending=true; startInstallAnimation(); syncInstallButtons();
   try {
+   const usageAttempt=await prepareInstallUsage();
+   if(installed)return {outcome:'installed'};
+   // A slow preparation may exhaust Chrome's transient user activation. Keep
+   // the funded attempt and request a fresh click rather than faking success.
+   if(usageAttempt&&navigator.userActivation&&!navigator.userActivation.isActive){
+    installPrompt=prompt;stopInstallAnimation();showInstallMessage(text('Ready. Tap Install to continue.','已准备好，请再次点击安装。'));return {outcome:'ready'};
+   }
    await prompt.prompt(); const choice = await prompt.userChoice;
    if (!installed && attempt === installAttempt) {
     if (choice.outcome === 'accepted') startInstallAnimation(); else stopInstallAnimation();
     setStatus(installStatus, choice.outcome === 'accepted' ? text('Installation started. Look for the app on your home screen.', '已开始安装，请在桌面查看应用。') : text('Installation canceled. You can install it later.', '已取消安装，你可以随时重新安装。'));
+    if(choice.outcome!=='accepted')await cancelInstallUsage();
    }
    return choice;
   }
-  catch (_) { if (!installed && attempt === installAttempt) { stopInstallAnimation(); showGuide(); } }
+  catch (error) { if (!installed && attempt === installAttempt) { stopInstallAnimation();await cancelInstallUsage();if(error?.billing){installPrompt=prompt;installUsageAttempt=undefined;showInstallMessage(error.message);}else showGuide(); } }
   finally { if (attempt === installAttempt) { installPending=false; syncInstallButtons(); } }
  }
  window.D1ReturnFlowInstall = installApp;

@@ -240,6 +240,13 @@ func getSettings(db *gorm.DB) (Settings, error) {
 	return s, e
 }
 func getPlan(db *gorm.DB, u User, now time.Time) (Plan, error) {
+	x, err := getSettings(db)
+	if err != nil {
+		return Plan{}, err
+	}
+	if x.MeteredBilling {
+		return publicMeteredPlans(x)[0], nil
+	}
 	var p Plan
 	e := db.First(&p, "id = ?", u.PlanID(now)).Error
 	return p, e

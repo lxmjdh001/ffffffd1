@@ -83,6 +83,7 @@ func (s *Server) registerPWARoutes(m *http.ServeMux) {
 	m.HandleFunc("GET /p/{slug}/style.css", s.pwaStyles)
 	m.HandleFunc("GET /p/{slug}/icon/{size}", s.pwaIcon)
 	m.HandleFunc("GET /p/{slug}/push-config", s.pwaPushConfig)
+	m.HandleFunc("POST /p/{slug}/install/{action}", s.pwaInstallUsage)
 }
 
 func (s *Server) pwaView(a PWAApp, count int64) pwaAppView {
