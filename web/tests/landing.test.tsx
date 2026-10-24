@@ -59,12 +59,24 @@ describe('public landing page', () => {
     expect(screen.getByRole('heading', {name:'什么是 PWA？'})).toBeTruthy();
     expect(document.querySelector('.home-push-copy')?.textContent).toContain('用户自主订阅');
     expect(screen.getByText(/iOS 通常需从主屏幕打开/)).toBeTruthy();
-    expect(document.querySelectorAll('.home-solution-grid article')).toHaveLength(8);
+    expect(document.querySelectorAll('.home-solution-grid article')).toHaveLength(7);
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('回流页');
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('广告回传');
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('斗篷');
-    expect(screen.getByRole('img', { name: /APK 与 PWA 两大产品/ })).toBeTruthy();
-    expect(document.querySelector('.home-cover img')).toBeNull();
+    expect(screen.getByRole('img', { name: 'APK 下载、PWA 安装与安全检测的卡通手机示意' }).getAttribute('src')).toBe('/images/home-phone-v1.png');
+    expect(document.querySelector('.home-cartoon')).toBeNull();
+  });
+
+  it('groups hero copy beside the phone and pricing copy beside the cards', () => {
+    openLanding();
+    const hero = document.querySelector('.home-hero-layout')!;
+    expect(hero.children).toHaveLength(2);
+    expect(hero.children[0].classList.contains('home-hero-copy')).toBe(true);
+    expect(hero.children[0].querySelector('.home-hero-aside')).toBeTruthy();
+    expect(hero.children[1].classList.contains('home-phone-visual')).toBe(true);
+    const pricing = document.getElementById('home-pricing')!;
+    expect(pricing.children[0].classList.contains('home-pricing-copy')).toBe(true);
+    expect(pricing.children[1].classList.contains('home-pricing-grid')).toBe(true);
   });
 
   it('highlights automatic domain safety without exposing the internal schedule', () => {
@@ -80,7 +92,16 @@ describe('public landing page', () => {
     expect(safety.textContent).toContain('不主动扫描主站根地址');
     expect(safety.textContent).toContain('命中风险的域名自动停止参与分流');
     expect(document.querySelector('.home-capability-strip button')?.textContent).toBe('自动检查域名安全');
-    expect(screen.getByRole('heading', {name:'自定义域名与免费 SSL'})).toBeTruthy();
+    expect(screen.queryByRole('heading', {name:'自定义域名与免费 SSL'})).toBeNull();
     expect(screen.getByRole('heading', {name:'下载记录与来源统计'})).toBeTruthy();
+  });
+
+  it('places the return feature last, opposite the double-width safety feature', () => {
+    openLanding();
+    const features = document.querySelectorAll('.home-solution-grid article');
+    expect(features[0].classList.contains('home-security-feature')).toBe(true);
+    expect(features[features.length-1].classList.contains('home-return-feature')).toBe(true);
+    expect(features[features.length-1].textContent).toContain('回流页');
+    expect(document.querySelector('.home-capability-strip')?.textContent).not.toContain('免费 SSL');
   });
 });

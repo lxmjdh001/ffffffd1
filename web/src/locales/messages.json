@@ -1916,7 +1916,8 @@
     "应用筛选": "Filter by app",
     "来源与设备": "Sources and devices",
     "有效付费会员在分流中开启后，通过 Google Web Risk 自动检测所配置的 APK 下载地址或详情页 URL。命中风险的域名自动停止参与分流；仅检查目标链接，不主动扫描主站根地址。": "With an active paid plan, enable safety checks in traffic routing. Google Web Risk automatically checks configured APK download or detail-page URLs. Flagged domains stop participating in routing. Only target URLs are checked; the main site’s root is not scanned proactively.",
-    "自动安全检测": "Automatic safety checks"
+    "自动安全检测": "Automatic safety checks",
+    "APK 下载、PWA 安装与安全检测的卡通手机示意": "Cartoon phone showing APK downloads, PWA installation and safety checks"
   },
   "pt": {
     " + 活动赠送 $": " + Bônus promocional $",
@@ -3835,7 +3836,8 @@
     "应用筛选": "Filtrar por aplicativo",
     "来源与设备": "Fontes e dispositivos",
     "有效付费会员在分流中开启后，通过 Google Web Risk 自动检测所配置的 APK 下载地址或详情页 URL。命中风险的域名自动停止参与分流；仅检查目标链接，不主动扫描主站根地址。": "Com um plano pago ativo, ative a verificação de segurança no roteamento. O Google Web Risk verifica automaticamente os URLs configurados de download de APK ou de páginas de detalhes. Os domínios sinalizados deixam de participar do roteamento. Apenas os URLs de destino são verificados; a raiz do site principal não é verificada proativamente.",
-    "自动安全检测": "Verificação automática de segurança"
+    "自动安全检测": "Verificação automática de segurança",
+    "APK 下载、PWA 安装与安全检测的卡通手机示意": "Telemóvel ilustrado com downloads APK, instalação PWA e verificações de segurança"
   },
   "de": {
     " + 活动赠送 $": " + Aktionsbonus $",
@@ -5754,7 +5756,8 @@
     "应用筛选": "Filtern nach App",
     "来源与设备": "Quellen und Geräte",
     "有效付费会员在分流中开启后，通过 Google Web Risk 自动检测所配置的 APK 下载地址或详情页 URL。命中风险的域名自动停止参与分流；仅检查目标链接，不主动扫描主站根地址。": "Mit einem aktiven kostenpflichtigen Tarif können Sie Sicherheitsprüfungen im Routing aktivieren. Google Web Risk prüft die konfigurierten APK-Download- oder Detailseiten-URLs automatisch. Als riskant erkannte Domains nehmen nicht mehr am Routing teil. Geprüft werden nur die Ziel-URLs, nicht aktiv die Startseite der Hauptdomain.",
-    "自动安全检测": "Automatische Sicherheitsprüfung"
+    "自动安全检测": "Automatische Sicherheitsprüfung",
+    "APK 下载、PWA 安装与安全检测的卡通手机示意": "Cartoon-Smartphone mit APK-Downloads, PWA-Installation und Sicherheitsprüfungen"
   },
   "fr": {
     " + 活动赠送 $": " + Prime promotionnelle $",
@@ -7673,7 +7676,8 @@
     "应用筛选": "Filtrer par application",
     "来源与设备": "Sources et dispositifs",
     "有效付费会员在分流中开启后，通过 Google Web Risk 自动检测所配置的 APK 下载地址或详情页 URL。命中风险的域名自动停止参与分流；仅检查目标链接，不主动扫描主站根地址。": "Avec un abonnement payant actif, activez les contrôles de sécurité du routage. Google Web Risk vérifie automatiquement les URL de téléchargement APK ou des pages de présentation configurées. Les domaines signalés sont exclus du routage. Seules les URL cibles sont vérifiées, sans analyse proactive de la racine du site principal.",
-    "自动安全检测": "Contrôles de sécurité automatiques"
+    "自动安全检测": "Contrôles de sécurité automatiques",
+    "APK 下载、PWA 安装与安全检测的卡通手机示意": "Téléphone illustré avec téléchargement APK, installation PWA et contrôles de sécurité"
   },
   "ko": {
     " + 活动赠送 $": " + 프로모션 보너스 $",
@@ -9592,7 +9596,8 @@
     "应用筛选": "앱으로 필터",
     "来源与设备": "소스 및 장치",
     "有效付费会员在分流中开启后，通过 Google Web Risk 自动检测所配置的 APK 下载地址或详情页 URL。命中风险的域名自动停止参与分流；仅检查目标链接，不主动扫描主站根地址。": "유효한 유료 요금제에서 분산 라우팅의 안전 검사를 켜면 Google Web Risk가 설정된 APK 다운로드 주소 또는 상세 페이지 URL을 자동으로 검사합니다. 위험이 감지된 도메인은 라우팅에서 자동 제외됩니다. 대상 링크만 검사하며 메인 사이트의 루트 주소는 별도로 검사하지 않습니다.",
-    "自动安全检测": "자동 안전 검사"
+    "自动安全检测": "자동 안전 검사",
+    "APK 下载、PWA 安装与安全检测的卡通手机示意": "APK 다운로드, PWA 설치 및 안전 검사를 보여 주는 만화 스타일 휴대폰"
   },
   "ja": {
     " + 活动赠送 $": " + プロモーションボーナス $",
@@ -11511,7 +11516,8 @@
     "应用筛选": "アプリによるフィルタ",
     "来源与设备": "ソースとデバイス",
     "有效付费会员在分流中开启后，通过 Google Web Risk 自动检测所配置的 APK 下载地址或详情页 URL。命中风险的域名自动停止参与分流；仅检查目标链接，不主动扫描主站根地址。": "有効な有料プランで振り分けの安全チェックを有効にすると、Google Web Risk が設定されたAPKダウンロード先または詳細ページのURLを自動チェックします。危険と判定されたドメインは自動的に振り分け対象から外れます。対象URLのみを確認し、メインサイトのルートURLは能動的にスキャンしません。",
-    "自动安全检测": "自動安全チェック"
+    "自动安全检测": "自動安全チェック",
+    "APK 下载、PWA 安装与安全检测的卡通手机示意": "APKダウンロード、PWAインストールと安全チェックを示すスマートフォンのイラスト"
   },
   "zh-TW": {
     " + 活动赠送 $": " + 活動贈送 $",
@@ -13430,7 +13436,8 @@
     "应用筛选": "應用篩選",
     "来源与设备": "來源與設備",
     "有效付费会员在分流中开启后，通过 Google Web Risk 自动检测所配置的 APK 下载地址或详情页 URL。命中风险的域名自动停止参与分流；仅检查目标链接，不主动扫描主站根地址。": "有效付費會員在分流中開啟後，透過 Google Web Risk 自動檢測所設定的 APK 下載地址或詳情頁 URL。命中風險的網域自動停止參與分流；僅檢查目標連結，不主動掃描主站根地址。",
-    "自动安全检测": "自動安全檢測"
+    "自动安全检测": "自動安全檢測",
+    "APK 下载、PWA 安装与安全检测的卡通手机示意": "APK 下載、PWA 安裝與安全檢測的卡通手機示意"
   },
   "ru": {
     " + 活动赠送 $": " + Рекламный бонус $",
@@ -15349,6 +15356,7 @@
     "应用筛选": "Фильтр по приложению",
     "来源与设备": "Источники и устройства",
     "有效付费会员在分流中开启后，通过 Google Web Risk 自动检测所配置的 APK 下载地址或详情页 URL。命中风险的域名自动停止参与分流；仅检查目标链接，不主动扫描主站根地址。": "При активном платном тарифе включите проверку безопасности в маршрутизации. Google Web Risk автоматически проверяет настроенные URL загрузки APK или страниц приложения. Домены с выявленными угрозами автоматически исключаются из маршрутизации. Проверяются только целевые ссылки, без активного сканирования корневого адреса основного сайта.",
-    "自动安全检测": "Автоматическая проверка безопасности"
+    "自动安全检测": "Автоматическая проверка безопасности",
+    "APK 下载、PWA 安装与安全检测的卡通手机示意": "Смартфон с загрузкой APK, установкой PWA и проверкой безопасности"
   }
 }
