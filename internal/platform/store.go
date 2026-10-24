@@ -118,7 +118,13 @@ func Migrate(db *gorm.DB) error {
 			if err := migrateReferrals(tx); err != nil {
 				return err
 			}
-			return migrateAlipayPayment(tx)
+			if err := migrateAlipayPayment(tx); err != nil {
+				return err
+			}
+			if err := migrateReferralWithdrawals(tx); err != nil {
+				return err
+			}
+			return migrateCommissionSettings(tx)
 		}
 		if err := tx.AutoMigrate(&Settings{}); err != nil {
 			return err
@@ -143,7 +149,13 @@ func Migrate(db *gorm.DB) error {
 		if err := migrateReferrals(tx); err != nil {
 			return err
 		}
-		return migrateAlipayPayment(tx)
+		if err := migrateAlipayPayment(tx); err != nil {
+			return err
+		}
+		if err := migrateReferralWithdrawals(tx); err != nil {
+			return err
+		}
+		return migrateCommissionSettings(tx)
 	})
 }
 func BootstrapAdmin(db *gorm.DB, c Config) error {
@@ -233,12 +245,31 @@ func changeBalance(tx *gorm.DB, u *User, delta int64, reference, kind, note stri
 	if delta < 0 && u.BalanceMicros-u.HeldMicros < -delta {
 		return problem(402, "余额不足，请先充值")
 	}
-	if delta > 0 && u.BalanceMicros > 100000000*Dollar-delta {
-		return problem(400, "余额超过系统上限")
+	if delta > 0 {
+		var pending int64
+		// Pending withdrawals remain the user's funds and need refund headroom.
+		// Ordinary credits cannot occupy that space before an administrator can
+		// reject the request. A refund itself exits the pending balance atomically.
+		if kind != "withdrawal_refund" {
+			if err := tx.Model(&ReferralWithdrawal{}).Where("user_id = ? AND status IN ?", u.ID, []string{"pending", "approved"}).Select("COALESCE(SUM(amount_micros), 0)").Scan(&pending).Error; err != nil {
+				return err
+			}
+		}
+		if u.BalanceMicros > 100000000*Dollar-delta-pending {
+			return problem(400, "余额超过系统上限")
+		}
 	}
 	u.BalanceMicros += delta
 	if err := tx.Model(u).Update("balance_micros", u.BalanceMicros).Error; err != nil {
 		return err
 	}
-	return tx.Create(&Ledger{ID: randomHex(16), UserID: u.ID, Reference: reference, Kind: kind, AmountMicros: delta, BalanceMicros: u.BalanceMicros, Note: strings.TrimSpace(note), CreatedAt: time.Now().UTC()}).Error
+	wallet, err := referralWallet(tx, u.ID)
+	if err != nil {
+		return err
+	}
+	entry := Ledger{ID: randomHex(16), UserID: u.ID, Reference: reference, Kind: kind, AmountMicros: delta, BalanceMicros: u.BalanceMicros, Note: strings.TrimSpace(note), CreatedAt: time.Now().UTC()}
+	if err := tx.Create(&entry).Error; err != nil {
+		return err
+	}
+	return updateReferralWallet(tx, u, wallet, entry)
 }

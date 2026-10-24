@@ -1,0 +1,21 @@
+.referral-withdraw-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.referral-withdraw-footer .text-btn{font-size:12px;font-weight:600;padding:3px 0;white-space:nowrap}
+.referral-withdrawals{margin-bottom:24px}
+.referral-withdrawals>.panel-heading>svg{color:#8996de;flex-shrink:0}
+.withdrawal-balances{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 26px}
+.withdrawal-balances>div{padding:18px 20px;border:1px solid #e5ebfa;border-radius:10px;background:#f7faff;min-width:0}
+.withdrawal-balances span{display:block;color:#8795af;font-size:12px}
+.withdrawal-balances strong{display:block;color:#566da0;font-size:22px;font-weight:600;margin-top:10px;overflow-wrap:anywhere}
+.withdrawal-explanation{margin:16px 26px 0;color:#8291ac;font-size:12px;line-height:1.9}
+.referral-withdrawals>.notice{margin:16px 26px 0}
+.withdrawal-records-heading{margin:26px 26px 0;padding-top:22px;border-top:1px solid #eaf0f8}
+.withdrawal-records-heading h3{margin:0 0 6px;font-size:14px;color:#617394;font-weight:600}
+.withdrawal-details{font-size:12px;line-height:1.7;min-width:180px;max-width:340px}
+.withdrawal-details>small{display:block;color:#8b99b0;font-size:11px}
+.withdrawal-details>p{margin:5px 0;overflow-wrap:anywhere}
+.withdrawal-address{overflow-wrap:anywhere;word-break:break-all}
+.withdrawal-threshold{color:#b47b37;font-size:12px;line-height:1.8;margin:12px 0 16px}
+.withdrawal-filters{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.withdrawal-filters select{min-width:125px}
+.admin-withdrawals .row-actions{justify-content:flex-end;min-width:116px}
+@media(max-width:700px){.withdrawal-balances{padding:0 16px;gap:8px}.withdrawal-balances>div{padding:14px 10px}.withdrawal-balances span{font-size:10px}.withdrawal-balances strong{font-size:18px}.withdrawal-explanation,.withdrawal-records-heading{margin-left:16px;margin-right:16px}.referral-withdrawals>.notice{margin-left:16px;margin-right:16px}.referral-withdraw-footer{align-items:flex-start;gap:4px}.referral-withdraw-footer .text-btn{font-size:10px}.withdrawal-filters{width:100%}.withdrawal-filters .search-box{flex:1;min-width:140px}}

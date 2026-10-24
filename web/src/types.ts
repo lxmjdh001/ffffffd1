@@ -1,6 +1,8 @@
 export type RechargeTier = { threshold_micros: number; percent: number };
 export type RechargePromotion = { recharge_bonus_enabled: boolean; recharge_bonus_tiers: RechargeTier[] };
-export type User = { id: string; email: string; name: string; role: 'admin' | 'member'; disabled: boolean; balance_micros: number; held_micros: number; pro_until: string | null; created_at: string };
+export type User = { id: string; email: string; name: string; role: 'admin' | 'member'; disabled: boolean; balance_micros: number; held_micros: number; pro_until: string | null; created_at: string; direct_invite_count?: number; team_invite_count?: number; total_commission_micros?: number; referral_rates?: CommissionRates; referral_rates_overridden?: boolean };
+export type CommissionRates = [number, number, number];
+export type CommissionSettings = { rates: CommissionRates; updated_at?: string | null };
 export type Plan = { id: string; name: string; price_micros: number; app_limit: number; download_limit: number; storage_bytes: number };
 export type Config = RechargePromotion & { currency: 'USD'; site_name: string; development: boolean; registration_open: boolean; turnstile_site_key: string; public_url: string; download_base_url: string; download_domain_mode: 'unified' | 'separate'; cname_target: string; plans: Plan[]; download_price_micros: number; max_upload_bytes: number; domain_limit: number; payment_methods: string[]; support_email: string; usdt_rate_micros: number; alipay_cny_rate_micros?: number };
 export type App = { id: string; user_id: string; name: string; slug: string; version: string; description: string; platform: string; file_name: string; size: number; sha256: string; enabled: boolean; download_mode?: 'direct' | 'info'; blocked: boolean; downloads: number; created_at: string; updated_at: string };
@@ -16,4 +18,6 @@ export type Dashboard = { user: User; plan: Plan; usage: { period: string; free_
 export type Page<T> = { data: T[]; total: number };
 export type ReferralReward = { id: string; level: number; amount_micros: number; recharge_micros: number; created_at: string; source_name: string };
 export type ReferralMember = { id: string; name: string; level: number; created_at: string };
-export type Referrals = { invite_code: string; invite_url: string; rates: [number, number, number]; total_reward_micros: number; team_count: number; direct_count: number; level_counts: [number, number, number]; rewards: Page<ReferralReward>; members: Page<ReferralMember> };
+export type Referrals = { invite_code: string; invite_url: string; rates: [number, number, number]; total_reward_micros: number; withdrawal_available_micros?: number; withdrawal_pending_micros?: number; withdrawal_paid_micros?: number; withdrawal_minimum_micros?: number; withdrawal_reconciliation_required?: boolean; team_count: number; direct_count: number; level_counts: [number, number, number]; rewards: Page<ReferralReward>; members: Page<ReferralMember> };
+export type ReferralWithdrawalStatus = 'pending' | 'approved' | 'paid' | 'rejected';
+export type ReferralWithdrawal = { id: string; user_id: string; amount_micros: number; address: string; status: ReferralWithdrawalStatus; review_note: string; payout_reference: string | null; created_at: string; reviewed_at: string | null; paid_at: string | null; user_name?: string; user_email?: string };

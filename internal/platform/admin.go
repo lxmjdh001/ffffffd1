@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Server) adminUsers(w http.ResponseWriter, r *http.Request) {
-	listOut[User](w, r, addQuery(s.DB.Model(&User{}), r, "name", "email"))
+	s.adminUsersWithCommission(w, r)
 }
 func (s *Server) adminApps(w http.ResponseWriter, r *http.Request) {
 	listOut[Application](w, r, addQuery(s.DB.Model(&Application{}), r, "name", "file_name"))

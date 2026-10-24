@@ -102,6 +102,17 @@ describe('recharge promotion', () => {
     expect(screen.getByText('$0.0202')).toBeTruthy();
   });
 
+  it('labels withdrawal holds and refunds and preserves their full amount precision', async () => {
+    existingLedger = [
+      { id: 'withdrawal-hold', kind: 'withdrawal_hold', amount_micros: -100000001, balance_micros: 1, note: '邀请返利提现申请 · 等待人工审核', reference: 'withdrawal-hold:withdrawal-test', created_at: '2026-10-24T03:00:00Z' },
+      { id: 'withdrawal-refund', kind: 'withdrawal_refund', amount_micros: 100000001, balance_micros: 100000002, note: '邀请返利提现退回 · 地址需要核对', reference: 'withdrawal-refund:withdrawal-test', created_at: '2026-10-24T04:00:00Z' },
+    ];
+    const user = openBilling(); await user.click(await screen.findByRole('button', { name: '余额流水' }));
+    expect(await screen.findByText('提现冻结')).toBeTruthy(); expect(screen.getByText('提现退回')).toBeTruthy();
+    expect(screen.getByText('− $100.000001')).toBeTruthy(); expect(screen.getByText('+ $100.000001')).toBeTruthy();
+    expect(screen.getByText('$0.000001')).toBeTruthy(); expect(screen.getByText('$100.000002')).toBeTruthy();
+  });
+
   it('shows the two compact plans with the balance-card recharge action', async () => {
     const user = openBilling();
     const freeCard = (await screen.findByRole('heading', { name: '免费套餐' })).closest('section')!;

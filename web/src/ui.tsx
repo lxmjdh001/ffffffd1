@@ -26,3 +26,5 @@ export function Pager({ page, total, setPage, size = 20 }: { page: number; total
 export function AppIcon({ platform, small = false }: { platform: string; small?: boolean }) { const labels: Record<string, string> = { Android: 'A', iOS: 'i', Windows: 'W', macOS: 'M' }; return <span className={`app-icon ${platform.toLowerCase()} ${small ? 'small' : ''}`}>{labels[platform] || 'D'}</span>; }
 export function CheckLine({ children }: { children: ReactNode }) { return <div className="check-line"><Check size={16} />{children}</div>; }
 export function FormError({ children }: { children?: ReactNode }) { return children ? <div className="form-error" role="alert"><AlertCircle size={16} /><span>{children}</span></div> : null; }
+
+export const ledgerKind = (kind: string) => ({ referral_reward: '邀请返利', withdrawal_hold: '提现冻结', withdrawal_refund: '提现退回' } as Record<string, string>)[kind] || '';

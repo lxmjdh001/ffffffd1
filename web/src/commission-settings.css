@@ -1,0 +1,26 @@
+.commission-settings{margin-bottom:24px}
+.commission-settings>.panel-heading{padding:0 0 18px}
+.commission-settings h2{display:flex;align-items:center;gap:8px}
+.commission-settings .notice{margin-bottom:22px;line-height:1.9}
+.commission-rate-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.commission-rate-fields .field{min-width:0;margin-bottom:0}
+.commission-rate-input{position:relative}
+.commission-rate-input input{width:100%;padding-right:34px}
+.commission-rate-input>span{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#97a4bd;font-size:13px}
+.commission-form-hint{color:#8896b0;font-size:12px;line-height:1.8;margin:12px 0 20px}
+.commission-save-row{display:flex;justify-content:flex-end;padding-top:16px;border-top:1px solid #edf0f7}
+.commission-user-guide h2{margin-bottom:10px}
+.commission-user-guide p{margin:0;color:#8796b0;font-size:13px;line-height:1.9}
+.commission-current,.commission-reset-summary{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:16px 0;color:#8291ab;font-size:12px}
+.commission-mode{display:flex;gap:10px;margin:20px 0}
+.commission-mode .btn{flex:1;justify-content:center}
+.commission-rate-summary{display:inline-flex;align-items:center;gap:14px}
+.commission-rate-summary>span{display:flex;flex-direction:column;gap:4px;min-width:27px}
+.commission-rate-summary small{font-size:10px;color:#8a99b2;white-space:nowrap}
+.commission-rate-summary strong{font-size:12px;font-weight:600;color:#62769d;white-space:nowrap}
+.commission-source{display:flex;align-items:center;gap:10px;margin-top:10px}
+.commission-source .badge{font-size:9px;white-space:nowrap}
+.commission-source .text-btn{font-size:11px;white-space:nowrap;padding:2px 0}
+.commission-team-cell{min-width:104px;font-size:12px}
+.commission-user-cell{min-width:176px}
+@media(max-width:600px){.commission-rate-fields{gap:10px}.commission-rate-fields .field>span{font-size:10px}.commission-rate-fields input{padding-left:10px}.commission-mode .btn{padding-left:10px;padding-right:10px;font-size:11px}.commission-current,.commission-reset-summary{gap:10px}.commission-settings{margin-bottom:18px}}

@@ -156,10 +156,14 @@ func lockRechargeUsers(tx *gorm.DB, userID string, ancestors []string) (map[stri
 }
 
 func creditReferralRewards(tx *gorm.DB, order Order, ancestors []string, users map[string]*User, now time.Time) error {
+	rates, _, err := effectiveReferralBasisPoints(tx, ancestors)
+	if err != nil {
+		return err
+	}
 	for i, id := range ancestors {
 		// Calculate from paid principal only, excluding recharge gifts and the
 		// payment provider's matching suffix. Integer division rounds down.
-		amount := order.AmountMicros * referralRates()[i] / 100
+		amount := order.AmountMicros * rates[id][i] / 10000
 		if amount <= 0 {
 			continue
 		}
@@ -193,15 +197,20 @@ type referralPage[T any] struct {
 }
 
 type referralResponse struct {
-	InviteCode        string                           `json:"invite_code"`
-	InviteURL         string                           `json:"invite_url"`
-	Rates             [3]int64                         `json:"rates"`
-	TotalRewardMicros int64                            `json:"total_reward_micros"`
-	TeamCount         int64                            `json:"team_count"`
-	DirectCount       int64                            `json:"direct_count"`
-	LevelCounts       [3]int64                         `json:"level_counts"`
-	Rewards           referralPage[referralRewardView] `json:"rewards"`
-	Members           referralPage[referralMember]     `json:"members"`
+	InviteCode                       string                           `json:"invite_code"`
+	InviteURL                        string                           `json:"invite_url"`
+	Rates                            [3]float64                       `json:"rates"`
+	TotalRewardMicros                int64                            `json:"total_reward_micros"`
+	TeamCount                        int64                            `json:"team_count"`
+	DirectCount                      int64                            `json:"direct_count"`
+	LevelCounts                      [3]int64                         `json:"level_counts"`
+	WithdrawalAvailableMicros        int64                            `json:"withdrawal_available_micros"`
+	WithdrawalPendingMicros          int64                            `json:"withdrawal_pending_micros"`
+	WithdrawalPaidMicros             int64                            `json:"withdrawal_paid_micros"`
+	WithdrawalMinimumMicros          int64                            `json:"withdrawal_minimum_micros"`
+	WithdrawalReconciliationRequired bool                             `json:"withdrawal_reconciliation_required"`
+	Rewards                          referralPage[referralRewardView] `json:"rewards"`
+	Members                          referralPage[referralMember]     `json:"members"`
 }
 
 func referralPageParams(r *http.Request, key string) (int, int) {
@@ -226,8 +235,25 @@ func (s *Server) referrals(w http.ResponseWriter, r *http.Request) {
 	user := userOf(r)
 	var response referralResponse
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		locked, err := lockUser(tx, user.ID)
+		if err != nil {
+			return err
+		}
+		available, required, err := referralWithdrawalAvailable(tx, locked)
+		if err != nil {
+			return err
+		}
+		response.WithdrawalAvailableMicros = available
+		response.WithdrawalReconciliationRequired = required
+		response.WithdrawalMinimumMicros = referralWithdrawalMinimum
+		if err := tx.Model(&ReferralWithdrawal{}).Where("user_id = ? AND status IN ?", user.ID, []string{"pending", "approved"}).Select("COALESCE(SUM(amount_micros), 0)").Scan(&response.WithdrawalPendingMicros).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&ReferralWithdrawal{}).Where("user_id = ? AND status = ?", user.ID, "paid").Select("COALESCE(SUM(amount_micros), 0)").Scan(&response.WithdrawalPaidMicros).Error; err != nil {
+			return err
+		}
 		var account ReferralAccount
-		err := tx.First(&account, "user_id = ?", user.ID).Error
+		err = tx.First(&account, "user_id = ?", user.ID).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			account, err = createReferralAccount(tx, user.ID, nil, user.CreatedAt)
 		}
@@ -236,7 +262,11 @@ func (s *Server) referrals(w http.ResponseWriter, r *http.Request) {
 		}
 		response.InviteCode = account.InviteCode
 		response.InviteURL = strings.TrimRight(s.Config.PublicURL, "/") + "/#/register?invite=" + url.QueryEscape(account.InviteCode)
-		response.Rates = referralRates()
+		rates, _, err := effectiveReferralBasisPoints(tx, []string{user.ID})
+		if err != nil {
+			return err
+		}
+		response.Rates = commissionPercentages(rates[user.ID])
 		response.Rewards.Data = []referralRewardView{}
 		response.Members.Data = []referralMember{}
 		rewards := tx.Model(&ReferralReward{}).Where("user_id = ?", user.ID)

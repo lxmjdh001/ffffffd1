@@ -273,7 +273,7 @@ func TestReferralOverviewCountsPaginationAndPrivacy(t *testing.T) {
 		}
 	}
 	response, body := referralOverview(t, s, owner, "?per_page=1&members_page=2&rewards_page=2")
-	if response.InviteCode == "" || response.InviteURL != s.Config.PublicURL+"/#/register?invite="+response.InviteCode || response.Rates != [3]int64{10, 2, 2} || response.LevelCounts != [3]int64{1, 1, 1} || response.TeamCount != 3 || response.DirectCount != 1 || response.TotalRewardMicros != 14*Dollar {
+	if response.InviteCode == "" || response.InviteURL != s.Config.PublicURL+"/#/register?invite="+response.InviteCode || response.Rates != [3]float64{10, 2, 2} || response.LevelCounts != [3]int64{1, 1, 1} || response.TeamCount != 3 || response.DirectCount != 1 || response.TotalRewardMicros != 14*Dollar {
 		t.Fatalf("incorrect referral overview: %+v", response)
 	}
 	if response.Rewards.Total != 3 || response.Members.Total != 3 || len(response.Rewards.Data) != 1 || len(response.Members.Data) != 1 || response.Rewards.Data[0].SourceName == "" {
