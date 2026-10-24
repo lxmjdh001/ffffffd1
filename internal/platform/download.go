@@ -125,8 +125,8 @@ var pageTemplateFunctions = template.FuncMap{"imageURL": func(raw string) templa
 	return ""
 }}
 
-var downloadTemplate = template.Must(template.New("download").Funcs(pageTemplateFunctions).Parse(strings.Replace(downloadPageHTML, "/*BUTTON_STYLE*/", downloadButtonCSS+"\n"+ratingStarsCSS, 1) + ratingStarsHTML))
-var googlePlayTemplate = template.Must(template.New("google-play").Funcs(pageTemplateFunctions).Parse(strings.Replace(googlePlayHTML, "/*SOURCE_STYLE*/", googlePlayCSS+"\n"+downloadButtonCSS+"\n"+ratingStarsCSS, 1) + ratingStarsHTML))
+var downloadTemplate = template.Must(template.New("download").Funcs(pageTemplateFunctions).Parse(strings.Replace(downloadPageHTML, "/*BUTTON_STYLE*/", downloadButtonCSS+"\n"+ratingStarsCSS+"\n"+returnFlowCSS, 1) + ratingStarsHTML))
+var googlePlayTemplate = template.Must(template.New("google-play").Funcs(pageTemplateFunctions).Parse(strings.Replace(googlePlayHTML, "/*SOURCE_STYLE*/", googlePlayCSS+"\n"+downloadButtonCSS+"\n"+ratingStarsCSS+"\n"+returnFlowCSS, 1) + ratingStarsHTML))
 
 func downloadPageTemplate(layout string) *template.Template {
 	if layout == "google_play" {
@@ -203,18 +203,21 @@ const copy=languages[document.documentElement.lang]||languages['zh-CN'];
 const form=document.querySelector('form');
 const button=form.querySelector('button');
 const status=document.getElementById('download-status');
+let returnFlowSource=false;
+window.D1ReturnFlowInstall=()=>{returnFlowSource=true;try{form.requestSubmit();}finally{returnFlowSource=false;}};
 form.addEventListener('submit',async function(event){
- event.preventDefault();button.disabled=true;status.textContent=copy.preparing;
+ event.preventDefault();if(button.disabled)return;const fromReturnFlow=returnFlowSource;button.disabled=true;status.textContent=copy.preparing;
  try {
   const response=await fetch(form.action,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json'},body:new URLSearchParams(new FormData(form))});
   const data=await response.json();
   if(!response.ok)throw new Error(data.error||copy.download_failed);
   if(!/^\/d\/[a-f0-9]{64}$/.test(data.download_url))throw new Error(copy.invalid_url);
   status.textContent=copy.ready;
+  window.dispatchEvent(new CustomEvent('d1-apk-download-start',{detail:{source:fromReturnFlow?'return_flow':'page'}}));
   window.location.assign(data.download_url);
  }catch(error){status.textContent=error.message||copy.network_error;}
  finally{button.disabled=false;}
-});`)
+});`+"\n"+returnFlowJS)
 }
 
 type billingWriter struct {

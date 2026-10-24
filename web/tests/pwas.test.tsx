@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PWAsPage, validPWAIcon, validPWAURL } from '../src/pwas';
+import { defaultReturnFlow } from '../src/return-flow';
 import type { PWAApp } from '../src/pwa-types';
 
 vi.mock('react-admin', () => ({ useNotify: () => vi.fn() }));
@@ -72,4 +73,15 @@ describe('PWA applications', () => {
     const user = setup(); await user.click(await screen.findByRole('button', { name: '暂停应用' })); await screen.findByText('已暂停'); expect(writes[0]).toMatchObject({ path: '/api/pwas/own-app', method: 'PUT', body: { name: app.name, target_url: app.target_url, enabled: false, push_enabled: true, theme_color: app.theme_color } });
     await user.click(screen.getByRole('button', { name: '删除应用', exact: true })); expect(writes.filter(write => write.method === 'DELETE')).toHaveLength(0); await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '确认删除应用' })); await screen.findByRole('heading', { name: '让网页，走进用户的桌面' }); expect(writes.filter(write => write.method === 'DELETE')).toEqual([expect.objectContaining({ path: '/api/pwas/own-app' })]);
   });
+  it('saves return page settings and preserves them when pausing the application', async () => {
+    rows[0].return_flow_config = { ...defaultReturnFlow(), enabled: true, triggerMode: 'resume', title: '欢迎回来' };
+    const user = setup(); await user.click(await screen.findByRole('button', { name: '编辑', exact: true }));
+    const form = within(screen.getByRole('dialog')); expect((form.getByLabelText('弹窗标题') as HTMLInputElement).value).toBe('欢迎回来');
+    await user.selectOptions(form.getByLabelText('触发方式'), 'both'); await user.click(form.getByRole('button', { name: '保存应用' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(writes[0]).toMatchObject({body:{return_flow_config:{enabled:true,triggerMode:'both',title:'欢迎回来'}}});
+    await user.click(screen.getByRole('button', {name:'暂停应用'})); await screen.findByText('已暂停');
+    expect(writes[1]).toMatchObject({body:{enabled:false,return_flow_config:{enabled:true,triggerMode:'both',title:'欢迎回来'}}});
+  });
+
 });

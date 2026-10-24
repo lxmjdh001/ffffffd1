@@ -151,6 +151,7 @@ func (s *Server) rate(key string, limit int64, window time.Duration) error {
 func (s *Server) Handler() http.Handler {
 	m := http.NewServeMux()
 	s.registerPWARoutes(m)
+	s.registerReturnFlowRoutes(m)
 	s.registerPWAPushRoutes(m)
 	m.HandleFunc("GET /robots.txt", s.robots)
 	m.HandleFunc("GET /sitemap.xml", s.sitemap)
@@ -265,7 +266,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; frame-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; frame-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 		w.Header().Set("Cache-Control", "no-store")
 		defer func() {
 			if p := recover(); p != nil {

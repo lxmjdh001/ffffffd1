@@ -64,7 +64,7 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 	// Every D1 response retains frame-ancestors 'none' and X-Frame-Options DENY,
 	// so redirects back to this origin cannot load a same-origin child document.
 	// Only public PWA wrappers relax frame-src; the console stays restrictive.
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src "+frameSources+"; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https:; media-src 'self' https:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src "+frameSources+"; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	w.Header().Set("Cache-Control", "no-store")
@@ -110,10 +110,10 @@ func (s *Server) pwaAsset(w http.ResponseWriter, r *http.Request, content, conte
 	}
 }
 func (s *Server) pwaClientScript(w http.ResponseWriter, r *http.Request) {
-	s.pwaAsset(w, r, pwaClientJS, "application/javascript; charset=utf-8")
+	s.pwaAsset(w, r, pwaClientJS+"\n"+returnFlowJS, "application/javascript; charset=utf-8")
 }
 func (s *Server) pwaStyles(w http.ResponseWriter, r *http.Request) {
-	s.pwaAsset(w, r, pwaPageCSS, "text/css; charset=utf-8")
+	s.pwaAsset(w, r, pwaPageCSS+"\n"+returnFlowCSS, "text/css; charset=utf-8")
 }
 func (s *Server) pwaServiceWorker(w http.ResponseWriter, r *http.Request) {
 	// The browser's default maximum scope is the worker's /p/{slug}/ directory.

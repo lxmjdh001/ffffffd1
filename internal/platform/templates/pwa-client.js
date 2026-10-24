@@ -34,12 +34,14 @@
  window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); installPrompt = event; if (installButton) installButton.disabled = false; });
  window.addEventListener('appinstalled', () => { installPrompt = null; setStatus(installStatus, text('App installed. Open it from your home screen.', '应用已安装，可以从桌面打开。')); });
  if (standalone) setStatus(installStatus, text('You are using the installed app.', '你正在使用桌面应用。'));
- if (installButton) installButton.addEventListener('click', async () => {
+ async function installApp() {
   if (!installPrompt) { showGuide(); return; }
-  const prompt = installPrompt; installPrompt = null; installButton.disabled = true;
+  const prompt = installPrompt; installPrompt = null; if (installButton) installButton.disabled = true;
   try { await prompt.prompt(); const choice = await prompt.userChoice; setStatus(installStatus, choice.outcome === 'accepted' ? text('Installation started. Look for the app on your home screen.', '已开始安装，请在桌面查看应用。') : text('Installation canceled. You can install it later.', '已取消安装，你可以随时重新安装。')); }
-  catch (_) { showGuide(); } finally { installButton.disabled = false; }
- });
+  catch (_) { showGuide(); } finally { if (installButton) installButton.disabled = false; }
+ }
+ window.D1ReturnFlowInstall = installApp;
+ if (installButton) installButton.addEventListener('click', installApp);
  async function post(url, body) {
   const res = await fetch(url, {method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   let result = {}; try { result = await res.json(); } catch (_) {}

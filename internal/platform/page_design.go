@@ -37,25 +37,26 @@ var ratingStarsHTML string
 var ratingStarsCSS string
 
 type PageDesign struct {
-	Layout               string   `json:"layout"`
-	Language             string   `json:"language"`
-	Title                string   `json:"title"`
-	Developer            string   `json:"developer"`
-	Summary              string   `json:"summary"`
-	Description          string   `json:"description"`
-	Icon                 string   `json:"icon"`
-	Screenshots          []string `json:"screenshots"`
-	Tags                 []string `json:"tags"`
-	ButtonText           string   `json:"button_text"`
-	ThemeColor           string   `json:"theme_color"`
-	BackgroundColor      string   `json:"background_color"`
-	ShowDescription      bool     `json:"show_description"`
-	ShowScreenshots      bool     `json:"show_screenshots"`
-	ShowFileInfo         bool     `json:"show_file_info"`
-	ShowDownloads        bool     `json:"show_downloads"`
-	DisplayRating        string   `json:"display_rating"`
-	DisplayReviewCount   string   `json:"display_review_count"`
-	DisplayDownloadCount string   `json:"display_download_count"`
+	ReturnFlowConfig     *ReturnFlowConfig `json:"return_flow_config,omitempty"`
+	Layout               string            `json:"layout"`
+	Language             string            `json:"language"`
+	Title                string            `json:"title"`
+	Developer            string            `json:"developer"`
+	Summary              string            `json:"summary"`
+	Description          string            `json:"description"`
+	Icon                 string            `json:"icon"`
+	Screenshots          []string          `json:"screenshots"`
+	Tags                 []string          `json:"tags"`
+	ButtonText           string            `json:"button_text"`
+	ThemeColor           string            `json:"theme_color"`
+	BackgroundColor      string            `json:"background_color"`
+	ShowDescription      bool              `json:"show_description"`
+	ShowScreenshots      bool              `json:"show_screenshots"`
+	ShowFileInfo         bool              `json:"show_file_info"`
+	ShowDownloads        bool              `json:"show_downloads"`
+	DisplayRating        string            `json:"display_rating"`
+	DisplayReviewCount   string            `json:"display_review_count"`
+	DisplayDownloadCount string            `json:"display_download_count"`
 }
 type AppPageDesign struct {
 	AppID     string     `json:"-" gorm:"primaryKey;size:32"`
@@ -116,7 +117,16 @@ func validPageImage(raw string) bool {
 	u, err := url.Parse(raw)
 	return err == nil && u.Scheme == "https" && u.Hostname() != "" && u.User == nil && len(raw) <= 2048
 }
-func validatePageDesign(d PageDesign) error {
+func validatePageDesign(d PageDesign, publicURL ...string) error {
+	origin := ""
+	if len(publicURL) > 0 {
+		origin = publicURL[0]
+	}
+	if d.ReturnFlowConfig != nil {
+		if err := normalizeReturnFlow(d.ReturnFlowConfig, origin); err != nil {
+			return err
+		}
+	}
 	if _, supported := pageLanguages[d.Language]; d.Language != "" && !supported {
 		return problem(400, "请选择支持的详情页语言")
 	}
@@ -166,7 +176,7 @@ func (s *Server) savePageDesign(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	if err := validatePageDesign(d); err != nil {
+	if err := validatePageDesign(d, s.Config.PublicURL); err != nil {
 		fail(w, err)
 		return
 	}
@@ -179,6 +189,9 @@ func (s *Server) savePageDesign(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		if err := s.validatePageImageReferences(tx, a.ID, d); err != nil {
+			return err
+		}
+		if err := s.validateReturnFlowAsset(tx, a.UserID, d.ReturnFlowConfig); err != nil {
 			return err
 		}
 		saved := AppPageDesign{AppID: a.ID, Design: d}
@@ -204,7 +217,7 @@ func (s *Server) previewPageDesign(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	if err := validatePageDesign(d); err != nil {
+	if err := validatePageDesign(d, s.Config.PublicURL); err != nil {
 		fail(w, err)
 		return
 	}

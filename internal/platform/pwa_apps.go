@@ -23,6 +23,7 @@ import (
 // PWAApp deliberately keeps credentials and binary icons out of JSON responses.
 // Each app gets a distinct VAPID identity and a narrowly scoped service worker.
 type PWAApp struct {
+	ReturnFlowJSON    string         `json:"-" gorm:"type:text;not null;default:'{}'"`
 	ID                string         `json:"id" gorm:"primaryKey;size:32"`
 	Slug              string         `json:"slug" gorm:"uniqueIndex;size:16;not null"`
 	UserID            string         `json:"-" gorm:"index;size:32;not null"`
@@ -43,20 +44,21 @@ type PWAApp struct {
 }
 
 type pwaAppView struct {
-	ID                string    `json:"id"`
-	Slug              string    `json:"slug"`
-	Name              string    `json:"name"`
-	TargetURL         string    `json:"target_url"`
-	Description       string    `json:"description"`
-	Enabled           bool      `json:"enabled"`
-	PushEnabled       bool      `json:"push_enabled"`
-	ThemeColor        string    `json:"theme_color"`
-	IconURL           string    `json:"icon_url"`
-	EntryURL          string    `json:"entry_url"`
-	LaunchURL         string    `json:"launch_url"`
-	SubscriptionCount int64     `json:"subscription_count"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	ReturnFlowConfig  ReturnFlowConfig `json:"return_flow_config"`
+	ID                string           `json:"id"`
+	Slug              string           `json:"slug"`
+	Name              string           `json:"name"`
+	TargetURL         string           `json:"target_url"`
+	Description       string           `json:"description"`
+	Enabled           bool             `json:"enabled"`
+	PushEnabled       bool             `json:"push_enabled"`
+	ThemeColor        string           `json:"theme_color"`
+	IconURL           string           `json:"icon_url"`
+	EntryURL          string           `json:"entry_url"`
+	LaunchURL         string           `json:"launch_url"`
+	SubscriptionCount int64            `json:"subscription_count"`
+	CreatedAt         time.Time        `json:"created_at"`
+	UpdatedAt         time.Time        `json:"updated_at"`
 }
 
 var pwaSlugPattern = regexp.MustCompile(`^[a-f0-9]{16}$`)
@@ -82,7 +84,7 @@ func (s *Server) registerPWARoutes(m *http.ServeMux) {
 
 func (s *Server) pwaView(a PWAApp, count int64) pwaAppView {
 	base := strings.TrimRight(s.Config.PublicURL, "/") + "/p/" + a.Slug + "/"
-	return pwaAppView{ID: a.ID, Slug: a.Slug, Name: a.Name, TargetURL: a.TargetURL, Description: a.Description, Enabled: a.Enabled, PushEnabled: a.PushEnabled, ThemeColor: a.ThemeColor, IconURL: s.Config.PublicURL + "/api/pwas/" + a.ID + "/icon", EntryURL: base, LaunchURL: base + "launch", SubscriptionCount: count, CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt}
+	return pwaAppView{ReturnFlowConfig: storedReturnFlow(a.ReturnFlowJSON), ID: a.ID, Slug: a.Slug, Name: a.Name, TargetURL: a.TargetURL, Description: a.Description, Enabled: a.Enabled, PushEnabled: a.PushEnabled, ThemeColor: a.ThemeColor, IconURL: s.Config.PublicURL + "/api/pwas/" + a.ID + "/icon", EntryURL: base, LaunchURL: base + "launch", SubscriptionCount: count, CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt}
 }
 func (s *Server) ownedPWA(r *http.Request) (PWAApp, error) {
 	var a PWAApp
@@ -125,12 +127,13 @@ func (s *Server) getPWA(w http.ResponseWriter, r *http.Request) {
 }
 
 type pwaAppInput struct {
-	Name        *string `json:"name"`
-	TargetURL   *string `json:"target_url"`
-	Description *string `json:"description"`
-	Enabled     *bool   `json:"enabled"`
-	PushEnabled *bool   `json:"push_enabled"`
-	ThemeColor  *string `json:"theme_color"`
+	ReturnFlowConfig *ReturnFlowConfig `json:"return_flow_config"`
+	Name             *string           `json:"name"`
+	TargetURL        *string           `json:"target_url"`
+	Description      *string           `json:"description"`
+	Enabled          *bool             `json:"enabled"`
+	PushEnabled      *bool             `json:"push_enabled"`
+	ThemeColor       *string           `json:"theme_color"`
 }
 
 // No target is fetched by the server. Reject private destinations anyway, and
@@ -201,6 +204,12 @@ func urlPort(raw string) string {
 	return u.Port()
 }
 func (s *Server) applyPWAInput(a *PWAApp, in pwaAppInput, _ bool) error {
+	if in.ReturnFlowConfig != nil {
+		if err := normalizeReturnFlow(in.ReturnFlowConfig, s.Config.PublicURL); err != nil {
+			return err
+		}
+		a.ReturnFlowJSON = returnFlowJSON(in.ReturnFlowConfig)
+	}
 	if in.Name != nil {
 		a.Name = strings.TrimSpace(*in.Name)
 	}
@@ -260,7 +269,8 @@ func (s *Server) createPWA(w http.ResponseWriter, r *http.Request) {
 	canonical, _ := json.Marshal(struct {
 		Name, TargetURL, Description, ThemeColor string
 		Enabled, PushEnabled                     bool
-	}{a.Name, a.TargetURL, a.Description, a.ThemeColor, a.Enabled, a.PushEnabled})
+		ReturnFlowConfig                         *ReturnFlowConfig `json:",omitempty"`
+	}{a.Name, a.TargetURL, a.Description, a.ThemeColor, a.Enabled, a.PushEnabled, in.ReturnFlowConfig})
 	a.CreateFingerprint = hashString(string(canonical))
 	private, public, err := webpush.GenerateVAPIDKeys()
 	if err != nil {
@@ -310,6 +320,9 @@ func (s *Server) createPWA(w http.ResponseWriter, r *http.Request) {
 		if count >= limit {
 			return problem(403, "PWA 应用数量已达套餐上限，请升级会员或删除应用")
 		}
+		if e = s.validateReturnFlowAsset(tx, owner.ID, in.ReturnFlowConfig); e != nil {
+			return e
+		}
 		if e = tx.Create(&a).Error; e != nil {
 			return e
 		}
@@ -340,6 +353,9 @@ func (s *Server) updatePWA(w http.ResponseWriter, r *http.Request) {
 			return e
 		}
 		if e = s.applyPWAInput(&a, in, false); e != nil {
+			return e
+		}
+		if e = s.validateReturnFlowAsset(tx, owner.ID, in.ReturnFlowConfig); e != nil {
 			return e
 		}
 		a.UpdatedAt = s.Now()

@@ -21,7 +21,10 @@ func migratePWA(tx *gorm.DB) error {
 			return err
 		}
 	}
-	return migratePWAPushRichContent(tx)
+	if err := migratePWAPushRichContent(tx); err != nil {
+		return err
+	}
+	return migrateReturnFlow(tx)
 }
 
 func migratePWAPushRichContent(tx *gorm.DB) error {
@@ -38,4 +41,18 @@ func migratePWAPushRichContent(tx *gorm.DB) error {
 		return err
 	}
 	return tx.Create(&Migration{Version: 14, AppliedAt: time.Now().UTC()}).Error
+}
+
+func migrateReturnFlow(tx *gorm.DB) error {
+	var count int64
+	if err := tx.Model(&Migration{}).Where("version = ?", 15).Count(&count).Error; err != nil {
+		return err
+	}
+	if count != 0 {
+		return nil
+	}
+	if err := tx.AutoMigrate(&PWAApp{}, &ReturnFlowAsset{}); err != nil {
+		return err
+	}
+	return tx.Create(&Migration{Version: 15, AppliedAt: time.Now().UTC()}).Error
 }
