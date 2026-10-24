@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="{{if .Chinese}}zh-CN{{else}}en{{end}}">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="{{.App.ThemeColor}}"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="{{.App.Name}}">
+ <meta name="description" content="{{.App.Description}}"><title>{{.App.Name}}</title>
+ <link rel="manifest" href="{{.Base}}manifest.webmanifest"><link rel="icon" type="image/png" href="{{.Base}}icon/192.png"><link rel="apple-touch-icon" href="{{.Base}}icon/192.png">
+ <link rel="stylesheet" href="{{.Base}}style.css"><script src="{{.Base}}client.js" defer></script>
+</head>
+<body class="{{if .Launch}}launch-page{{else}}install-page{{end}}" data-base="{{.Base}}" data-locale="{{if .Chinese}}zh{{else}}en{{end}}" data-push-enabled="{{.App.PushEnabled}}">
+{{if .Launch}}
+ <header class="runtime-bar"><a class="runtime-brand" href="{{.Base}}"><img src="{{.Base}}icon/192.png" alt=""><span>{{.App.Name}}</span></a><div class="runtime-actions"><button type="button" class="small-button" id="notification-button">{{if .Chinese}}开启通知{{else}}Enable notifications{{end}}</button><button type="button" id="unsubscribe-button" class="text-button" hidden>{{if .Chinese}}关闭{{else}}Turn off{{end}}</button><a href="{{.App.TargetURL}}" target="_blank" rel="noopener noreferrer" class="external-link">{{if .Chinese}}在浏览器打开 ↗{{else}}Open in browser ↗{{end}}</a></div></header>
+ <div class="runtime-status" id="notification-status" role="status" aria-live="polite"></div>
+ <main class="runtime-content"><iframe id="pwa-frame" src="{{.App.TargetURL}}" title="{{.App.Name}}" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads" referrerpolicy="no-referrer" allow="fullscreen" allowfullscreen></iframe></main>
+ <aside class="runtime-help"><span>{{if .Chinese}}页面无法显示？目标网站可能限制嵌入。{{else}}Page not loading? This website may restrict embedded views.{{end}}</span><a href="{{.App.TargetURL}}" target="_blank" rel="noopener noreferrer">{{if .Chinese}}直接打开{{else}}Open website{{end}} ↗</a></aside>
+{{else}}
+ <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+ <main class="install-shell">
+  <div class="topline"><span class="wordmark"><span class="wordmark-icon">D1</span> PWA</span><span class="secure-badge"><span></span>{{if .Chinese}}轻量应用 · 即点即用{{else}}Lightweight · Always within reach{{end}}</span></div>
+  <section class="app-card" aria-labelledby="app-title">
+   <div class="app-visual"><div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div><img class="app-icon" src="{{.Base}}icon/512.png" alt="{{.App.Name}}"><div class="visual-label"><span>↗</span> {{if .Chinese}}你的专属桌面入口{{else}}Your shortcut to more{{end}}</div></div>
+   <div class="app-details"><div class="eyebrow">{{if .Chinese}}安装到桌面，随时开启{{else}}ONE TAP AWAY{{end}}</div><h1 id="app-title">{{.App.Name}}</h1><p class="app-description">{{if .App.Description}}{{.App.Description}}{{else}}{{if .Chinese}}把喜爱的网站放进口袋，从桌面轻松开启。{{else}}Keep your favorite website close. Open it right from your home screen.{{end}}{{end}}</p>
+    <div class="feature-chips"><span><b>✧</b> {{if .Chinese}}无需应用商店{{else}}No app store needed{{end}}</span><span><b>◈</b> {{if .Chinese}}独立应用窗口{{else}}A dedicated app window{{end}}</span></div>
+    <div class="install-actions"><button id="install-button" class="primary-button" type="button">{{if .Chinese}}安装应用{{else}}Install app{{end}} <span>↓</span></button><a class="secondary-button" href="{{.Base}}launch">{{if .Chinese}}立即打开{{else}}Open now{{end}} <span>↗</span></a></div>
+    <p class="install-status" id="install-status" role="status" aria-live="polite">{{if .Chinese}}添加到主屏幕，使用更便捷。{{else}}Add to your home screen for a smoother experience.{{end}}</p>
+   </div>
+  </section>
+  <section class="notification-card" aria-labelledby="notification-title"><div class="notification-symbol">♧</div><div class="notification-copy"><h2 id="notification-title">{{if .Chinese}}不错过重要消息{{else}}Stay in the loop{{end}}</h2><p>{{if .Chinese}}自主开启通知，第一时间获取应用更新。你可以随时关闭。{{else}}Choose to receive useful updates from this app. You can turn them off at any time.{{end}}</p><p id="notification-status" class="notification-status" role="status" aria-live="polite"></p></div><div class="notification-actions"><button type="button" id="notification-button" class="small-button">{{if .Chinese}}开启通知{{else}}Enable notifications{{end}}</button><button type="button" id="unsubscribe-button" class="text-button" hidden>{{if .Chinese}}关闭通知{{else}}Turn off{{end}}</button></div></section>
+  <section class="install-guide" id="install-guide" hidden><h2>{{if .Chinese}}添加到主屏幕{{else}}Add to your home screen{{end}}</h2><p id="install-guide-text"></p></section>
+  <footer class="install-footer"><span>{{if .Chinese}}网页应用，无需下载安装包{{else}}A web app, without the download{{end}}</span><span>Powered by D1</span></footer>
+ </main>
+{{end}}
+<noscript><p class="no-script">{{if .Chinese}}请启用 JavaScript 以使用安装和通知功能。{{else}}Enable JavaScript to use installation and notifications.{{end}}</p></noscript>
+</body></html>

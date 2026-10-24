@@ -1,0 +1,7 @@
+export type PWAInput = { name: string; target_url: string; description: string; theme_color: string; enabled: boolean; push_enabled: boolean };
+export type PWAApp = PWAInput & { id: string; slug: string; icon_url: string; entry_url: string; launch_url: string; subscription_count: number; created_at: string; updated_at: string };
+export type PWAList<T> = { data: T[]; total: number; page?: number; per_page?: number };
+export type PWASchedule = 'now' | 'scheduled' | 'first_subscribe';
+export type PWAPushTask = { id: string; pwa_id: string; pwa_name: string; title: string; body: string; url: string; schedule_type: PWASchedule; scheduled_at: string | null; delay_minutes: number; target_countries: string[]; status: string; total_count: number; sent_count: number; failed_count: number; displayed_count: number; clicked_count: number; created_at: string; completed_at: string | null };
+export type PWASubscription = { id: string; pwa_id: string; pwa_name: string; country: string; status: 'active' | 'unsubscribed' | 'expired'; browser: string; device: string; created_at: string; last_seen_at: string };
+export type PWAPushDelivery = { id: string; task_id: string; subscription_id: string; country: string; status: string; attempts: number; last_error: string; created_at: string; sent_at: string | null; displayed_at: string | null; clicked_at: string | null };

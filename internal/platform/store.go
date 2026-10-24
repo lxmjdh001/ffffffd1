@@ -124,7 +124,10 @@ func Migrate(db *gorm.DB) error {
 			if err := migrateReferralWithdrawals(tx); err != nil {
 				return err
 			}
-			return migrateCommissionSettings(tx)
+			if err := migrateCommissionSettings(tx); err != nil {
+				return err
+			}
+			return migratePWA(tx)
 		}
 		if err := tx.AutoMigrate(&Settings{}); err != nil {
 			return err
@@ -155,7 +158,10 @@ func Migrate(db *gorm.DB) error {
 		if err := migrateReferralWithdrawals(tx); err != nil {
 			return err
 		}
-		return migrateCommissionSettings(tx)
+		if err := migrateCommissionSettings(tx); err != nil {
+			return err
+		}
+		return migratePWA(tx)
 	})
 }
 func BootstrapAdmin(db *gorm.DB, c Config) error {

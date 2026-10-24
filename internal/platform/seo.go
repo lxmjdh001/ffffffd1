@@ -36,7 +36,7 @@ func (s *Server) robots(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Search metadata is temporarily unavailable.", http.StatusServiceUnavailable)
 		return
 	}
-	body := "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /internal/\nDisallow: /healthz\nDisallow: /a/\nDisallow: /d/\nDisallow: /r/\nDisallow: /c/\n\nSitemap: " + home + "sitemap.xml\n"
+	body := "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /internal/\nDisallow: /healthz\nDisallow: /a/\nDisallow: /d/\nDisallow: /r/\nDisallow: /c/\nDisallow: /p/\n\nSitemap: " + home + "sitemap.xml\n"
 	writeSEOFile(w, r, "text/plain; charset=utf-8", []byte(body))
 }
 

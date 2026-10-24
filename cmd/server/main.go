@@ -74,6 +74,7 @@ func main() {
 	if c.Role != "download" {
 		go app.RunWorker(ctx)
 		go app.RunAdWorker(ctx)
+		go app.RunPWAPushWorker(ctx)
 	} else {
 		go app.RunFileWorker(ctx)
 	}

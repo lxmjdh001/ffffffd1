@@ -33,6 +33,9 @@ type Server struct {
 	DNS         *net.Resolver
 	Now         func() time.Time
 	uploadSlots chan struct{}
+	// Push delivery uses a separate restricted client; tests may replace its
+	// transport without changing payment, DNS, or advertisement HTTP traffic.
+	pwaPushHTTP *http.Client
 }
 
 func NewServer(db *gorm.DB, c Config) *Server {
@@ -147,6 +150,8 @@ func (s *Server) rate(key string, limit int64, window time.Duration) error {
 }
 func (s *Server) Handler() http.Handler {
 	m := http.NewServeMux()
+	s.registerPWARoutes(m)
+	s.registerPWAPushRoutes(m)
 	m.HandleFunc("GET /robots.txt", s.robots)
 	m.HandleFunc("GET /sitemap.xml", s.sitemap)
 	m.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {

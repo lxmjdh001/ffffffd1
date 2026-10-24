@@ -38,7 +38,7 @@ func TestSearchMetadataUsesConfiguredOriginAndRootOnly(t *testing.T) {
 				if !strings.Contains(body, "User-agent: *\nAllow: /\n") || !strings.Contains(body, "Sitemap: "+s.Config.PublicURL+"/sitemap.xml\n") {
 					t.Fatalf("robots does not advertise the configured sitemap: %s", body)
 				}
-				for _, privatePath := range []string{"/api/", "/internal/", "/healthz", "/a/", "/d/", "/r/", "/c/"} {
+				for _, privatePath := range []string{"/api/", "/internal/", "/healthz", "/a/", "/d/", "/r/", "/c/", "/p/"} {
 					if !strings.Contains(body, "Disallow: "+privatePath+"\n") {
 						t.Errorf("robots does not exclude %s", privatePath)
 					}
