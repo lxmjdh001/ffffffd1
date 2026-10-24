@@ -14,6 +14,9 @@ it('displays and copies a two-decimal amount and address without a QR code or ch
   const wallet = 'TExampleReceivingWallet';
   const { container } = render(<UsdtPaymentDetails order={{ usdt_units: 499010000, wallet } as Order} />);
   expect(screen.getByText('499.01')).toBeTruthy();
+  expect(screen.getByText('应付金额')).toBeTruthy();
+  expect(container.querySelectorAll('.payment-amount')).toHaveLength(1);
+  expect(container.querySelector('.payment-amount')?.nextElementSibling?.classList.contains('link-card')).toBe(true);
   expect(container.querySelector('svg:not(.lucide)')).toBeNull();
   expect(container.querySelector('.badge')).toBeNull();
   expect(screen.queryByText(/TRON|TRC20|二维码/)).toBeNull();

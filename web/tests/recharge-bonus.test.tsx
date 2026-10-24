@@ -25,6 +25,7 @@ let submissions: unknown[];
 let existingOrders: Order[];
 let existingLedger: Ledger[];
 let createdOrder: Order | undefined;
+let paymentChecks: number;
 const dialogMethods = {
   showModal: Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'showModal'),
   close: Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close'),
@@ -38,7 +39,7 @@ beforeEach(() => {
     plans: [free, { ...free, id: 'pro', name: '尊享套餐', price_micros: 99000000, app_limit: 500, storage_bytes: 30 * 2 ** 30, download_limit: 10000 }], download_price_micros: 500,
     max_upload_bytes: 2 ** 30, domain_limit: 5, payment_methods: ['manual'], support_email: '', usdt_rate_micros: 1000000,
   };
-  submissions = []; existingOrders = []; existingLedger = []; createdOrder = undefined;
+  submissions = []; existingOrders = []; existingLedger = []; createdOrder = undefined; paymentChecks = 0;
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   vi.stubGlobal('scrollTo', vi.fn());
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value(this: HTMLDialogElement) { this.setAttribute('open', ''); } });
@@ -55,6 +56,11 @@ beforeEach(() => {
     }
     if (path === '/api/orders') return json({ data: existingOrders, total: existingOrders.length });
     if (path === '/api/ledger') return json({ data: existingLedger, total: existingLedger.length });
+    if (path === `/api/orders/${order.id}/check`) {
+      paymentChecks++;
+      createdOrder = { ...(createdOrder || existingOrders.find(o => o.id === order.id) || order), status: 'paid' };
+      return json(createdOrder);
+    }
     if (path === `/api/orders/${order.id}`) return json(createdOrder || existingOrders.find(o => o.id === order.id) || order);
     throw new Error(`Unexpected request: ${input}`);
   }));
@@ -163,6 +169,60 @@ describe('recharge promotion', () => {
     expect(screen.getByRole('dialog').querySelector('svg[role="img"]')).toBeNull();
     expect(payment.getByText('999.01')).toBeTruthy();
     expect(payment.getByText('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t')).toBeTruthy();
+    expect(payment.getByText('应付金额')).toBeTruthy();
+    expect(payment.queryByText('实付金额')).toBeNull();
+    expect(payment.queryByText('$ 1,000.00')).toBeNull();
+    expect(payment.queryByText('预计到账余额')).toBeNull();
+    for (const label of ['订单编号', '支付方式', '有效期至']) expect(payment.queryByText(label)).toBeNull();
+    const instructions = screen.getByRole('region', { name: 'USDT 付款信息' });
+    expect(instructions.querySelectorAll('.payment-amount')).toHaveLength(1);
+    expect(instructions.querySelector('.payment-amount')?.nextElementSibling?.classList.contains('link-card')).toBe(true);
+  });
+
+  it('shows only the exact USDT payable amount, copies the amount/address and still checks payment', async () => {
+    const wallet = 'TExampleReceivingWallet';
+    existingOrders = [{ ...order, method: 'usdt', amount_micros: 50000000, bonus_micros: 0, usdt_units: 49990000, wallet }];
+    const user = openBilling();
+    const copy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+    await user.click(await screen.findByRole('button', { name: /查看详情/ }));
+    const payment = within(screen.getByRole('dialog'));
+    expect(payment.getByText('49.99')).toBeTruthy();
+    expect(payment.queryByText('$ 50.00')).toBeNull();
+    expect(payment.queryByText(/请准确转入以下金额/)).toBeNull();
+    expect(payment.queryByText(order.id)).toBeNull();
+    await user.click(payment.getByRole('button', { name: '复制金额' }));
+    expect(copy).toHaveBeenLastCalledWith('49.99');
+    await user.click(payment.getByRole('button', { name: '复制地址' }));
+    expect(copy).toHaveBeenLastCalledWith(wallet);
+    await user.click(payment.getByRole('button', { name: '检查到账状态' }));
+    await payment.findByRole('heading', { name: '充值已到账' });
+    expect(paymentChecks).toBe(1);
+    expect(payment.queryByText('收款地址')).toBeNull();
+    expect(payment.queryByRole('button', { name: '检查到账状态' })).toBeNull();
+    expect(submissions).toEqual([]);
+  });
+
+  it('keeps expired-order warnings without exposing order metadata or losing legacy precision', async () => {
+    existingOrders = [{ ...order, method: 'usdt', amount_micros: 500000000, bonus_micros: 0, usdt_units: 500009314, wallet: 'TLegacyReceivingWallet', expires_at: '2000-01-01T00:00:00Z' }];
+    const user = openBilling();
+    await user.click(await screen.findByRole('button', { name: /查看详情/ }));
+    const payment = within(screen.getByRole('dialog'));
+    expect(payment.getByText('500.009314')).toBeTruthy();
+    expect(payment.getByText('已超时')).toBeTruthy();
+    expect(payment.getByText(/订单已超时，请勿继续转账/)).toBeTruthy();
+    for (const label of ['实付金额', '订单编号', '支付方式', '有效期至']) expect(payment.queryByText(label)).toBeNull();
+  });
+
+  it('retains the promised gift on the USDT paid receipt without showing another payment address', async () => {
+    existingOrders = [{ ...order, method: 'usdt', status: 'paid', usdt_units: 999010000, wallet: 'TExampleReceivingWallet' }];
+    const user = openBilling();
+    await user.click(await screen.findByRole('button', { name: /查看详情/ }));
+    const payment = within(screen.getByRole('dialog'));
+    expect(payment.getByText('999.01')).toBeTruthy();
+    expect(payment.getByText('到账余额')).toBeTruthy();
+    expect(payment.getByText('+ $500.00')).toBeTruthy();
+    expect(payment.getByText('$1,500.00')).toBeTruthy();
+    expect(payment.queryByText('收款地址')).toBeNull();
   });
 
   it('opens recharge when the member clicks insufficient balance during upgrade', async () => {
@@ -192,7 +252,7 @@ describe('recharge promotion', () => {
     await waitFor(() => expect(submissions).toEqual([{ amount: '1000', method: 'manual' }]));
     await screen.findByRole('heading', { name: '充值订单' });
     const payment = within(screen.getByRole('dialog'));
-    expect(payment.getByText('实付金额')).toBeTruthy();
+    expect(payment.getByText('应付金额')).toBeTruthy();
     expect(payment.getByText('$ 1,000.00')).toBeTruthy();
     expect(payment.getByText('+ $500.00')).toBeTruthy();
     expect(payment.getByText('$1,500.00')).toBeTruthy();

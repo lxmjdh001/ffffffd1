@@ -1,0 +1,7 @@
+.payment-amount.usdt-payment-amount{margin:16px 0 22px}
+.payment-amount.usdt-payment-amount>strong{font-size:34px;overflow-wrap:anywhere;margin:12px 0 8px}
+.usdt-payment-amount .usdt-amount small{font-size:13px;letter-spacing:0;margin-left:3px}
+.usdt-payment-status{margin-top:13px}
+.usdt-payment-instructions>.link-card{margin:0;padding:18px 16px}
+.usdt-payment-instructions>.link-card code{display:block;overflow-wrap:anywhere;margin:10px 0 5px}
+@media(max-width:650px){.payment-amount.usdt-payment-amount>strong{font-size:30px}.usdt-payment-instructions>.link-card{padding:15px 13px}}

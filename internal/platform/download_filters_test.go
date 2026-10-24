@@ -42,6 +42,10 @@ func TestDownloadDateFiltersAndPagination(t *testing.T) {
 		{"first page", "?per_page=1&page=1", 2, []string{"today-end"}},
 		{"second page", "?per_page=1&page=2", 2, []string{"today-start"}},
 		{"application", "?app_id=" + a.ID, 1, []string{"today-start"}},
+		{"other application", "?app_id=" + b.ID, 1, []string{"today-end"}},
+		{"application and range", "?app_id=" + a.ID + "&start_date=2026-09-08&end_date=2026-10-07&per_page=1&page=2", 3, []string{"yesterday"}},
+		{"unknown application", "?app_id=missing", 0, nil},
+		{"application injection remains scoped", "?app_id=%27%20OR%201%3D1--", 0, nil},
 		{"yesterday", "?start_date=2026-10-06&end_date=2026-10-06", 1, []string{"yesterday"}},
 		{"30 inclusive days", "?start_date=2026-09-08&end_date=2026-10-07", 4, []string{"today-end", "today-start", "yesterday", "start-30"}},
 		{"historical month", "?start_date=2026-09-01&end_date=2026-09-30", 2, []string{"start-30", "outside-30"}},
@@ -66,6 +70,16 @@ func TestDownloadDateFiltersAndPagination(t *testing.T) {
 				}
 			}
 		})
+	}
+	// Even a valid application ID must never cross the download owner's boundary.
+	otherCookie, _ := sessionFor(t, s, seedUser(t, s, 0))
+	w := call(t, s, "GET", "/api/downloads?app_id="+a.ID, nil, otherCookie, "")
+	requireCode(t, w, 200)
+	var isolated struct {
+		Total int `json:"total"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &isolated); err != nil || isolated.Total != 0 {
+		t.Fatal("download application filter leaked another account's records")
 	}
 }
 

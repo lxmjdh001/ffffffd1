@@ -6,13 +6,20 @@ import { ActivityPage } from '../src/activity';
 
 let client: QueryClient;
 let requests: Array<Record<string, string>>;
+let appsFail: boolean;
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-06T17:00:00Z'));
   requests = [];
+  appsFail = false;
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
     const url = new URL(String(input), 'http://localhost:8088');
+    if (url.pathname === '/api/downloads/apps') return new Response(JSON.stringify(appsFail ? { error: '应用列表暂时不可用' } : { data: [
+      { id: 'app-one', name: '应用一', deleted: false },
+      { id: 'app-two', name: '应用二', deleted: false },
+      { id: 'app-deleted', name: '旧应用', deleted: true },
+    ] }), { status: appsFail ? 503 : 200, headers: { 'Content-Type': 'application/json' } });
     if (url.pathname !== '/api/downloads') throw new Error(`Unexpected request: ${input}`);
     requests.push(Object.fromEntries(url.searchParams));
     return new Response(JSON.stringify({ data: [], total: 25 }), { headers: { 'Content-Type': 'application/json' } });
@@ -25,8 +32,8 @@ async function open() {
   await screen.findByRole('button', { name: '查询', exact: true });
   return user;
 }
-const expectRequest = async (start: string, end: string, page = '1') => {
-  await waitFor(() => expect(requests.at(-1)).toEqual({ start_date: start, end_date: end, page }));
+const expectRequest = async (start: string, end: string, page = '1', app = '') => {
+  await waitFor(() => expect(requests.at(-1)).toEqual({ start_date: start, end_date: end, page, ...(app ? { app_id: app } : {}) }));
   await screen.findByRole('button', { name: '查询', exact: true });
 };
 
@@ -66,4 +73,43 @@ it('applies a custom inclusive 30-day range and blocks invalid or longer queries
     expect((await screen.findByRole('alert')).textContent).toContain(message);
     expect(requests).toHaveLength(count);
   }
+});
+
+it('combines application and date filters, preserves them when paging, and resets the page when changing apps', async () => {
+  const user = await open();
+  const picker = screen.getByRole('combobox', { name: '应用', exact: true });
+  await screen.findByRole('option', { name: '旧应用（已删除）' });
+  expect((picker as HTMLSelectElement).value).toBe('');
+  await user.selectOptions(picker, 'app-one');
+  expect(requests).toHaveLength(1);
+  await user.click(screen.getByRole('button', { name: '查询', exact: true }));
+  await expectRequest('2026-10-07', '2026-10-07', '1', 'app-one');
+  expect(screen.getByRole('heading', { name: '筛选结果' })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: '下一页' }));
+  await expectRequest('2026-10-07', '2026-10-07', '2', 'app-one');
+  await user.selectOptions(picker, 'app-two');
+  await user.click(screen.getByRole('button', { name: '查询', exact: true }));
+  await expectRequest('2026-10-07', '2026-10-07', '1', 'app-two');
+  await user.click(screen.getByRole('button', { name: '最近 7 天' }));
+  await expectRequest('2026-10-01', '2026-10-07', '1', 'app-two');
+  await user.selectOptions(picker, 'app-deleted');
+  await user.click(screen.getByRole('button', { name: '查询', exact: true }));
+  await expectRequest('2026-10-01', '2026-10-07', '1', 'app-deleted');
+  expect(screen.getByText('所选条件暂无下载记录')).toBeTruthy();
+  await user.selectOptions(picker, '');
+  await user.click(screen.getByRole('button', { name: '查询', exact: true }));
+  await expectRequest('2026-10-01', '2026-10-07');
+});
+
+it('keeps all-record queries available if the application picker fails and supports retry', async () => {
+  appsFail = true;
+  const user = await open();
+  await screen.findByText('应用列表加载失败，仍可查询全部记录。');
+  await expectRequest('2026-10-07', '2026-10-07');
+  await user.click(screen.getByRole('button', { name: '最近 7 天' }));
+  await expectRequest('2026-10-01', '2026-10-07');
+  appsFail = false;
+  await user.click(screen.getByRole('button', { name: '重试应用列表' }));
+  await screen.findByRole('option', { name: '应用一' });
+  expect(screen.queryByText('应用列表加载失败，仍可查询全部记录。')).toBeNull();
 });
