@@ -60,6 +60,74 @@ func TestTrafficShortSlugsAndAtomicRename(t *testing.T) {
 	requireCode(t, call(t, s, "PUT", "/api/traffic-pools/my-route", body, cookie, csrf), 400)
 }
 
+func TestTrafficManagedPublicDomainAudiences(t *testing.T) {
+	s := testServer(t)
+	s.Config.Env = "production"
+	s.Config.PublicURL = "https://control.example.com"
+	free, paid := seedUser(t, s, 0), seedUser(t, s, 0)
+	if err := s.DB.Model(&paid).Update("pro_until", s.Now().Add(time.Hour)).Error; err != nil {
+		t.Fatal(err)
+	}
+	x, err := getSettings(s.DB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	x.DownloadDomainRules = []DownloadDomainRule{
+		{URL: "https://all1.download.example", Audience: "all"},
+		{URL: "https://all2.download.example", Audience: "all"},
+		{URL: "https://paid1.download.example", Audience: "paid"},
+		{URL: "https://paid2.download.example", Audience: "paid"},
+	}
+	if err := s.DB.Save(&x).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, owner := range []User{free, paid} {
+		p := TrafficPool{Slug: randomHex(4), UserID: owner.ID, Enabled: true, Mode: "sequential"}
+		if err := s.DB.Create(&p).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := s.DB.Create(&TrafficLink{ID: randomHex(16), UserID: owner.ID, PoolSlug: p.Slug, URL: "https://target.example/app.apk", Position: 1}).Error; err != nil {
+			t.Fatal(err)
+		}
+		for _, rule := range x.DownloadDomainRules {
+			request := func(want int) {
+				t.Helper()
+				var before TrafficPool
+				if err := s.DB.First(&before, "slug = ?", p.Slug).Error; err != nil {
+					t.Fatal(err)
+				}
+				r := httptest.NewRequest("GET", rule.URL+"/r/"+p.Slug, nil)
+				w := httptest.NewRecorder()
+				s.Handler().ServeHTTP(w, r)
+				requireCode(t, w, want)
+				if want == 302 && w.Header().Get("Location") != "https://target.example/app.apk" {
+					t.Fatal("public traffic domain changed the pool target")
+				}
+				if want == 404 {
+					var after TrafficPool
+					if err := s.DB.First(&after, "slug = ?", p.Slug).Error; err != nil || after.Cursor != before.Cursor || w.Header().Get("Location") != "" {
+						t.Fatal("denied route advanced the cursor or revealed its target", err)
+					}
+				}
+			}
+			want := 302
+			if rule.Audience == "paid" && owner.ID == free.ID {
+				want = 404
+			}
+			request(want)
+			if rule.Audience == "paid" && owner.ID == paid.ID {
+				if err := s.DB.Model(&paid).Update("pro_until", s.Now().Add(-time.Second)).Error; err != nil {
+					t.Fatal(err)
+				}
+				request(404)
+				if err := s.DB.Model(&paid).Update("pro_until", s.Now().Add(time.Hour)).Error; err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
+}
+
 func TestTrafficMultiplePoolsSequentialAndOwnership(t *testing.T) {
 	s := testServer(t)
 	u := seedUser(t, s, 0)

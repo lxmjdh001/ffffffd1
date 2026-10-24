@@ -271,6 +271,9 @@ func (s *Server) routeTraffic(w http.ResponseWriter, r *http.Request) {
 		if owner.Disabled {
 			return problem(404, "分流未启用")
 		}
+		if audience, managed := r.Context().Value(downloadAudienceKey).(string); managed && audience != "all" && owner.PlanID(s.Now()) != audience {
+			return problem(404, "分流未启用")
+		}
 		if err := tx.First(&p, "slug = ? AND user_id = ? AND enabled = ?", p.Slug, owner.ID, true).Error; err != nil {
 			return err
 		}
