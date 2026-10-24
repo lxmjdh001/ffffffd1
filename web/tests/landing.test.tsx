@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LandingPage } from '../src/landing';
 import { ConfigContext } from '../src/ui';
 import type { Config } from '../src/types';
+import homeMedia from '../src/home-media.json';
 
 const config: Config = {
   currency: 'USD', site_name: '星河分发', development: false, registration_open: true,
@@ -63,7 +64,8 @@ describe('public landing page', () => {
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('回流页');
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('广告回传');
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('斗篷');
-    expect(screen.getByRole('img', { name: 'APK 下载、PWA 安装与安全检测的卡通手机示意' }).getAttribute('src')).toBe('https://img.okkpwa.com/d1apk/site-assets/home-phone-258ba3946726e245.png');
+    expect(screen.getByRole('img', { name: 'APK 下载、PWA 安装与安全检测的卡通手机示意' }).getAttribute('src')).toBe(homeMedia.phoneImage);
+    expect(homeMedia.phoneImage.endsWith('.webp')).toBe(true);
     expect(document.querySelector('.home-cartoon')).toBeNull();
   });
 
