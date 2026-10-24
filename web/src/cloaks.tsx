@@ -148,8 +148,7 @@ export function CloaksPage() {
         </EditorSection>
 
         <EditorSection step="03" title={t("安全页")} description={t("命中拦截条件、未满足广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。")}>
-          <Field label={t("安全页 URL（选填）")} hint={t("留空显示“Account not found”，提示访客联系客服。自定义时请填写完整的 HTTP / HTTPS 地址，访问参数不会传给安全页。")}><input type="url" maxLength={4096} placeholder={t("留空使用默认 404 页面")} value={draft.safe_url} onChange={event => update('safe_url', event.target.value)} /></Field>
-          {!safeURL && <div className="cloak-default-safe-preview" role="region" aria-label={t("默认安全页预览")} lang="en"><span>404</span><div><h3>Account not found</h3><p>Please contact customer support for assistance.</p></div></div>}
+          <Field label={t("安全页 URL（选填）")}><input type="url" maxLength={4096} placeholder={t("留空使用默认 404 页面")} value={draft.safe_url} onChange={event => update('safe_url', event.target.value)} /></Field>
         </EditorSection>
       </div>
 

@@ -142,9 +142,10 @@ describe('cloak editor API integration', () => {
     const safeInput = screen.getByRole('textbox', { name: /安全页 URL/ }) as HTMLInputElement;
     expect(safeInput.required).toBe(false);
     expect(safeInput.checkValidity()).toBe(true);
-    const preview = within(screen.getByRole('region', { name: '默认安全页预览' }));
-    expect(preview.getByRole('heading', { name: 'Account not found' })).toBeTruthy();
-    expect(preview.getByText('Please contact customer support for assistance.')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: '默认安全页预览' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Account not found' })).toBeNull();
+    expect(screen.queryByText('Please contact customer support for assistance.')).toBeNull();
+    expect(screen.queryByText(/留空显示“Account not found”/)).toBeNull();
     const summary = within(screen.getByRole('complementary'));
     expect(summary.getByText('默认 404 页面')).toBeTruthy();
     expect(summary.getByText('Account not found')).toBeTruthy();
@@ -173,7 +174,7 @@ describe('cloak editor API integration', () => {
     await user.clear(screen.getByRole('textbox', { name: /安全页 URL/ }));
     expect(summary.getByText('默认 404 页面')).toBeTruthy();
     expect(summary.queryByText('自定义安全页')).toBeNull();
-    expect(screen.getByRole('region', { name: '默认安全页预览' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: '默认安全页预览' })).toBeNull();
     await user.click(screen.getByRole('button', { name: '保存修改' }));
     await screen.findByText('斗篷已保存，入口可以使用了');
     expect(mutations[0]).toEqual({ path: '/api/cloaks/11111111111111111111111111111111', method: 'PUT', body: { ...baseDraft, safe_url: '' } });
