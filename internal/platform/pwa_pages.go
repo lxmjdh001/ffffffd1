@@ -30,10 +30,11 @@ var pwaPageCSS string
 var pwaPageTemplate = template.Must(template.New("pwa-page").Parse(pwaPageHTML))
 
 type pwaPageData struct {
-	App     *PWAApp
-	Base    string
-	Launch  bool
-	Chinese bool
+	ReturnFlowToken string
+	App             *PWAApp
+	Base            string
+	Launch          bool
+	Chinese         bool
 }
 
 func pwaWantsChinese(r *http.Request) bool {
@@ -54,7 +55,7 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 		// Never allow arbitrary insecure frames, including their redirects.
 		frameSources += " " + target.Scheme + "://" + target.Host
 	}
-	data := pwaPageData{App: a, Base: "/p/" + a.Slug + "/", Launch: launch, Chinese: pwaWantsChinese(r)}
+	data := pwaPageData{App: a, Base: "/p/" + a.Slug + "/", Launch: launch, Chinese: pwaWantsChinese(r), ReturnFlowToken: s.returnFlowViewToken("pwa", a.ID, r)}
 	var buf bytes.Buffer
 	landing := storedPWALanding(a.LandingJSON)
 	if !launch && (landing.Template == "google_play" || landing.Template == "custom") {

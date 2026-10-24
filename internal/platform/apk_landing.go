@@ -117,7 +117,7 @@ func (s *Server) apkLandingCustomConfig(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Cache-Control", "no-store")
 	jsonOut(w, 200, map[string]any{"code": 0, "data": v})
 }
-func (s *Server) renderAPKLanding(a Application, d PageDesign, nonce, attribution string, deepLink template.URL, ads bool, out *bytes.Buffer) error {
+func (s *Server) renderAPKLanding(a Application, d PageDesign, nonce, attribution, viewToken string, deepLink template.URL, ads bool, out *bytes.Buffer) error {
 	layout := d.Layout
 	if layout == "google_play" {
 		layout = "google_play"
@@ -137,7 +137,7 @@ func (s *Server) renderAPKLanding(a Application, d PageDesign, nonce, attributio
 		key = "custom-app/src/main.ts"
 	}
 	entry := entries[key]
-	v := map[string]any{"App": a, "Design": d, "JS": entry.File, "CSS": entry.CSS, "Nonce": nonce, "Attribution": attribution, "DeepLink": deepLink, "AdsEnabled": ads, "Size": pageDesignSize(a.Size)}
+	v := map[string]any{"App": a, "Design": d, "JS": entry.File, "CSS": entry.CSS, "Nonce": nonce, "Attribution": attribution, "DeepLink": deepLink, "AdsEnabled": ads, "ReturnFlowToken": viewToken, "Size": pageDesignSize(a.Size)}
 	return apkReferenceHTML.Execute(out, v)
 }
 

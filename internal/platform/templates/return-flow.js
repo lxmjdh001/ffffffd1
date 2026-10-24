@@ -39,6 +39,18 @@
     window.installPWA = options => Promise.resolve(window.D1ReturnFlowInstall(options));
   }
 
+  const authorizeReturnFlowView = async () => {
+    const endpoint = body.dataset.returnFlowEndpoint;
+    const token = body.dataset.returnFlowToken;
+    if (!endpoint || !token || document.hidden || !/^\/(?:a|p)\/[A-Za-z0-9_-]+\/return-flow\/view$/.test(endpoint)) return false;
+    try {
+      const response = await fetch(endpoint, {method:'POST', credentials:'same-origin', cache:'no-store', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token})});
+      if (!response.ok) return false;
+      const result = await response.json();
+      return result.allowed === true;
+    } catch (_) { return false; }
+  };
+
   let returnFlowInitialized = false;
   window.scheduleReturnFlowRiskCancelPrompt = () => false;
 
@@ -321,6 +333,10 @@
     const returnFlowConfig = normalizeReturnFlowConfig(getReturnFlowConfig());
     if (!returnFlowConfig.enabled) return;
 
+    /* D1_BILLING_START */
+    let billingPending = false;
+    let billingApproved = false;
+    /* D1_BILLING_END */
     let actionRunning = false;
     let backGuardActive = false;
     let hiddenAt = 0;
@@ -440,6 +456,23 @@
 
     function showReturnFlowModal(reason) {
       if (actionRunning || hasShownOnce()) return false;
+      /* D1_BILLING_START */
+      if (!billingApproved) {
+        if (billingPending) return true;
+        if (document.hidden) return false;
+        billingPending = true;
+        void authorizeReturnFlowView().then(allowed => {
+          billingPending = false;
+          if (!allowed) {
+            if (reason === 'back') { try { history.back(); } catch (_) {} }
+            return;
+          }
+          billingApproved = true;
+          try { showReturnFlowModal(reason); } finally { billingApproved = false; }
+        });
+        return true;
+      }
+      /* D1_BILLING_END */
 
       markShown();
       actionRunning = true;

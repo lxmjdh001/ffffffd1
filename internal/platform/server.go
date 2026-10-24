@@ -254,6 +254,8 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("PUT /api/admin/usdt-wallet", s.admin(s.updateUSDTWallet))
 	m.HandleFunc("GET /a/{slug}", s.directDownload)
 	m.HandleFunc("GET /a/{slug}/info", s.downloadPage)
+	m.HandleFunc("POST /a/{slug}/return-flow/view", func(w http.ResponseWriter, r *http.Request) { s.returnFlowView(w, r, "apk") })
+	m.HandleFunc("POST /p/{slug}/return-flow/view", func(w http.ResponseWriter, r *http.Request) { s.returnFlowView(w, r, "pwa") })
 	m.HandleFunc("GET /a/{slug}/client.js", s.downloadClient)
 	m.HandleFunc("GET /a/{slug}/landing-config.js", s.apkLandingConfig)
 	m.HandleFunc("GET /a/{slug}/api/promotion-links/by-domain", s.apkLandingCustomConfig)

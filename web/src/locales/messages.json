@@ -1901,7 +1901,9 @@
     "为返回，留一个新的入口。": "Make the next visit count.",
     "图片、视频与自定义按钮，让回到页面的用户继续浏览、下载或安装。触发与展示频率由你设置。": "Images, video and custom buttons help returning visitors continue browsing, download or install. You choose the triggers and display frequency.",
     "从容发布，细节有序。": "A considered release. Every detail in place.",
-    "在同一个工作空间，管理链接、页面与每一次有效连接。": "Manage links, pages and meaningful connections in one workspace."
+    "在同一个工作空间，管理链接、页面与每一次有效连接。": "Manage links, pages and meaningful connections in one workspace.",
+    "回流页按有效展示扣费 $0.01，重复访问自动去重。": "Return pages cost $0.01 per billable display. Repeat visits are automatically deduplicated.",
+    "回流页扣费": "Return page charge"
   },
   "pt": {
     " + 活动赠送 $": " + Bônus promocional $",
@@ -3805,7 +3807,9 @@
     "为返回，留一个新的入口。": "Faça a próxima visita valer a pena.",
     "图片、视频与自定义按钮，让回到页面的用户继续浏览、下载或安装。触发与展示频率由你设置。": "As imagens, os botões de vídeo e personalizados ajudam a retornar os visitantes a continuar navegando, baixando ou instalando. Você escolhe os gatilhos e a frequência de exibição.",
     "从容发布，细节有序。": "Um lançamento considerado. Cada detalhe no local.",
-    "在同一个工作空间，管理链接、页面与每一次有效连接。": "Gerencie links, páginas e conexões significativas em um espaço de trabalho."
+    "在同一个工作空间，管理链接、页面与每一次有效连接。": "Gerencie links, páginas e conexões significativas em um espaço de trabalho.",
+    "回流页按有效展示扣费 $0.01，重复访问自动去重。": "A página de retorno custa US$ 0,01 por exibição faturável. Visitas repetidas são deduplicadas automaticamente.",
+    "回流页扣费": "Cobrança da página de retorno"
   },
   "de": {
     " + 活动赠送 $": " + Aktionsbonus $",
@@ -5709,7 +5713,9 @@
     "为返回，留一个新的入口。": "Lassen Sie den nächsten Besuch zählen.",
     "图片、视频与自定义按钮，让回到页面的用户继续浏览、下载或安装。触发与展示频率由你设置。": "Bilder, Videos und benutzerdefinierte Schaltflächen helfen wiederkehrenden Besuchern, weiter zu surfen, herunterzuladen oder zu installieren.",
     "从容发布，细节有序。": "Eine überlegte Freigabe. Jedes Detail an Ort und Stelle.",
-    "在同一个工作空间，管理链接、页面与每一次有效连接。": "Verwalten Sie Links, Seiten und sinnvolle Verbindungen in einem Arbeitsbereich."
+    "在同一个工作空间，管理链接、页面与每一次有效连接。": "Verwalten Sie Links, Seiten und sinnvolle Verbindungen in einem Arbeitsbereich.",
+    "回流页按有效展示扣费 $0.01，重复访问自动去重。": "Rückkehrseiten kosten 0,01 $ pro abrechenbarer Anzeige. Wiederholte Besuche werden automatisch dedupliziert.",
+    "回流页扣费": "Gebühr für Rückkehrseite"
   },
   "fr": {
     " + 活动赠送 $": " + Prime promotionnelle $",
@@ -7613,7 +7619,9 @@
     "为返回，留一个新的入口。": "Faites compter la prochaine visite.",
     "图片、视频与自定义按钮，让回到页面的用户继续浏览、下载或安装。触发与展示频率由你设置。": "Les images, vidéos et boutons personnalisés aident les visiteurs à revenir continuer à naviguer, à télécharger ou à installer. Vous choisissez les déclencheurs et la fréquence d'affichage.",
     "从容发布，细节有序。": "Tous les détails sont en place.",
-    "在同一个工作空间，管理链接、页面与每一次有效连接。": "Gérer les liens, les pages et les connexions significatives dans un espace de travail."
+    "在同一个工作空间，管理链接、页面与每一次有效连接。": "Gérer les liens, les pages et les connexions significatives dans un espace de travail.",
+    "回流页按有效展示扣费 $0.01，重复访问自动去重。": "La page de retour coûte 0,01 $ par affichage facturable. Les visites répétées sont automatiquement dédupliquées.",
+    "回流页扣费": "Frais de page de retour"
   },
   "ko": {
     " + 活动赠送 $": " + 프로모션 보너스 $",
@@ -9517,7 +9525,9 @@
     "为返回，留一个新的入口。": "다음 방문 수를 만드십시오.",
     "图片、视频与自定义按钮，让回到页面的用户继续浏览、下载或安装。触发与展示频率由你设置。": "이미지, 비디오 및 사용자 정의 버튼은 방문자가 검색, 다운로드 또는 설치를 계속하는 데 도움이됩니다. 트리거와 디스플레이 주파수를 선택하십시오.",
     "从容发布，细节有序。": "모든 세부 사항이 있습니다.",
-    "在同一个工作空间，管理链接、页面与每一次有效连接。": "링크, 페이지 및 의미있는 연결을 하나의 작업 공간에 관리합니다."
+    "在同一个工作空间，管理链接、页面与每一次有效连接。": "링크, 페이지 및 의미있는 연결을 하나의 작업 공간에 관리합니다.",
+    "回流页按有效展示扣费 $0.01，重复访问自动去重。": "리턴 페이지는 유효한 표시당 $0.01이 차감됩니다. 반복 방문은 자동으로 중복 제거됩니다.",
+    "回流页扣费": "리턴 페이지 요금"
   },
   "ja": {
     " + 活动赠送 $": " + プロモーションボーナス $",
@@ -11421,7 +11431,9 @@
     "为返回，留一个新的入口。": "次の訪問数を作る。",
     "图片、视频与自定义按钮，让回到页面的用户继续浏览、下载或安装。触发与展示频率由你设置。": "画像、ビデオ、カスタムボタンにより、訪問者が閲覧、ダウンロード、インストールを継続できます。 トリガーと表示頻度を選択します。",
     "从容发布，细节有序。": "リリースと見なされます。",
-    "在同一个工作空间，管理链接、页面与每一次有效连接。": "1つのワークスペースでリンク、ページ、意味のある接続を管理します。"
+    "在同一个工作空间，管理链接、页面与每一次有效连接。": "1つのワークスペースでリンク、ページ、意味のある接続を管理します。",
+    "回流页按有效展示扣费 $0.01，重复访问自动去重。": "リターンページは有効な表示ごとに$0.01を課金します。繰り返しのアクセスは自動的に重複除外されます。",
+    "回流页扣费": "リターンページ料金"
   },
   "zh-TW": {
     " + 活动赠送 $": " + 活動贈送 $",
@@ -13325,7 +13337,9 @@
     "为返回，留一个新的入口。": "爲返回，留一個新的入口。",
     "图片、视频与自定义按钮，让回到页面的用户继续浏览、下载或安装。触发与展示频率由你设置。": "圖片、視頻與自定義按鈕，讓回到頁面的用戶繼續瀏覽、下載或安裝。觸發與展示頻率由你設置。",
     "从容发布，细节有序。": "從容發佈，細節有序。",
-    "在同一个工作空间，管理链接、页面与每一次有效连接。": "在同一個工作空間，管理鏈接、頁面與每一次有效連接。"
+    "在同一个工作空间，管理链接、页面与每一次有效连接。": "在同一個工作空間，管理鏈接、頁面與每一次有效連接。",
+    "回流页按有效展示扣费 $0.01，重复访问自动去重。": "回流頁按有效展示扣費 $0.01，重複訪問自動去重。",
+    "回流页扣费": "回流頁扣費"
   },
   "ru": {
     " + 活动赠送 $": " + Рекламный бонус $",
@@ -15229,6 +15243,8 @@
     "为返回，留一个新的入口。": "Считайте следующий визит.",
     "图片、视频与自定义按钮，让回到页面的用户继续浏览、下载或安装。触发与展示频率由你设置。": "Изображения, видео и пользовательские кнопки помогают возвращающимся посетителям продолжать просмотр, загрузку или установку. Вы выбираете триггеры и частоту отображения.",
     "从容发布，细节有序。": "Все детали на месте.",
-    "在同一个工作空间，管理链接、页面与每一次有效连接。": "Управляйте ссылками, страницами и значимыми связями в одном рабочем пространстве."
+    "在同一个工作空间，管理链接、页面与每一次有效连接。": "Управляйте ссылками, страницами и значимыми связями в одном рабочем пространстве.",
+    "回流页按有效展示扣费 $0.01，重复访问自动去重。": "Страница возврата стоит $0,01 за учитываемый показ. Повторные посещения автоматически исключаются.",
+    "回流页扣费": "Плата за страницу возврата"
   }
 }

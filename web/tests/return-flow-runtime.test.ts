@@ -3,7 +3,9 @@ import { resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { JSDOM } from 'jsdom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-const candidate=readFileSync(resolve(process.cwd(),'../internal/platform/templates/return-flow.js'),'utf8');
+const billedCandidate=readFileSync(resolve(process.cwd(),'../internal/platform/templates/return-flow.js'),'utf8');
+// Compare the reference presentation/behavior after removing only D1's charge gate.
+const candidate=billedCandidate.replace(/^ *\/\* D1_BILLING_START \*\/[\s\S]*?^ *\/\* D1_BILLING_END \*\/\n/gm,'');
 const reference=readFileSync(resolve(process.cwd(),'tests/fixtures/pwa-return-flow.reference.js'),'utf8');
 const css=readFileSync(resolve(process.cwd(),'../internal/platform/templates/return-flow.css'),'utf8');
 const documents:JSDOM[]=[];

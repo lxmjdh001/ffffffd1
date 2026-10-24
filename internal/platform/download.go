@@ -110,6 +110,7 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 	}
 	var ads AdConfig
 	_ = s.DB.First(&ads, "app_id = ?", a.ID).Error
+	viewToken := s.returnFlowViewToken("apk", a.ID, r)
 	design, err := s.pageDesign(a)
 	if err != nil {
 		fail(w, err)
@@ -118,14 +119,14 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if design.Layout == "google_play" || design.Layout == "custom" {
 		var out bytes.Buffer
-		if e := s.renderAPKLanding(a, design, randomHex(16), token, deepLinkWithToken(ads, token), ads.FacebookEnabled || ads.TikTokEnabled, &out); e != nil {
+		if e := s.renderAPKLanding(a, design, randomHex(16), token, viewToken, deepLinkWithToken(ads, token), ads.FacebookEnabled || ads.TikTokEnabled, &out); e != nil {
 			fail(w, e)
 			return
 		}
 		w.Write(out.Bytes())
 		return
 	}
-	_ = downloadPageTemplate(design.Layout).Execute(w, map[string]any{"App": a, "Design": design, "Nonce": randomHex(16), "Size": pageDesignSize(a.Size), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled})
+	_ = downloadPageTemplate(design.Layout).Execute(w, map[string]any{"App": a, "Design": design, "Nonce": randomHex(16), "Size": pageDesignSize(a.Size), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled, "ReturnFlowToken": viewToken})
 }
 
 var pageTemplateFunctions = template.FuncMap{"imageURL": func(raw string) template.URL {

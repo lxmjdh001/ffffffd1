@@ -67,7 +67,12 @@ func TestDownloadUABlockAPIIsolationIdempotenceAndMigration(t *testing.T) {
 	a := seedApp(t, s, u, 10)
 	d := seedUADownload(t, s, u, a, "private-full-UA/123 (test)")
 	d2 := seedUADownload(t, s, u, a, d.UserAgent)
-	empty := seedUADownload(t, s, u, a, "\r\n\x00")
+	emptyUA := "\r\n\x00"
+	if s.DB.Dialector.Name() == "postgres" {
+		// PostgreSQL text rejects NUL before the blacklist API can inspect it.
+		emptyUA = "\r\n\t"
+	}
+	empty := seedUADownload(t, s, u, a, emptyUA)
 	blank := seedUADownload(t, s, u, a, "   ")
 	foreign := seedUADownload(t, s, other, a, d.UserAgent)
 	cookie, csrf := sessionFor(t, s, u)
