@@ -60,7 +60,13 @@ func (s *Server) paymentURL(o Order, ip string) string {
 	if kind == "wechat" {
 		kind = "wxpay"
 	}
-	params := map[string]string{"pid": s.Config.FutoonPID, "type": kind, "out_trade_no": o.ID, "notify_url": s.Config.PublicURL + "/api/payments/futoon/notify", "return_url": s.Config.PublicURL + "/#/billing?order=" + o.ID, "name": "D1 Apk 余额充值", "money": formatCents(o.AmountMicros), "clientip": ip, "device": "pc"}
+	payAmount := formatCents(o.AmountMicros)
+	returnURL := s.Config.PublicURL + "/#/billing?order=" + o.ID
+	if o.PaymentCurrency == "CNY" {
+		payAmount = formatCNYCents(o.PayCNYCents)
+		returnURL = s.Config.PublicURL + "/api/payments/futoon/return"
+	}
+	params := map[string]string{"pid": s.Config.FutoonPID, "type": kind, "out_trade_no": o.ID, "notify_url": s.Config.PublicURL + "/api/payments/futoon/notify", "return_url": returnURL, "name": "D1 Apk 余额充值", "money": payAmount, "clientip": ip, "device": "pc"}
 	params["sign"] = FutoonSign(params, s.Config.FutoonKey)
 	params["sign_type"] = "MD5"
 	q := url.Values{}
@@ -102,7 +108,7 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, problem(400, "单笔充值须为 1–10,000 美元，最多两位小数"))
 		return
 	}
-	if in.Method != "manual" && in.Method != "usdt" {
+	if in.Method != "manual" && in.Method != "usdt" && in.Method != "alipay" {
 		fail(w, problem(400, "不支持的支付方式"))
 		return
 	}
@@ -124,6 +130,10 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	if e = s.rate("order:"+userOf(r).ID, 20, time.Hour); e != nil {
 		fail(w, e)
+		return
+	}
+	if in.Method == "alipay" && !s.Config.futoonConfigured() {
+		fail(w, problem(503, "支付宝支付尚未配置，请联系管理员"))
 		return
 	}
 	if in.Method == "usdt" {
@@ -169,6 +179,15 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		order = Order{ID: randomHex(16), UserID: u.ID, IdempotencyKey: idkey, Method: in.Method, AmountMicros: amount, Status: "pending", CreatedAt: s.Now(), ExpiresAt: s.Now().Add(30 * time.Minute)}
 		order.BonusMicros = rechargeBonus(amount, settings)
+		if in.Method == "alipay" {
+			order.PaymentCurrency = "CNY"
+			order.AlipayRateMicros = settings.AlipayCNYRateMicros
+			order.FeeMicros, order.PayCNYCents, e = alipayQuote(amount, order.AlipayRateMicros)
+			if e != nil {
+				return e
+			}
+			order.PayURL = s.paymentURL(order, s.clientIP(r))
+		}
 		if in.Method == "manual" {
 			order.ExpiresAt = s.Now().Add(7 * 24 * time.Hour)
 		}
@@ -231,6 +250,10 @@ func (s *Server) settle(orderID, tradeID, method string, amount int64) error {
 	return s.settleAudited(orderID, tradeID, method, amount, "", "")
 }
 func (s *Server) settleAudited(orderID, tradeID, method string, amount int64, actor, note string) error {
+	return s.settleChecked(orderID, tradeID, method, amount, actor, note, false)
+}
+
+func (s *Server) settleChecked(orderID, tradeID, method string, amount int64, actor, note string, gatewayAmount bool) error {
 	var pre Order
 	if e := s.DB.First(&pre, "id = ?", orderID).Error; e != nil {
 		return e
@@ -249,7 +272,15 @@ func (s *Server) settleAudited(orderID, tradeID, method string, amount int64, ac
 		if e = tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&o, "id = ?", orderID).Error; e != nil {
 			return e
 		}
-		if o.Method != method || o.AmountMicros != amount || tradeID == "" || o.BonusMicros < 0 || o.BonusMicros > o.AmountMicros {
+		expected := o.AmountMicros
+		if gatewayAmount && o.PaymentCurrency == "CNY" {
+			fee, cents, err := alipayQuote(o.AmountMicros, o.AlipayRateMicros)
+			if err != nil || o.Method != "alipay" || fee != o.FeeMicros || cents != o.PayCNYCents {
+				return problem(400, "订单付款快照无效")
+			}
+			expected = o.PayCNYCents * 10000
+		}
+		if o.Method != method || expected != amount || tradeID == "" || o.BonusMicros < 0 || o.BonusMicros > o.AmountMicros {
 			return problem(400, "支付信息不匹配")
 		}
 		if o.Status == "paid" {
@@ -326,7 +357,7 @@ func (s *Server) futoonNotify(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "fail", 400)
 		return
 	}
-	if e = s.settle(params["out_trade_no"], "futoon:"+trade, method, amount); e != nil {
+	if e = s.settleChecked(params["out_trade_no"], "futoon:"+trade, method, amount, "", "", true); e != nil {
 		http.Error(w, "fail", 400)
 		return
 	}

@@ -217,7 +217,7 @@ func (s *Server) adminSettings(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	jsonOut(w, 200, map[string]any{"risk_usage": usage, "settings": settings, "plans": plans, "runtime": map[string]any{"public_url": s.Config.PublicURL, "cname_target": s.Config.CNAMEHost, "scanner_configured": s.Config.ClamAVAddr != "", "futoon_configured": s.Config.FutoonURL != "", "usdt_configured": s.Config.receivingWallet(settings) != "", "usdt_wallet": s.Config.receivingWallet(settings), "usdt_provider": s.Config.usdtProvider(), "usdt_address_password_configured": s.Config.USDTAddressPasswordHash != "", "production": s.Config.Production()}})
+	jsonOut(w, 200, map[string]any{"risk_usage": usage, "settings": settings, "plans": plans, "runtime": map[string]any{"public_url": s.Config.PublicURL, "cname_target": s.Config.CNAMEHost, "scanner_configured": s.Config.ClamAVAddr != "", "futoon_configured": s.Config.futoonConfigured(), "usdt_configured": s.Config.receivingWallet(settings) != "", "usdt_wallet": s.Config.receivingWallet(settings), "usdt_provider": s.Config.usdtProvider(), "usdt_address_password_configured": s.Config.USDTAddressPasswordHash != "", "production": s.Config.Production()}})
 }
 func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 	var in struct {
@@ -225,6 +225,14 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 		Plans    []Plan   `json:"plans"`
 		Section  string   `json:"section"`
 	}
+	// Preserve this new field when older clients send a full legacy payload;
+	// an explicitly supplied zero is still invalid rather than silently reset.
+	currentSettings, e := getSettings(s.DB)
+	if e != nil {
+		fail(w, e)
+		return
+	}
+	in.Settings.AlipayCNYRateMicros = currentSettings.AlipayCNYRateMicros
 	if e := decode(w, r, &in); e != nil {
 		fail(w, e)
 		return
@@ -235,6 +243,7 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 		"domains":   {"download_domain_rules"},
 		"billing":   {"download_price_micros", "max_upload_bytes", "domain_limit", "usdt_rate_micros"},
 		"recharge":  {"recharge_bonus_enabled", "recharge_bonus_tiers"},
+		"alipay":    {"alipay_cny_rate_micros"},
 		"plan_free": {}, "plan_pro": {},
 	}
 	if in.Section != "" {
@@ -276,6 +285,10 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 		in.Plans = plans
 	}
 	x.SiteName = strings.TrimSpace(x.SiteName)
+	if !validAlipayRate(x.AlipayCNYRateMicros) {
+		fail(w, problem(400, "支付宝汇率须为 0.01–1000 人民币 / USDT"))
+		return
+	}
 	if x.DownloadDomainMode == "" {
 		x.DownloadDomainMode = "unified"
 	}
@@ -339,7 +352,7 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		seen[p.ID] = true
 	}
-	e := s.DB.Transaction(func(tx *gorm.DB) error {
+	e = s.DB.Transaction(func(tx *gorm.DB) error {
 		// Serialize platform hostname changes against customer domain claims.
 		if e := tx.Exec("UPDATE settings SET id = id WHERE id = 1").Error; e != nil {
 			return e

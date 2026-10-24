@@ -64,6 +64,7 @@ type Settings struct {
 	MaxUploadBytes       int64                `json:"max_upload_bytes"`
 	DomainLimit          int64                `json:"domain_limit"`
 	USDTRateMicros       int64                `json:"usdt_rate_micros"`
+	AlipayCNYRateMicros  int64                `json:"alipay_cny_rate_micros" gorm:"not null;default:6650000"`
 	USDTWallet           *string              `json:"usdt_wallet"`
 	SupportEmail         string               `json:"support_email"`
 	RechargeBonusEnabled bool                 `json:"recharge_bonus_enabled" gorm:"not null;default:true"`
@@ -199,22 +200,26 @@ type Ledger struct {
 	CreatedAt     time.Time `json:"created_at" gorm:"index"`
 }
 type Order struct {
-	ID             string     `json:"id" gorm:"primaryKey;size:32"`
-	UserID         string     `json:"user_id" gorm:"index;size:32"`
-	IdempotencyKey string     `json:"-" gorm:"uniqueIndex;size:128"`
-	Method         string     `json:"method"`
-	AmountMicros   int64      `json:"amount_micros"`
-	BonusMicros    int64      `json:"bonus_micros" gorm:"not null;default:0;check:bonus_micros >= 0"`
-	Status         string     `json:"status" gorm:"index;size:20"`
-	TradeID        *string    `json:"trade_id" gorm:"uniqueIndex;size:128"`
-	PayURL         string     `json:"pay_url"`
-	USDTUnits      int64      `json:"usdt_units"`
-	USDTProvider   string     `json:"usdt_provider" gorm:"not null;default:tron"`
-	Wallet         string     `json:"wallet"`
-	RateMicros     int64      `json:"rate_micros"`
-	CreatedAt      time.Time  `json:"created_at"`
-	ExpiresAt      time.Time  `json:"expires_at"`
-	PaidAt         *time.Time `json:"paid_at"`
+	ID               string     `json:"id" gorm:"primaryKey;size:32"`
+	UserID           string     `json:"user_id" gorm:"index;size:32"`
+	IdempotencyKey   string     `json:"-" gorm:"uniqueIndex;size:128"`
+	Method           string     `json:"method"`
+	AmountMicros     int64      `json:"amount_micros"`
+	BonusMicros      int64      `json:"bonus_micros" gorm:"not null;default:0;check:bonus_micros >= 0"`
+	Status           string     `json:"status" gorm:"index;size:20"`
+	TradeID          *string    `json:"trade_id" gorm:"uniqueIndex;size:128"`
+	PayURL           string     `json:"pay_url"`
+	PaymentCurrency  string     `json:"payment_currency" gorm:"size:3;not null;default:''"`
+	AlipayRateMicros int64      `json:"alipay_rate_micros" gorm:"not null;default:0"`
+	FeeMicros        int64      `json:"fee_micros" gorm:"not null;default:0"`
+	PayCNYCents      int64      `json:"pay_cny_cents" gorm:"not null;default:0"`
+	USDTUnits        int64      `json:"usdt_units"`
+	USDTProvider     string     `json:"usdt_provider" gorm:"not null;default:tron"`
+	Wallet           string     `json:"wallet"`
+	RateMicros       int64      `json:"rate_micros"`
+	CreatedAt        time.Time  `json:"created_at"`
+	ExpiresAt        time.Time  `json:"expires_at"`
+	PaidAt           *time.Time `json:"paid_at"`
 }
 
 // Never recycle a payment amount for a receiving wallet. A delayed transfer

@@ -72,18 +72,17 @@ func TestPaymentChannelAvailabilityAndNewOrderRestrictions(t *testing.T) {
 		return w
 	}
 	channels([]string{"manual"})
-	requireCode(t, post("alipay"), 400)
+	requireCode(t, post("alipay"), 503)
 	requireCode(t, post("usdt"), 503)
 	s.Config.FutoonURL = "https://gateway.example/submit.php"
 	s.Config.FutoonPID = "test-merchant"
 	channels([]string{"manual"})
-	requireCode(t, post("alipay"), 400)
+	requireCode(t, post("alipay"), 503)
 	s.Config.FutoonKey = "test-secret"
 	s.Config.USDTWallet = usdtContract
-	channels([]string{"usdt", "manual"})
+	channels([]string{"usdt", "alipay", "manual"})
 	requireCode(t, post("wechat"), 400)
-	requireCode(t, post("alipay"), 400)
-	for _, method := range []string{"usdt", "manual"} {
+	for _, method := range []string{"usdt", "alipay", "manual"} {
 		requireCode(t, post(method), 201)
 	}
 }
