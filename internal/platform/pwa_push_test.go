@@ -255,6 +255,174 @@ func TestPWAPushPublicCapabilitiesAndFirstSubscriptionDedup(t *testing.T) {
 	_ = s.DB.Model(&app).Update("push_enabled", false).Error
 	requireCode(t, pushPublicCall(t, s, path, in, s.Config.PublicURL), 409)
 }
+
+func TestPWAPushAutomaticRenewalRespectsExplicitUnsubscribe(t *testing.T) {
+	s := testServer(t)
+	u := seedUser(t, s, 0)
+	app := pushTestApp(t, s, u)
+	rule := pushTestTask(t, s, u, app, "first_subscribe", nil)
+	in, _, _ := pushTestInput(t, "https://fcm.googleapis.com/wp/original")
+	sub, token := pushTestSubscribe(t, s, app, in)
+	path := "/p/" + app.Slug + "/subscribe"
+	unsubscribe := map[string]string{"subscription_id": sub.ID, "token": token}
+	requireCode(t, pushPublicCall(t, s, "/p/"+app.Slug+"/unsubscribe", unsubscribe, s.Config.PublicURL), 200)
+
+	// Both same-endpoint recovery and token-authenticated endpoint rotation
+	// must preserve opt-out when initiated automatically by another window.
+	in.Automatic = true
+	for _, rotate := range []bool{false, true} {
+		if rotate {
+			in.Endpoint = "https://web.push.apple.com/rotated"
+			in.Token = token
+		}
+		w := pushPublicCall(t, s, path, in, s.Config.PublicURL)
+		requireCode(t, w, http.StatusConflict)
+		var response map[string]string
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil || response["code"] != "subscription_unsubscribed" {
+			t.Fatalf("missing machine-readable opt-out response: %s", w.Body.String())
+		}
+		var unchanged PWAPushSubscription
+		if err := s.DB.First(&unchanged, "id = ?", sub.ID).Error; err != nil {
+			t.Fatal(err)
+		}
+		if unchanged.Status != "unsubscribed" || unchanged.EndpointHash != sub.EndpointHash || unchanged.EncryptedSubscription != sub.EncryptedSubscription || !unchanged.LastSeenAt.Equal(sub.LastSeenAt) {
+			t.Fatal("automatic renewal modified an explicitly unsubscribed browser")
+		}
+	}
+
+	// A deliberate click keeps the existing identity and cannot repeat welcome
+	// messages, including when the browser supplies a new provider endpoint.
+	in.Automatic = false
+	restored, restoredToken := pushTestSubscribe(t, s, app, in)
+	if restored.ID != sub.ID || restoredToken != token || restored.Status != "active" || restored.EndpointHash != hashString(in.Endpoint) {
+		t.Fatal("manual re-subscription did not restore the original identity")
+	}
+
+	// Provider expiration is recoverable without a new permission gesture. Both
+	// a current endpoint and a rotated endpoint still belong to this browser.
+	in.Automatic = true
+	for _, endpoint := range []string{in.Endpoint, "https://fcm.googleapis.com/wp/renewed"} {
+		if err := s.DB.Model(&PWAPushSubscription{}).Where("id = ?", sub.ID).Update("status", "expired").Error; err != nil {
+			t.Fatal(err)
+		}
+		in.Endpoint = endpoint
+		renewed, renewedToken := pushTestSubscribe(t, s, app, in)
+		if renewed.ID != sub.ID || renewedToken != token || renewed.Status != "active" || renewed.EndpointHash != hashString(endpoint) {
+			t.Fatal("automatic renewal failed to recover an expired browser")
+		}
+		raw, err := s.decryptSecret(renewed.EncryptedSubscription)
+		if err != nil || strings.Contains(raw, "automatic") {
+			t.Fatal("request-only renewal mode persisted with subscription keys")
+		}
+	}
+	if countRows(t, s, &PWAPushSubscription{}) != 1 || len(pushDeliveries(t, s, rule)) != 1 {
+		t.Fatal("automatic/manual renewal repeated the first-subscription audience")
+	}
+}
+
+func TestPWAPushAutomaticRenewalWaitsForConcurrentPostgresUnsubscribe(t *testing.T) {
+	s := testServer(t)
+	if s.DB.Dialector.Name() != "postgres" {
+		t.Skip("PostgreSQL is required to verify subscription row locks")
+	}
+	u := seedUser(t, s, 0)
+	app := pushTestApp(t, s, u)
+	rule := pushTestTask(t, s, u, app, "first_subscribe", nil)
+	in, _, _ := pushTestInput(t, "https://web.push.apple.com/concurrent-renewal")
+	sub, token := pushTestSubscribe(t, s, app, in)
+	in.Token, in.Automatic = token, true
+
+	// Keep an actual opt-out UPDATE uncommitted so the handler must acquire
+	// this same subscription's row lock before deciding whether to renew it.
+	tx := s.DB.Begin()
+	if tx.Error != nil {
+		t.Fatal(tx.Error)
+	}
+	var finished <-chan struct{}
+	defer func() {
+		_ = tx.Rollback().Error
+		if finished != nil {
+			select {
+			case <-finished:
+			case <-time.After(time.Second):
+				t.Error("automatic renewal did not finish after releasing the opt-out lock")
+			}
+		}
+	}()
+	var blockerPID int
+	if err := tx.Raw("SELECT pg_backend_pid()").Scan(&blockerPID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if result := tx.Model(&PWAPushSubscription{}).Where("id = ?", sub.ID).Update("status", "unsubscribed"); result.Error != nil || result.RowsAffected != 1 {
+		t.Fatalf("could not hold the subscription opt-out row lock: %v", result.Error)
+	}
+	raw, err := json.Marshal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := httptest.NewRequest("POST", s.Config.PublicURL+"/p/"+app.Slug+"/subscribe", bytes.NewReader(raw))
+	r.Header.Set("Origin", s.Config.PublicURL)
+	w := httptest.NewRecorder()
+	done := make(chan struct{})
+	finished = done
+	go func() {
+		defer close(done)
+		s.Handler().ServeHTTP(w, r)
+	}()
+
+	// Observe the real SELECT FOR UPDATE waiting behind this transaction.
+	// The relation OID resolves in this test's isolated schema; the blocker PID
+	// ties the observed lock to the exact UPDATE above, never another test.
+	watch, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		var waiting bool
+		err := s.DB.WithContext(watch).Raw(`SELECT EXISTS (
+			SELECT 1 FROM pg_stat_activity a
+			WHERE a.datname = current_database() AND a.usename = current_user
+			  AND a.wait_event_type = 'Lock' AND a.query ILIKE '%FOR UPDATE%'
+			  AND ? = ANY(pg_blocking_pids(a.pid))
+			  AND EXISTS (SELECT 1 FROM pg_locks l WHERE l.pid = a.pid
+			    AND l.relation = 'pwa_push_subscriptions'::regclass)
+		)`, blockerPID).Scan(&waiting).Error
+		if err != nil {
+			t.Fatalf("could not observe the subscription SELECT FOR UPDATE: %v", err)
+		}
+		if waiting {
+			break
+		}
+		select {
+		case <-done:
+			t.Fatal("automatic renewal returned without waiting for the subscription row lock")
+		case <-watch.Done():
+			t.Fatal("subscription SELECT FOR UPDATE did not enter a lock wait within three seconds")
+		case <-ticker.C:
+		}
+	}
+	if err := tx.Commit().Error; err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("automatic renewal remained blocked after opt-out committed")
+	}
+	requireCode(t, w, http.StatusConflict)
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil || response["code"] != "subscription_unsubscribed" {
+		t.Fatalf("concurrent opt-out did not produce the expected renewal rejection: %s", w.Body.String())
+	}
+	var final PWAPushSubscription
+	if err := s.DB.First(&final, "id = ?", sub.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if final.Status != "unsubscribed" || countRows(t, s, &PWAPushSubscription{}) != 1 || len(pushDeliveries(t, s, rule)) != 1 {
+		t.Fatal("concurrent automatic renewal changed opt-out or repeated the welcome delivery")
+	}
+}
+
 func TestPWAPushTaskOwnershipValidationIdempotencyAndPagination(t *testing.T) {
 	s := testServer(t)
 	u := seedUser(t, s, 0)

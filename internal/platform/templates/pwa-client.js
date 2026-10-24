@@ -18,7 +18,7 @@
  let pushReady = false;
  if (notificationButton) notificationButton.disabled = true;
  const setStatus = (node, value) => { if (node) node.textContent = value; };
- const storageRead = () => { try { const value = JSON.parse(localStorage.getItem(storeKey) || 'null'); return value && typeof value.subscription_id === 'string' && typeof value.token === 'string' ? value : null; } catch (_) { return null; } };
+ const storageRead = () => { try { const value = JSON.parse(localStorage.getItem(storeKey) || 'null'); return value && (value.unsubscribed === true || (typeof value.subscription_id === 'string' && typeof value.token === 'string')) ? value : null; } catch (_) { return null; } };
  let savedSubscription = storageRead();
  const storageWrite = (v) => { savedSubscription = v; try { if (v) localStorage.setItem(storeKey, JSON.stringify(v)); else localStorage.removeItem(storeKey); } catch (_) {} };
  const supported = window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -43,7 +43,7 @@
  async function post(url, body) {
   const res = await fetch(url, {method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   let result = {}; try { result = await res.json(); } catch (_) {}
-  if (!res.ok) throw new Error(result.error || text('Please try again.', '请稍后重试。'));
+  if (!res.ok) { const error = new Error(result.error || text('Please try again.', '请稍后重试。')); error.status = res.status; error.code = result.code; throw error; }
   return result;
  }
  function keyBytes(key) { const padded = key.replace(/-/g,'+').replace(/_/g,'/') + '='.repeat((4-key.length%4)%4); return Uint8Array.from(atob(padded), ch => ch.charCodeAt(0)); }
@@ -51,22 +51,52 @@
   if (notificationButton) notificationButton.textContent = active ? text('Notifications on', '通知已开启') : text('Enable notifications', '开启通知');
   if (unsubscribeButton) unsubscribeButton.hidden = !canUnsubscribe;
  }
- async function syncSubscription() {
+ function rememberOptOut(value) {
+  storageWrite({...value,unsubscribed:true}); activeUI(false);
+  setStatus(notificationStatus,text('Notifications turned off.', '通知已关闭。'));
+ }
+ async function preserveOptOut(value, subscription, newlyCreated, serverCapability) {
+  rememberOptOut(value || savedSubscription || {});
+  if (newlyCreated) await subscription.unsubscribe().catch(() => {});
+  if (serverCapability && serverCapability.subscription_id && serverCapability.token) {
+   // An older successful response must not revive a preference changed in
+   // another window while this request was in flight.
+   await post(config.unsubscribe_url,{subscription_id:serverCapability.subscription_id,token:serverCapability.token}).catch(() => {});
+  }
+ }
+ async function syncSubscription(automatic = false) {
   if (!registration || !config || !config.enabled || !config.public_key) throw new Error(text('Notifications are not ready. Refresh and try again.', '通知服务未就绪，请刷新后重试。'));
   let subscription = await registration.pushManager.getSubscription();
   const newlyCreated = !subscription;
   if (!subscription) subscription = await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:keyBytes(config.public_key)});
   const serialized = subscription.toJSON();
   const body = {endpoint:serialized.endpoint,keys:serialized.keys};
+  const latest = storageRead();
+  if (latest) savedSubscription = latest;
+  if (automatic && savedSubscription && savedSubscription.unsubscribed) {
+   await preserveOptOut(savedSubscription, subscription, newlyCreated);
+   return;
+  }
   // Keep the capability on renewal so an updated endpoint remains the same
   // subscription and does not repeat first-subscription notifications.
-  if (savedSubscription) body.token = savedSubscription.token;
+  if (savedSubscription && savedSubscription.token) body.token = savedSubscription.token;
+  if (automatic) body.automatic = true;
   try {
    const result = await post(config.subscribe_url, body);
    if (!result.subscription_id || !result.token) throw new Error(text('Subscription could not be saved.', '订阅保存失败。'));
+   const currentPreference = storageRead();
+   if (automatic && currentPreference && currentPreference.unsubscribed) {
+    await preserveOptOut(currentPreference, subscription, newlyCreated, result);
+    return;
+   }
    storageWrite({subscription_id:result.subscription_id,token:result.token}); activeUI(true);
    setStatus(notificationStatus,text('Notifications enabled. You are all set.', '通知已开启，订阅成功。'));
   } catch (error) {
+   const currentPreference = storageRead();
+   if (automatic && ((error.status === 409 && error.code === 'subscription_unsubscribed') || (currentPreference && currentPreference.unsubscribed))) {
+    await preserveOptOut(currentPreference || savedSubscription, subscription, newlyCreated);
+    return;
+   }
    if (newlyCreated) await subscription.unsubscribe().catch(() => {});
    activeUI(false, !!savedSubscription && !savedSubscription.unsubscribed);
    throw error;
@@ -93,7 +123,7 @@
    // Older clients removed both the browser subscription and saved capability
    // on opt-out, so permission alone must not create a new subscription.
    if (Notification.permission === 'granted' && (subscription || savedSubscription) && !(savedSubscription && savedSubscription.unsubscribed)) {
-    await syncSubscription();
+    await syncSubscription(true);
    }
   } catch (_) { setStatus(notificationStatus,pushReady ? text('Unable to sync notifications. Tap Enable notifications to try again.', '通知同步失败，请点击“开启通知”重试。') : text('Unable to prepare notifications. Refresh the page to try again.', '通知服务暂不可用，请刷新后重试。')); }
   finally { busy=false; if (notificationButton) notificationButton.disabled=!pushReady; }

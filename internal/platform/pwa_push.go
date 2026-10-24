@@ -86,7 +86,10 @@ type pwaSubscriptionInput struct {
 	} `json:"keys"`
 	Token          string   `json:"token,omitempty"`
 	ExpirationTime *float64 `json:"expirationTime,omitempty"`
+	Automatic      bool     `json:"automatic,omitempty"`
 }
+
+var errPWASubscriptionUnsubscribed = errors.New("subscription_unsubscribed")
 
 type pwaPushTaskInput struct {
 	PWAID           string     `json:"pwa_id"`
@@ -237,7 +240,7 @@ func (s *Server) subscribePWAPush(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		endpointHash := hashString(in.Endpoint)
-		err := tx.Where("pwa_id = ? AND endpoint_hash = ?", app.ID, endpointHash).First(&sub).Error
+		err := pwaPushLock(tx).Where("pwa_id = ? AND endpoint_hash = ?", app.ID, endpointHash).First(&sub).Error
 		isNew := errors.Is(err, gorm.ErrRecordNotFound)
 		if err != nil && !isNew {
 			return err
@@ -247,7 +250,7 @@ func (s *Server) subscribePWAPush(w http.ResponseWriter, r *http.Request) {
 			if len(parts) != 2 {
 				return problem(403, "通知订阅凭证无效")
 			}
-			if err = tx.Where("id = ? AND pwa_id = ?", parts[0], app.ID).First(&sub).Error; err != nil {
+			if err = pwaPushLock(tx).Where("id = ? AND pwa_id = ?", parts[0], app.ID).First(&sub).Error; err != nil {
 				return problem(403, "通知订阅凭证无效")
 			}
 			if !s.validPWASubscriptionToken(sub, in.Token) {
@@ -266,6 +269,11 @@ func (s *Server) subscribePWAPush(w http.ResponseWriter, r *http.Request) {
 				return problem(403, "通知订阅凭证无效")
 			}
 		}
+		// A delayed automatic sync from another window must not undo opt-out.
+		// The row lock also orders this check against unsubscribe's UPDATE.
+		if in.Automatic && !isNew && sub.Status == "unsubscribed" {
+			return errPWASubscriptionUnsubscribed
+		}
 		now := s.Now()
 		if isNew {
 			var n int64
@@ -280,6 +288,7 @@ func (s *Server) subscribePWAPush(w http.ResponseWriter, r *http.Request) {
 		stored := in
 		stored.Token = ""
 		stored.ExpirationTime = nil
+		stored.Automatic = false
 		raw, _ := json.Marshal(stored)
 		encrypted, err := s.encryptSecret(string(raw))
 		if err != nil {
@@ -311,6 +320,10 @@ func (s *Server) subscribePWAPush(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if e != nil {
+		if errors.Is(e, errPWASubscriptionUnsubscribed) {
+			jsonOut(w, http.StatusConflict, map[string]string{"error": "通知已关闭，请手动开启以重新订阅", "code": "subscription_unsubscribed"})
+			return
+		}
 		fail(w, e)
 		return
 	}

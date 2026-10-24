@@ -24,6 +24,7 @@ type Options = {
   ios?: boolean;
   standalone?: boolean;
   subscribeFailures?: number;
+  subscribeConflict?: boolean;
   unsubscribeFailures?: number;
   configFailure?: boolean;
   holdSubscribe?: Promise<void>;
@@ -54,6 +55,7 @@ function start(options: Options = {}) {
     if (url.endsWith('push-config')) return new Response(JSON.stringify(options.config || configuration), { status: options.configFailure ? 503 : 200 });
     if (url.endsWith('/subscribe')) {
       if (options.holdSubscribe) await options.holdSubscribe;
+      if (options.subscribeConflict && JSON.parse(request!.body as string).automatic) return new Response(JSON.stringify({ error: '订阅已关闭', code: 'subscription_unsubscribed' }), { status: 409 });
       if (subscribeFailures-- > 0) return new Response(JSON.stringify({ error: 'Temporary outage' }), { status: 503 });
       return new Response(JSON.stringify({ ...capability, status: 'active' }));
     }
@@ -94,7 +96,7 @@ describe('PWA subscription renewal follows the reference PWA', () => {
     const c = start({ permission: 'granted', existing, saved: capability });
     await vi.waitFor(() => expect(c.status()).toContain('Notifications enabled'));
     expect(c.calls()).toHaveLength(1);
-    expect(JSON.parse(c.calls()[0][1]!.body as string)).toEqual({ ...existing.toJSON(), token: capability.token });
+    expect(JSON.parse(c.calls()[0][1]!.body as string)).toEqual({ ...existing.toJSON(), token: capability.token, automatic: true });
     expect(c.saved()).toEqual(capability);
     expect(c.notification.requestPermission).not.toHaveBeenCalled();
     expect(c.subscribe).not.toHaveBeenCalled();
@@ -105,7 +107,7 @@ describe('PWA subscription renewal follows the reference PWA', () => {
     const existing = subscription();
     const c = start({ permission: 'granted', existing });
     await vi.waitFor(() => expect(c.status()).toContain('Notifications enabled'));
-    expect(JSON.parse(c.calls()[0][1]!.body as string)).toEqual(existing.toJSON());
+    expect(JSON.parse(c.calls()[0][1]!.body as string)).toEqual({ ...existing.toJSON(), automatic: true });
     expect(c.saved()).toEqual(capability);
   });
 
@@ -166,6 +168,75 @@ describe('PWA subscription renewal follows the reference PWA', () => {
     release();
     await vi.waitFor(() => expect(c.enable.disabled).toBe(false));
     expect(c.status()).toContain('Notifications enabled');
+  });
+
+  it('preserves a server opt-out conflict instead of automatically resubscribing', async () => {
+    const c = start({ permission: 'granted', existing: subscription(), saved: capability, subscribeConflict: true });
+    await vi.waitFor(() => expect(c.status()).toContain('Notifications turned off'));
+    expect(c.calls()).toHaveLength(1);
+    expect(c.saved()).toEqual({ ...capability, unsubscribed: true });
+    expect(c.enable.textContent).toBe('Enable notifications');
+    expect(c.turnOff.hidden).toBe(true);
+    expect(c.notification.requestPermission).not.toHaveBeenCalled();
+    c.enable.click();
+    await vi.waitFor(() => expect(c.status()).toContain('Notifications enabled'));
+    expect(JSON.parse(c.calls()[1][1]!.body as string)).toEqual({ ...subscription().toJSON(), token: capability.token });
+    expect(c.saved()).toEqual(capability);
+  });
+
+  it('remembers a server opt-out even when browser storage had lost the capability', async () => {
+    const c = start({ permission: 'granted', existing: subscription(), subscribeConflict: true });
+    await vi.waitFor(() => expect(c.status()).toContain('Notifications turned off'));
+    expect(c.saved()).toEqual({ unsubscribed: true });
+    const revisit = start({ permission: 'granted', existing: subscription() });
+    await vi.waitFor(() => expect(revisit.enable.disabled).toBe(false));
+    expect(revisit.calls()).toHaveLength(0);
+    revisit.enable.click();
+    await vi.waitFor(() => expect(revisit.status()).toContain('Notifications enabled'));
+    expect(JSON.parse(revisit.calls()[0][1]!.body as string)).toEqual(subscription().toJSON());
+  });
+
+  it('does not let a delayed automatic success overwrite another window opt-out', async () => {
+    let release!: () => void;
+    const holdSubscribe = new Promise<void>(resolve => { release = resolve; });
+    const c = start({ permission: 'granted', existing: subscription(), saved: capability, holdSubscribe });
+    await vi.waitFor(() => expect(c.calls()).toHaveLength(1));
+    localStorage.setItem(storeKey, JSON.stringify({ ...capability, unsubscribed: true }));
+    release();
+    await vi.waitFor(() => expect(c.enable.disabled).toBe(false));
+    expect(c.status()).toContain('Notifications turned off');
+    expect(c.saved()).toEqual({ ...capability, unsubscribed: true });
+    expect(c.calls('/unsubscribe')).toHaveLength(1);
+    expect(JSON.parse(c.calls('/unsubscribe')[0][1]!.body as string)).toEqual(capability);
+    expect(c.turnOff.hidden).toBe(true);
+  });
+
+  it('cleans up a just-created browser subscription when another window opts out during sync', async () => {
+    let release!: () => void;
+    const holdSubscribe = new Promise<void>(resolve => { release = resolve; });
+    const c = start({ permission: 'granted', saved: capability, holdSubscribe });
+    await vi.waitFor(() => expect(c.calls()).toHaveLength(1));
+    const created = await c.subscribe.mock.results[0].value;
+    localStorage.setItem(storeKey, JSON.stringify({ ...capability, unsubscribed: true }));
+    release();
+    await vi.waitFor(() => expect(c.enable.disabled).toBe(false));
+    expect(created.unsubscribe).toHaveBeenCalledOnce();
+    expect(c.saved()).toEqual({ ...capability, unsubscribed: true });
+    expect(c.calls('/unsubscribe')).toHaveLength(1);
+    expect(c.status()).toContain('Notifications turned off');
+  });
+
+  it('keeps a concurrent opt-out when the older automatic request fails', async () => {
+    let release!: () => void;
+    const holdSubscribe = new Promise<void>(resolve => { release = resolve; });
+    const c = start({ permission: 'granted', existing: subscription(), saved: capability, holdSubscribe, subscribeFailures: 1 });
+    await vi.waitFor(() => expect(c.calls()).toHaveLength(1));
+    localStorage.setItem(storeKey, JSON.stringify({ ...capability, unsubscribed: true }));
+    release();
+    await vi.waitFor(() => expect(c.enable.disabled).toBe(false));
+    expect(c.status()).toContain('Notifications turned off');
+    expect(c.saved()).toEqual({ ...capability, unsubscribed: true });
+    expect(c.turnOff.hidden).toBe(true);
   });
 
   it('does not automatically subscribe an iPhone browser outside the installed app', async () => {
