@@ -431,5 +431,10 @@ func (s *Server) deleteApp(w http.ResponseWriter, r *http.Request) {
 		cleanupPending = true
 		slog.Warn("deleted app file cleanup deferred", "app", app.ID, "error", e)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if e = s.cleanupPageImages(ctx, app.ID); e != nil {
+		cleanupPending = true
+	}
 	jsonOut(w, 200, map[string]bool{"ok": true, "file_cleanup_pending": cleanupPending})
 }

@@ -17,7 +17,7 @@ export function AppDeleteDialog({ app, close, deleted }: { app: App; close: () =
     try {
       const result = await api<{ ok: boolean; file_cleanup_pending?: boolean }>(`/apps/${app.id}`, { method: 'DELETE' });
       cache.invalidateQueries();
-      notify(result.file_cleanup_pending ? '应用已永久删除，安装包清理暂未完成，后台将重试清理' : '应用和安装包已永久删除', { type: result.file_cleanup_pending ? 'warning' : 'success' });
+      notify(result.file_cleanup_pending ? '应用已永久删除，安装包或图片清理暂未完成，后台将重试清理' : '应用、安装包及上传图片已永久删除', { type: result.file_cleanup_pending ? 'warning' : 'success' });
       deleted();
     } catch (e) {
       setError(errorText(e));
@@ -26,7 +26,7 @@ export function AppDeleteDialog({ app, close, deleted }: { app: App; close: () =
     }
   };
   return <Modal title="确定永久删除这个应用？" close={() => { if (!busy) close(); }}>
-    <p>将永久删除「{app.name}」的应用数据和安装包，释放应用名额与存储空间，所有分享链接立即失效。此操作无法恢复。</p>
+    <p>将永久删除「{app.name}」的应用数据、安装包及其上传图片，释放应用名额与存储空间，所有分享链接立即失效。此操作无法恢复。</p>
     <p className="small muted">历史下载记录与账单保留，不影响已完成的结算。</p>
     <FormError>{error}</FormError>
     <div className="modal-footer">

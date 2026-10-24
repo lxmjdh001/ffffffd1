@@ -3,27 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, ExternalLink, ImagePlus, Monitor, RotateCcw, Smartphone, Trash2 } from 'lucide-react';
 import { api, send } from './api';
+import { uploadPagePicture } from './page-image-upload';
 import type { App } from './types';
 import { useDownloadDomain } from './download-domain';
 import { Badge, ErrorState, errorText, Field, FormError, PageHeader, Spinner, useConfig } from './ui';
 
-export type PageDesign = { layout: 'google_play' | 'store' | 'minimal'; title: string; developer: string; summary: string; description: string; icon: string; screenshots: string[]; tags: string[]; button_text: string; theme_color: string; background_color: string; show_description: boolean; show_screenshots: boolean; show_file_info: boolean; show_downloads: boolean };
+export type PageDesign = { layout: 'google_play' | 'store' | 'minimal'; title: string; developer: string; summary: string; description: string; icon: string; screenshots: string[]; tags: string[]; button_text: string; theme_color: string; background_color: string; show_description: boolean; show_screenshots: boolean; show_file_info: boolean; show_downloads: boolean; display_rating?: string; display_review_count?: string; display_download_count?: string };
 type DesignResponse = { app: App; design: PageDesign; defaults: PageDesign };
 
-async function readPicture(file: File, icon = false): Promise<string> {
- if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('请选择 PNG、JPEG 或 WebP 图片');
- if (file.size > 8 * 1024 * 1024) throw new Error('单张原图不能超过 8 MB');
- const source = URL.createObjectURL(file);
- try {
-  const image = new Image(); image.src = source; await image.decode();
-  const ratio = Math.min(1, (icon ? 512 : 1400) / Math.max(image.width, image.height));
-  const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.width * ratio)); canvas.height = Math.max(1, Math.round(image.height * ratio));
-  const context = canvas.getContext('2d'); if (!context) throw new Error('浏览器无法处理图片');
-  context.fillStyle = '#ffffff'; context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  for (const quality of [0.85, 0.7, 0.5, 0.3]) { const output = canvas.toDataURL('image/jpeg', quality); if (output.length < 120000) return output; }
-  throw new Error('图片压缩后仍过大，请选择更小或更简单的图片');
- } finally { URL.revokeObjectURL(source); }
-}
 
 export function PageDesigner() {
  const { id } = useParams(); const navigate = useNavigate(); const cache = useQueryClient(); const { config } = useConfig(); const { data: assigned } = useDownloadDomain();
@@ -43,9 +30,9 @@ export function PageDesigner() {
  }, [draft, id]);
  const update = <K extends keyof PageDesign>(key: K, value: PageDesign[K]) => { setDraft(previous => previous ? { ...previous, [key]: value } : previous); setDirty(true); setSaved(false); setMessage(''); };
  const picture = async (e: ChangeEvent<HTMLInputElement>, icon: boolean) => {
-  const files = Array.from(e.target.files || []); e.target.value = ''; if (!files.length || !draft) return;
+  const files = Array.from(e.target.files || []); e.target.value = ''; if (!files.length || !draft || !id) return;
   if (!icon && files.length + draft.screenshots.length > 5) { setMessage('最多添加 5 张截图'); return; }
-  setImageBusy(true); setMessage(''); try { const values = await Promise.all(files.map(f => readPicture(f, icon))); if (icon) update('icon', values[0]); else update('screenshots', [...draft.screenshots, ...values]); } catch (e) { setMessage(errorText(e)); } finally { setImageBusy(false); }
+  setImageBusy(true); setMessage(''); try { const values: string[] = []; for (const file of files) values.push(await uploadPagePicture(id, file, icon)); if (icon) update('icon', values[0]); else update('screenshots', [...draft.screenshots, ...values]); } catch (e) { setMessage(errorText(e)); } finally { setImageBusy(false); }
  };
  const save = async () => {
   if (!draft) return; setBusy(true); setMessage(''); setSaved(false);
@@ -64,7 +51,8 @@ export function PageDesigner() {
  <Field label="一句话简介"><textarea rows={2} maxLength={200} value={draft.summary} onChange={e => update('summary', e.target.value)} placeholder="介绍应用的核心用途" /></Field><Field label="应用介绍"><textarea rows={5} maxLength={4000} value={draft.description} onChange={e => update('description', e.target.value)} /></Field><Field label="标签" hint="以逗号分隔，最多 6 个，每个不超过 20 字。"><input value={draft.tags.join(',')} onChange={e => update('tags', e.target.value.split(/[,，]/))} placeholder="工具,效率,生活" /></Field></section>
  <section className="panel padded"><h2>应用截图</h2><p className="muted small">最多 5 张，上传后自动压缩。支持调整顺序。</p><div className="designer-screenshots">{draft.screenshots.map((src, i) => <div className="designer-shot" key={i}><img src={src} alt={`截图 ${i + 1}`} /><div><button className="text-btn" aria-label={`前移截图 ${i+1}`} disabled={i === 0} onClick={() => moveScreenshot(i, -1)}>←</button><button className="icon-btn danger-text" aria-label={`移除截图 ${i+1}`} onClick={() => update('screenshots', draft.screenshots.filter((_, j) => i !== j))}><Trash2 size={14} /></button><button className="text-btn" aria-label={`后移截图 ${i+1}`} disabled={i === draft.screenshots.length-1} onClick={() => moveScreenshot(i, 1)}>→</button></div></div>)}</div>{draft.screenshots.length < 5 && <label className="btn secondary"><ImagePlus size={15} />上传截图<input type="file" hidden multiple accept="image/png,image/jpeg,image/webp" onChange={e => picture(e, false)} /></label>}
  <Field label="或添加 HTTPS 截图地址（回车添加）"><input type="url" placeholder="https://example.com/screenshot.jpg" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); const value = e.currentTarget.value.trim(); if (value && draft.screenshots.length < 5) { update('screenshots', [...draft.screenshots, value]); e.currentTarget.value = ''; } } }} /></Field></section>
- <section className="panel padded"><h2>内容显示</h2>{([['show_description', '显示应用介绍'], ['show_screenshots', '显示应用截图'], ['show_file_info', '显示文件信息'], ['show_downloads', '显示真实下载次数']] as const).map(([key, label]) => <label className="switch-field" key={key}><input type="checkbox" checked={draft[key]} onChange={e => update(key, e.target.checked)} /><span>{label}</span></label>)}</section>
- </fieldset><div className="designer-save panel padded"><div className="row-actions wrap"><button className="btn primary" disabled={busy || imageBusy} onClick={save}><Check size={15} />{busy ? '保存中…' : '保存并发布'}</button><button className="btn secondary" disabled={busy || imageBusy} onClick={() => { setDraft(structuredClone(data.defaults)); setDirty(true); setSaved(false); setMessage(''); }}><RotateCcw size={15} />恢复默认</button>{base && <a className="text-btn" href={`${base}/a/${data.app.slug}/info`} target="_blank" rel="noreferrer">查看已发布页面<ExternalLink size={13} /></a>}</div><FormError>{message}</FormError>{imageBusy && <p className="small muted">正在处理图片…</p>}{saved && <p className="success-line" role="status">已保存，公开详情页已更新</p>}</div></div>
+ <section className="panel padded"><h2>评分与下载量展示</h2><p className="muted small">参考商店页面的展示信息，可自行填写，不代表平台核验的用户评价。不会改变后台真实下载次数、用量和账单。</p><div className="form-grid"><Field label="展示评分" hint="0–5 分，最多一位小数，留空则不显示评分。"><input type="number" min="0" max="5" step="0.1" value={draft.display_rating || ''} onChange={e => update('display_rating', e.target.value)} placeholder="例如：4.8" /></Field><Field label="展示评价数" hint="仅用于页面展示，留空不显示评价数。"><input maxLength={20} value={draft.display_review_count || ''} onChange={e => update('display_review_count', e.target.value)} placeholder="例如：1.2万" /></Field></div><Field label="展示下载量" hint="留空显示真实下载次数；填写后仅替换公开页面的展示文字。"><input maxLength={20} value={draft.display_download_count || ''} onChange={e => update('display_download_count', e.target.value)} placeholder="例如：100K+、100万+" /></Field></section>
+ <section className="panel padded"><h2>内容显示</h2>{([['show_description', '显示应用介绍'], ['show_screenshots', '显示应用截图'], ['show_file_info', '显示文件信息'], ['show_downloads', '显示下载量']] as const).map(([key, label]) => <label className="switch-field" key={key}><input type="checkbox" checked={draft[key]} onChange={e => update(key, e.target.checked)} /><span>{label}</span></label>)}</section>
+ </fieldset><div className="designer-save panel padded"><div className="row-actions wrap"><button className="btn primary" disabled={busy || imageBusy} onClick={save}><Check size={15} />{busy ? '保存中…' : '保存并发布'}</button><button className="btn secondary" disabled={busy || imageBusy} onClick={() => { setDraft(structuredClone(data.defaults)); setDirty(true); setSaved(false); setMessage(''); }}><RotateCcw size={15} />恢复默认</button>{base && <a className="text-btn" href={`${base}/a/${data.app.slug}/info`} target="_blank" rel="noreferrer">查看已发布页面<ExternalLink size={13} /></a>}</div><FormError>{message}</FormError>{imageBusy && <p className="small muted" role="status">正在处理并上传图片…</p>}{saved && <p className="success-line" role="status">已保存，公开详情页已更新</p>}</div></div>
  <aside className="designer-preview"><div className="designer-preview-toolbar"><strong>实时预览</strong><span className="muted small">{previewBusy ? '更新中…' : dirty ? '未发布预览' : '当前效果'}</span><div><button className={`btn ${!desktop ? 'primary' : 'secondary'}`} onClick={() => setDesktop(false)}><Smartphone size={15} />手机</button><button className={`btn ${desktop ? 'primary' : 'secondary'}`} onClick={() => setDesktop(true)}><Monitor size={15} />桌面</button></div></div><div className={`designer-device ${desktop ? 'desktop' : 'phone'}`}><iframe title="应用详情页实时预览" srcDoc={html} sandbox="" referrerPolicy="no-referrer" /></div><FormError>{previewError}</FormError><p className="muted small">预览中的下载按钮不可点击，保存后在公开页面测试下载。</p></aside></div></div>;
 }

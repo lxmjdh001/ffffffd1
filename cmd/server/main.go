@@ -62,6 +62,11 @@ func main() {
 		slog.Error("storage unavailable", "error", e)
 		os.Exit(1)
 	}
+	app.PageImages, e = platform.NewPageImageStore(c)
+	if e != nil {
+		slog.Error("page image storage unavailable", "error", e)
+		os.Exit(1)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	server := &http.Server{Addr: c.Addr, Handler: app.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 20 * time.Minute, WriteTimeout: 30 * time.Minute, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32768}

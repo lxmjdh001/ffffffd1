@@ -12,6 +12,7 @@ import (
 )
 
 type Config struct {
+	PageImages                                                            PageImageConfig
 	Role, RemoteStorageURL                                                string
 	S3Endpoint, S3AccessKey, S3SecretKey, S3Bucket, S3Region              string
 	S3Secure                                                              bool
@@ -46,6 +47,7 @@ func LoadConfig() (Config, error) {
 	c.S3Bucket = env("S3_BUCKET", "d1apk")
 	c.S3Region = env("S3_REGION", "us-east-1")
 	c.S3Secure = env("S3_SECURE", "true") == "true"
+	c.PageImages = PageImageConfig{Endpoint: os.Getenv("PAGE_IMAGE_R2_ENDPOINT"), AccessKey: os.Getenv("PAGE_IMAGE_R2_ACCESS_KEY"), SecretKey: os.Getenv("PAGE_IMAGE_R2_SECRET_KEY"), Bucket: os.Getenv("PAGE_IMAGE_R2_BUCKET"), PublicURL: strings.TrimRight(os.Getenv("PAGE_IMAGE_R2_PUBLIC_URL"), "/")}
 	c.MetaAPIVersion = env("META_API_VERSION", "v25.0")
 	c.CNAMEHost = env("CNAME_TARGET", "dns.d1apk.com")
 	for _, v := range strings.Split(os.Getenv("TRUSTED_PROXY_CIDRS"), ",") {
@@ -103,6 +105,9 @@ func (c Config) Host() string {
 	return strings.ToLower(u.Hostname())
 }
 func (c Config) Validate() error {
+	if err := c.PageImages.validate(); err != nil {
+		return err
+	}
 	u, err := url.Parse(c.PublicURL)
 	if err != nil || u.Host == "" || u.User != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
 		return errors.New("APP_URL must be a canonical origin, without a path")

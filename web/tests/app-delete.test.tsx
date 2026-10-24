@@ -77,7 +77,7 @@ it('adds deletion to the list and requires confirmation before sending a permane
   expect(deletes()).toHaveLength(1);
   expect(fetcher).toHaveBeenCalledWith('/api/apps/first', expect.objectContaining({ method: 'DELETE' }));
   expect(screen.queryByRole('dialog')).toBeNull();
-  expect(notify).toHaveBeenCalledWith('应用和安装包已永久删除', { type: 'success' });
+  expect(notify).toHaveBeenCalledWith('应用、安装包及上传图片已永久删除', { type: 'success' });
 });
 
 it('keeps the app and confirmation open on server failure and permits retry', async () => {
@@ -104,5 +104,5 @@ it('warns when the app is deleted but package cleanup needs a retry', async () =
   await user.click(screen.getByRole('button', { name: '删除应用 first 应用' }));
   await user.click(screen.getByRole('button', { name: '确认永久删除' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  expect(notify).toHaveBeenCalledWith('应用已永久删除，安装包清理暂未完成，后台将重试清理', { type: 'warning' });
+  expect(notify).toHaveBeenCalledWith('应用已永久删除，安装包或图片清理暂未完成，后台将重试清理', { type: 'warning' });
 });

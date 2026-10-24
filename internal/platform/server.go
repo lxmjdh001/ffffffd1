@@ -25,6 +25,7 @@ import (
 )
 
 type Server struct {
+	PageImages  *R2PageImageStore
 	Blobs       BlobStore
 	DB          *gorm.DB
 	Config      Config
@@ -189,6 +190,7 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("GET /api/download-domains", s.auth(s.availableDownloadDomains))
 	m.Handle("PATCH /api/download-domains/note", s.auth(s.saveDownloadDomainNote))
 	m.Handle("GET /api/apps/{id}/page-design", s.auth(s.getPageDesign))
+	m.Handle("POST /api/apps/{id}/page-images", s.auth(s.uploadPageImage))
 	m.Handle("PATCH /api/apps/{id}/download-settings", s.auth(s.saveDownloadSettings))
 	m.Handle("PUT /api/apps/{id}/page-design", s.auth(s.savePageDesign))
 	m.Handle("POST /api/apps/{id}/page-design/preview", s.auth(s.previewPageDesign))

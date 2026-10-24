@@ -42,11 +42,11 @@ it('opens download settings without leaving the drawer and keeps the saved mode'
  expect(screen.queryByText(/仅展示当前账号可用/)).toBeNull();
  expect(screen.queryByText(/分享链接将直接下载/)).toBeNull();
  await user.click(screen.getByRole('button',{name:'设置'}));
- await user.selectOptions(screen.getByRole('combobox'),'info');
+ await user.click(screen.getByRole('tab',{name:'跳转详情页'}));
  await user.click(screen.getByRole('button',{name:'保存设置'}));
- await waitFor(()=>expect(screen.queryByRole('combobox')).toBeNull());
+ await waitFor(()=>expect(screen.queryByRole('heading',{name:'应用设置'})).toBeNull());
  expect(savedMode).toBe('info');expect(screen.getByRole('heading',{name:'选择域名复制链接'})).toBeTruthy();
  await user.click(screen.getByRole('button',{name:'设置'}));
- expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('info');
+ expect(screen.getByRole('tab',{name:'跳转详情页',selected:true})).toBeTruthy();
  client.clear();
 });

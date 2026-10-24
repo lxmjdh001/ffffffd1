@@ -98,6 +98,9 @@ func (s *Server) maintenance(ctx context.Context) {
 	}
 }
 func (s *Server) cleanupOrphans(ctx context.Context) {
+	if s.Config.Role != "download" {
+		_ = s.cleanupPageImages(ctx, "")
+	}
 	var apps []Application
 	if e := s.DB.WithContext(ctx).Select("file_key").Find(&apps).Error; e != nil {
 		return

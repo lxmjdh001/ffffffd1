@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -27,21 +28,24 @@ var googlePlayHTML string
 var googlePlayCSS string
 
 type PageDesign struct {
-	Layout          string   `json:"layout"`
-	Title           string   `json:"title"`
-	Developer       string   `json:"developer"`
-	Summary         string   `json:"summary"`
-	Description     string   `json:"description"`
-	Icon            string   `json:"icon"`
-	Screenshots     []string `json:"screenshots"`
-	Tags            []string `json:"tags"`
-	ButtonText      string   `json:"button_text"`
-	ThemeColor      string   `json:"theme_color"`
-	BackgroundColor string   `json:"background_color"`
-	ShowDescription bool     `json:"show_description"`
-	ShowScreenshots bool     `json:"show_screenshots"`
-	ShowFileInfo    bool     `json:"show_file_info"`
-	ShowDownloads   bool     `json:"show_downloads"`
+	Layout               string   `json:"layout"`
+	Title                string   `json:"title"`
+	Developer            string   `json:"developer"`
+	Summary              string   `json:"summary"`
+	Description          string   `json:"description"`
+	Icon                 string   `json:"icon"`
+	Screenshots          []string `json:"screenshots"`
+	Tags                 []string `json:"tags"`
+	ButtonText           string   `json:"button_text"`
+	ThemeColor           string   `json:"theme_color"`
+	BackgroundColor      string   `json:"background_color"`
+	ShowDescription      bool     `json:"show_description"`
+	ShowScreenshots      bool     `json:"show_screenshots"`
+	ShowFileInfo         bool     `json:"show_file_info"`
+	ShowDownloads        bool     `json:"show_downloads"`
+	DisplayRating        string   `json:"display_rating"`
+	DisplayReviewCount   string   `json:"display_review_count"`
+	DisplayDownloadCount string   `json:"display_download_count"`
 }
 type AppPageDesign struct {
 	AppID     string     `json:"-" gorm:"primaryKey;size:32"`
@@ -62,6 +66,16 @@ func (s *Server) pageDesign(a Application) (PageDesign, error) {
 }
 
 var pageColor = regexp.MustCompile(`^#[a-fA-F0-9]{6}$`)
+var pageRating = regexp.MustCompile(`^(?:[0-4](?:\.[0-9])?|5(?:\.0)?)$`)
+
+// Marketing display values never change Application.Downloads or accounting.
+// Empty display downloads retain the existing real-counter behavior.
+func (d PageDesign) DownloadsForDisplay(real int64) string {
+	if custom := strings.TrimSpace(d.DisplayDownloadCount); custom != "" {
+		return custom
+	}
+	return strconv.FormatInt(real, 10)
+}
 
 func validPageImage(raw string) bool {
 	if raw == "" {
@@ -85,6 +99,12 @@ func validatePageDesign(d PageDesign) error {
 	}
 	if strings.TrimSpace(d.Title) == "" || len([]rune(d.Title)) > 100 || len([]rune(d.Developer)) > 80 || len([]rune(d.Summary)) > 200 || len([]rune(d.Description)) > 4000 || strings.TrimSpace(d.ButtonText) == "" || len([]rune(d.ButtonText)) > 30 {
 		return problem(400, "请检查标题、介绍和按钮文字的长度")
+	}
+	if d.DisplayRating != "" && !pageRating.MatchString(d.DisplayRating) {
+		return problem(400, "展示评分须为 0–5 分，最多一位小数，留空则不显示")
+	}
+	if len([]rune(d.DisplayReviewCount)) > 20 || len([]rune(d.DisplayDownloadCount)) > 20 {
+		return problem(400, "展示评价数和下载量最多 20 字")
 	}
 	if len(d.Screenshots) > 5 || len(d.Tags) > 6 || !validPageImage(d.Icon) {
 		return problem(400, "最多 5 张截图、6 个标签，图片支持 HTTPS 地址或 PNG/JPEG 上传")
@@ -130,6 +150,9 @@ func (s *Server) savePageDesign(w http.ResponseWriter, r *http.Request) {
 		}
 		var a Application
 		if err := tx.First(&a, "id = ? AND user_id = ?", r.PathValue("id"), userOf(r).ID).Error; err != nil {
+			return err
+		}
+		if err := s.validatePageImageReferences(tx, a.ID, d); err != nil {
 			return err
 		}
 		saved := AppPageDesign{AppID: a.ID, Design: d}

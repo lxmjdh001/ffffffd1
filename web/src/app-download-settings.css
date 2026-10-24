@@ -1,0 +1,10 @@
+.download-mode-field { margin-bottom: 24px; }
+.download-mode-label { display: block; margin-bottom: 10px; color: #7c8ca9; font-size: 12px; font-weight: 600; }
+.download-mode-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 5px; border: 1px solid #e6eaf4; border-radius: 10px; background: #f5f7fc; }
+.download-mode-tab { display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 0; min-height: 48px; padding: 10px 8px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #8492ab; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.download-mode-tab svg { flex-shrink: 0; }
+.download-mode-tab[aria-selected="true"] { border-color: #d9dcfa; background: #fff; color: #5e63d8; box-shadow: 0 2px 5px #6266a40c; }
+.download-mode-tab:hover:not(:disabled):not([aria-selected="true"]) { background: #edf0f8; color: #68799b; }
+.download-mode-tab:focus-visible { outline: 2px solid #787cf0; outline-offset: 2px; }
+.download-mode-tab:disabled { opacity: .65; cursor: wait; }
+.download-mode-description { min-height: 3.6em; margin-top: 10px; color: #94a1b8; font-size: 12px; line-height: 1.8; }
