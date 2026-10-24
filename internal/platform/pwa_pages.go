@@ -56,17 +56,29 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 	}
 	data := pwaPageData{App: a, Base: "/p/" + a.Slug + "/", Launch: launch, Chinese: pwaWantsChinese(r)}
 	var buf bytes.Buffer
-	if err = pwaPageTemplate.Execute(&buf, data); err != nil {
+	landing := storedPWALanding(a.LandingJSON)
+	if !launch && (landing.Template == "google_play" || landing.Template == "custom") {
+		err = s.renderPWALanding(a, r, &buf)
+	} else {
+		err = pwaPageTemplate.Execute(&buf, data)
+	}
+	if err != nil {
 		http.Error(w, "Page unavailable", 503)
 		return
 	}
 	// H5 flows can redirect to another HTTPS login, payment or www origin.
-	// Every D1 response retains frame-ancestors 'none' and X-Frame-Options DENY,
+	// Public runtime documents retain frame-ancestors 'none' and X-Frame-Options DENY,
 	// so redirects back to this origin cannot load a same-origin child document.
-	// Only public PWA wrappers relax frame-src; the console stays restrictive.
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https:; media-src 'self' https:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src "+frameSources+"; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
+	// The console only allows its authenticated same-origin preview path.
+	policy := "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; media-src 'self' https:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src " + frameSources + "; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+	if launch || (landing.Template != "google_play" && landing.Template != "custom") {
+		policy = strings.Replace(policy, "style-src 'self' 'unsafe-inline'", "style-src 'self'", 1)
+		policy = strings.Replace(policy, "img-src 'self' https: data:", "img-src 'self' https:", 1)
+	}
+	w.Header().Set("Content-Security-Policy", policy)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+	w.Header().Add("Vary", "Accept-Language")
 	w.Header().Set("Cache-Control", "no-store")
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(buf.Bytes())
@@ -80,14 +92,43 @@ func (s *Server) pwaManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	base := "/p/" + a.Slug + "/"
-	short := []rune(a.Name)
-	if len(short) > 12 {
-		short = short[:12]
-	}
 	w.Header().Set("Content-Type", "application/manifest+json; charset=utf-8")
+	w.Header().Add("Vary", "Accept-Language")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("X-Robots-Tag", "noindex")
-	jsonOutContent(w, map[string]any{"id": base, "name": a.Name, "short_name": string(short), "description": a.Description, "start_url": base + "launch", "scope": base, "display": "standalone", "orientation": "any", "background_color": "#f5f8ff", "theme_color": a.ThemeColor, "icons": []map[string]string{{"src": base + "icon/192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"}, {"src": base + "icon/512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}}})
+	landing := storedPWALanding(a.LandingJSON)
+	display, orientation, bg := landing.DisplayMode, landing.PWAOrientation, landing.StartupBgColor
+	if display == "" {
+		display = "standalone"
+	}
+	if orientation == "" {
+		orientation = "any"
+	}
+	if bg == "" {
+		bg = "#f5f8ff"
+	}
+	theme := a.ThemeColor
+	if landing.StartupThemeColor != "" {
+		theme = landing.StartupThemeColor
+	}
+	name, icon := a.Name, ""
+	if landing.Template != "" && landing.Template != "legacy" {
+		v := pwaLandingLanguage(landing, r.Header.Get("Accept-Language"))
+		if v.AppName != "" {
+			name = v.AppName
+		}
+		if v.AppIcon != "" {
+			icon = v.AppIcon
+			if !strings.HasPrefix(icon, "https://") && !strings.HasPrefix(icon, "http://") {
+				icon = strings.TrimRight(s.Config.PublicURL, "/") + "/" + strings.TrimLeft(icon, "/")
+			}
+		}
+	}
+	icons := []map[string]string{{"src": base + "icon/192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"}, {"src": base + "icon/512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}}
+	if icon != "" {
+		icons = []map[string]string{{"src": icon, "sizes": "any", "purpose": "any"}}
+	}
+	jsonOutContent(w, map[string]any{"id": base, "name": name, "short_name": string([]rune(name)[:min(12, len([]rune(name)))]), "description": a.Description, "start_url": base + "launch", "scope": base, "display": display, "orientation": orientation, "background_color": bg, "theme_color": theme, "icons": icons})
 }
 func jsonOutContent(w http.ResponseWriter, v any) {
 	b, err := json.Marshal(v)
@@ -110,10 +151,20 @@ func (s *Server) pwaAsset(w http.ResponseWriter, r *http.Request, content, conte
 	}
 }
 func (s *Server) pwaClientScript(w http.ResponseWriter, r *http.Request) {
-	s.pwaAsset(w, r, pwaClientJS+"\n"+returnFlowJS, "application/javascript; charset=utf-8")
+	s.pwaAsset(w, r, pwaClientJS+"\n"+returnFlowJS+"\n"+pwaBrowserGuideJS, "application/javascript; charset=utf-8")
 }
 func (s *Server) pwaStyles(w http.ResponseWriter, r *http.Request) {
-	s.pwaAsset(w, r, pwaPageCSS+"\n"+returnFlowCSS, "text/css; charset=utf-8")
+	a, err := s.loadPublicPWA(r)
+	if err != nil {
+		pwaPublicFailure(w, r, err)
+		return
+	}
+	css := pwaPageCSS
+	landing := storedPWALanding(a.LandingJSON)
+	if (landing.Template == "google_play" || landing.Template == "custom") && r.URL.Query().Get("launch") != "1" {
+		css = pwaLandingBaseCSS
+	}
+	s.pwaAsset(w, r, css+"\n"+returnFlowCSS+"\n"+pwaBrowserGuideCSS, "text/css; charset=utf-8")
 }
 func (s *Server) pwaServiceWorker(w http.ResponseWriter, r *http.Request) {
 	// The browser's default maximum scope is the worker's /p/{slug}/ directory.

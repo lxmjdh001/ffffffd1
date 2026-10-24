@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"image"
-	"image/png"
+	_ "image/gif"
 	"io"
 	"net/http"
 	"os"
@@ -30,7 +30,7 @@ type ReturnFlowAsset struct {
 
 const maxReturnFlowAssetBytes int64 = 50 << 20
 
-var returnFlowFilePattern = regexp.MustCompile(`^[a-f0-9]{32}\.(png|mp4|webm|mov|m4v)$`)
+var returnFlowFilePattern = regexp.MustCompile(`^[a-f0-9]{32}\.(png|jpg|jpeg|webp|gif|mp4|webm|mov|m4v)$`)
 
 func (s *Server) returnFlowAssetDirectory() string {
 	return filepath.Join(s.Config.DataDir, "return-flow-assets")
@@ -106,39 +106,20 @@ func (s *Server) uploadReturnFlowAsset(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.ReadFull(temporary, header)
 	_, _ = temporary.Seek(0, io.SeekStart)
 	contentType, ext := returnFlowVideoType(header)
+
 	if contentType == "" {
 		cfg, format, e := image.DecodeConfig(temporary)
-		if e != nil || (format != "png" && format != "jpeg" && format != "webp") || cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > 4096 || cfg.Height > 4096 || int64(cfg.Width)*int64(cfg.Height) > 16_000_000 {
-			fail(w, problem(400, "素材须为 PNG、JPG、WebP 图片或 MP4、WebM、MOV、M4V 视频"))
+		formats := map[string][2]string{"png": {"image/png", "png"}, "jpeg": {"image/jpeg", "jpg"}, "webp": {"image/webp", "webp"}, "gif": {"image/gif", "gif"}}
+		selected, ok := formats[format]
+		if e != nil || !ok || cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > 4096 || cfg.Height > 4096 || int64(cfg.Width)*int64(cfg.Height) > 16_000_000 {
+			fail(w, problem(400, "素材须为 PNG、JPG、WebP、GIF 图片或 MP4、WebM、MOV、M4V 视频"))
 			return
 		}
-		_, _ = temporary.Seek(0, io.SeekStart)
-		decoded, _, e := image.Decode(temporary)
-		if e != nil {
-			fail(w, problem(400, "图片文件已损坏，请重新选择"))
-			return
-		}
-		if err = temporary.Truncate(0); err != nil {
-			fail(w, err)
-			return
-		}
-		_, _ = temporary.Seek(0, io.SeekStart)
-		if err = png.Encode(temporary, decoded); err != nil {
-			fail(w, err)
-			return
-		}
-		contentType, ext = "image/png", "png"
-		stat, e := temporary.Stat()
-		if e != nil {
-			fail(w, e)
-			return
-		}
-		size = stat.Size()
-		if size > maxReturnFlowAssetBytes {
-			fail(w, problem(400, "图片转换后超过 50 MB，请选择更小的图片"))
-			return
-		}
+		// Preserve the source bytes, as PWA does: re-encoding would flatten animated
+		// GIF/WebP/APNG files and change the return-page effect.
+		contentType, ext = selected[0], selected[1]
 	}
+
 	_, _ = temporary.Seek(0, io.SeekStart)
 	digest := sha256.New()
 	if _, err = io.Copy(digest, temporary); err != nil {

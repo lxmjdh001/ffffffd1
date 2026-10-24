@@ -1,0 +1,13 @@
+{
+  "commit": "b575d0412e2740f3b420e56b8a8e765410382ce6",
+  "components": {
+    "google-play": {
+      "template_sha256": "4b364316ba5b8b83bb4742b00720b11995ebff42522bcf85679529366f190b7c",
+      "styles_sha256": "700ab9061f6426f62a9d4ccc307ec6980caaa2c236e57827147a1b6fafffa628"
+    },
+    "custom-app": {
+      "template_sha256": "508bc86fcaddace58d980b2f70eb6bc24bdc00bdfd9d1cc3a76bb71b187219e1",
+      "styles_sha256": "e0bdab0b1f21a163abfe83961b5b1a5092c1c7f12a90c2d98bdf186afbca44b1"
+    }
+  }
+}

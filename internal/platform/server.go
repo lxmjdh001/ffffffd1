@@ -360,6 +360,12 @@ func requestHost(r *http.Request) string {
 	return strings.ToLower(strings.TrimSuffix(h, "."))
 }
 func (s *Server) frontend(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+		// The console may embed only the authenticated, same-origin template preview.
+		policy := strings.Replace(w.Header().Get("Content-Security-Policy"), "frame-src 'none'", "frame-src "+strings.TrimRight(s.Config.PublicURL, "/")+"/api/pwa-landing/preview/", 1)
+		w.Header().Set("Content-Security-Policy", policy)
+	}
+
 	if r.Method != "GET" && r.Method != "HEAD" {
 		http.NotFound(w, r)
 		return

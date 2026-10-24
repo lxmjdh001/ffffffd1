@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"html"
 	"image"
+	"image/color"
+	"image/gif"
+	"image/jpeg"
 	"image/png"
 	"mime/multipart"
 	"net/http/httptest"
@@ -219,12 +222,12 @@ func TestReturnFlowConfigValidationAndLegacyCreationReplay(t *testing.T) {
 	for _, field := range []struct {
 		k string
 		v any
-	}{{"triggerMode", "bad"}, {"buttonAction", "bad"}, {"mediaAreaPercent", 49}, {"mediaAreaPercent", 101}, {"mediaUrl", "javascript:alert(1)"}, {"buttonUrl", "https://user:pass@example.com"}, {"mediaUrl", "http://insecure.example/banner.jpg"}, {"title", strings.Repeat("x", 101)}} {
+	}{{"mediaUrl", "javascript:alert(1)"}, {"buttonUrl", "https://user:pass@example.com"}} {
 		c := map[string]any{"enabled": true, "triggerMode": "back", "buttonAction": "continue"}
 		c[field.k] = field.v
 		requireCode(t, call(t, s, "PUT", "/api/pwas/"+view.ID, map[string]any{"return_flow_config": c}, cookie, csrf), 400)
 	}
-	requireCode(t, call(t, s, "PUT", "/api/pwas/"+view.ID, map[string]any{"return_flow_config": map[string]any{"enabled": true, "buttonAction": "url"}}, cookie, csrf), 400)
+	requireCode(t, call(t, s, "PUT", "/api/pwas/"+view.ID, map[string]any{"return_flow_config": map[string]any{"enabled": true, "buttonAction": "url"}}, cookie, csrf), 200)
 	c := defaultReturnFlowConfig()
 	c.Enabled = true
 	body["return_flow_config"] = c
@@ -278,5 +281,59 @@ func TestReturnFlowMigrationPreservesExistingPWAAndLedger(t *testing.T) {
 	_, e := os.Stat(filepath.Join(s.Config.DataDir, "return-flow-assets"))
 	if !os.IsNotExist(e) {
 		t.Fatal("migration created asset files")
+	}
+}
+
+func TestReturnFlowAssetsPreserveAnimatedImages(t *testing.T) {
+	s := testServer(t)
+	owner := seedUser(t, s, 0)
+	palette := color.Palette{color.Black, color.White}
+	first := image.NewPaletted(image.Rect(0, 0, 3, 3), palette)
+	second := image.NewPaletted(image.Rect(0, 0, 3, 3), palette)
+	second.SetColorIndex(1, 1, 1)
+	var animated, jpegData bytes.Buffer
+	if err := gif.EncodeAll(&animated, &gif.GIF{Image: []*image.Paletted{first, second}, Delay: []int{10, 20}, LoopCount: 0}); err != nil {
+		t.Fatal(err)
+	}
+	if err := jpeg.Encode(&jpegData, image.NewRGBA(image.Rect(0, 0, 3, 3)), nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range []struct {
+		data []byte
+		mime string
+	}{{animated.Bytes(), "image/gif"}, {jpegData.Bytes(), "image/jpeg"}} {
+		w := returnAssetCall(t, s, item.data, owner, "")
+		requireCode(t, w, 201)
+		r := httptest.NewRequest("GET", returnAssetURL(t, w), nil)
+		w = httptest.NewRecorder()
+		s.Handler().ServeHTTP(w, r)
+		requireCode(t, w, 200)
+		if w.Header().Get("Content-Type") != item.mime || !bytes.Equal(item.data, w.Body.Bytes()) {
+			t.Fatal("uploaded image bytes or format changed")
+		}
+		if item.mime == "image/gif" {
+			frames, err := gif.DecodeAll(bytes.NewReader(w.Body.Bytes()))
+			if err != nil || len(frames.Image) != 2 || frames.Delay[1] != 20 {
+				t.Fatal("animation frames lost")
+			}
+		}
+	}
+}
+func TestReturnFlowReferenceNormalization(t *testing.T) {
+	c := ReturnFlowConfig{TriggerMode: "unknown", ButtonAction: "unknown", MediaAreaPercent: 101, Title: strings.Repeat("长", 200)}
+	if err := normalizeReturnFlow(&c, "https://d1apk.com"); err != nil || c.TriggerMode != "back" || c.ButtonAction != "continue" || c.MediaAreaPercent != 100 {
+		t.Fatal("reference fallback or long text differs")
+	}
+	for _, raw := range []string{"example.com/offer", "//example.com/offer", "/offer", "http://example.com/offer", "https://example.com/offer"} {
+		c.ButtonAction = "url"
+		c.ButtonURL = raw
+		if err := normalizeReturnFlow(&c, "https://d1apk.com"); err != nil || c.ButtonURL != raw {
+			t.Fatal("reference destination changed")
+		}
+	}
+	c.ButtonURL = ""
+	c.MediaAreaPercent = 49
+	if err := normalizeReturnFlow(&c, "https://d1apk.com"); err != nil || c.MediaAreaPercent != 50 {
+		t.Fatal("empty URL or clamp differs")
 	}
 }

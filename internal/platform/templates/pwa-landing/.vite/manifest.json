@@ -1,0 +1,30 @@
+{
+  "_shared-DaTUpjeb.js": {
+    "file": "shared-DaTUpjeb.js",
+    "name": "_plugin-vue_export-helper"
+  },
+  "custom-app/src/main.ts": {
+    "file": "custom-COnmRNOe.js",
+    "name": "custom",
+    "src": "custom-app/src/main.ts",
+    "isEntry": true,
+    "imports": [
+      "_shared-DaTUpjeb.js"
+    ],
+    "css": [
+      "custom-C7F1ZAkp.css"
+    ]
+  },
+  "google-play/src/main.ts": {
+    "file": "google_play-D_SdBLZT.js",
+    "name": "google_play",
+    "src": "google-play/src/main.ts",
+    "isEntry": true,
+    "imports": [
+      "_shared-DaTUpjeb.js"
+    ],
+    "css": [
+      "google_play-DIoedOGB.css"
+    ]
+  }
+}

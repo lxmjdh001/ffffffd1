@@ -1,5 +1,6 @@
+import type { PWALandingConfig } from './pwa-landing';
 import type { ReturnFlowConfig } from './return-flow';
-export type PWAInput = { name: string; target_url: string; description: string; theme_color: string; enabled: boolean; push_enabled: boolean; return_flow_config?: ReturnFlowConfig };
+export type PWAInput = { name: string; target_url: string; description: string; theme_color: string; enabled: boolean; push_enabled: boolean; landing_config?: PWALandingConfig; return_flow_config?: ReturnFlowConfig };
 export type PWAApp = PWAInput & { id: string; slug: string; icon_url: string; entry_url: string; launch_url: string; subscription_count: number; created_at: string; updated_at: string };
 export type PWAList<T> = { data: T[]; total: number; page?: number; per_page?: number };
 export type PWASchedule = 'now' | 'scheduled' | 'first_subscribe';

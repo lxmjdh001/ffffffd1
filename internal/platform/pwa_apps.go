@@ -23,6 +23,7 @@ import (
 // PWAApp deliberately keeps credentials and binary icons out of JSON responses.
 // Each app gets a distinct VAPID identity and a narrowly scoped service worker.
 type PWAApp struct {
+	LandingJSON       string         `json:"-" gorm:"type:text;not null;default:'{}'"`
 	ReturnFlowJSON    string         `json:"-" gorm:"type:text;not null;default:'{}'"`
 	ID                string         `json:"id" gorm:"primaryKey;size:32"`
 	Slug              string         `json:"slug" gorm:"uniqueIndex;size:16;not null"`
@@ -44,6 +45,7 @@ type PWAApp struct {
 }
 
 type pwaAppView struct {
+	LandingConfig     PWALandingConfig `json:"landing_config"`
 	ReturnFlowConfig  ReturnFlowConfig `json:"return_flow_config"`
 	ID                string           `json:"id"`
 	Slug              string           `json:"slug"`
@@ -66,6 +68,7 @@ var pwaColorPattern = regexp.MustCompile(`^#[a-fA-F0-9]{6}$`)
 
 func (s *Server) registerPWARoutes(m *http.ServeMux) {
 	m.Handle("GET /api/pwas", s.auth(s.listPWAs))
+	s.registerPWALandingRoutes(m)
 	m.Handle("POST /api/pwas", s.auth(s.createPWA))
 	m.Handle("GET /api/pwas/{id}", s.auth(s.getPWA))
 	m.Handle("PUT /api/pwas/{id}", s.auth(s.updatePWA))
@@ -84,7 +87,7 @@ func (s *Server) registerPWARoutes(m *http.ServeMux) {
 
 func (s *Server) pwaView(a PWAApp, count int64) pwaAppView {
 	base := strings.TrimRight(s.Config.PublicURL, "/") + "/p/" + a.Slug + "/"
-	return pwaAppView{ReturnFlowConfig: storedReturnFlow(a.ReturnFlowJSON), ID: a.ID, Slug: a.Slug, Name: a.Name, TargetURL: a.TargetURL, Description: a.Description, Enabled: a.Enabled, PushEnabled: a.PushEnabled, ThemeColor: a.ThemeColor, IconURL: s.Config.PublicURL + "/api/pwas/" + a.ID + "/icon", EntryURL: base, LaunchURL: base + "launch", SubscriptionCount: count, CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt}
+	return pwaAppView{LandingConfig: storedPWALanding(a.LandingJSON), ReturnFlowConfig: storedReturnFlow(a.ReturnFlowJSON), ID: a.ID, Slug: a.Slug, Name: a.Name, TargetURL: a.TargetURL, Description: a.Description, Enabled: a.Enabled, PushEnabled: a.PushEnabled, ThemeColor: a.ThemeColor, IconURL: s.Config.PublicURL + "/api/pwas/" + a.ID + "/icon", EntryURL: base, LaunchURL: base + "launch", SubscriptionCount: count, CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt}
 }
 func (s *Server) ownedPWA(r *http.Request) (PWAApp, error) {
 	var a PWAApp
@@ -127,6 +130,7 @@ func (s *Server) getPWA(w http.ResponseWriter, r *http.Request) {
 }
 
 type pwaAppInput struct {
+	LandingConfig    *PWALandingConfig `json:"landing_config"`
 	ReturnFlowConfig *ReturnFlowConfig `json:"return_flow_config"`
 	Name             *string           `json:"name"`
 	TargetURL        *string           `json:"target_url"`
@@ -204,6 +208,13 @@ func urlPort(raw string) string {
 	return u.Port()
 }
 func (s *Server) applyPWAInput(a *PWAApp, in pwaAppInput, _ bool) error {
+	if in.LandingConfig != nil {
+		if err := s.normalizePWALanding(in.LandingConfig); err != nil {
+			return err
+		}
+		raw, _ := json.Marshal(in.LandingConfig)
+		a.LandingJSON = string(raw)
+	}
 	if in.ReturnFlowConfig != nil {
 		if err := normalizeReturnFlow(in.ReturnFlowConfig, s.Config.PublicURL); err != nil {
 			return err
@@ -270,7 +281,8 @@ func (s *Server) createPWA(w http.ResponseWriter, r *http.Request) {
 		Name, TargetURL, Description, ThemeColor string
 		Enabled, PushEnabled                     bool
 		ReturnFlowConfig                         *ReturnFlowConfig `json:",omitempty"`
-	}{a.Name, a.TargetURL, a.Description, a.ThemeColor, a.Enabled, a.PushEnabled, in.ReturnFlowConfig})
+		LandingConfig                            *PWALandingConfig `json:",omitempty"`
+	}{a.Name, a.TargetURL, a.Description, a.ThemeColor, a.Enabled, a.PushEnabled, in.ReturnFlowConfig, in.LandingConfig})
 	a.CreateFingerprint = hashString(string(canonical))
 	private, public, err := webpush.GenerateVAPIDKeys()
 	if err != nil {
@@ -320,6 +332,9 @@ func (s *Server) createPWA(w http.ResponseWriter, r *http.Request) {
 		if count >= limit {
 			return problem(403, "PWA 应用数量已达套餐上限，请升级会员或删除应用")
 		}
+		if e = s.validatePWALandingAssets(tx, owner.ID, in.LandingConfig); e != nil {
+			return e
+		}
 		if e = s.validateReturnFlowAsset(tx, owner.ID, in.ReturnFlowConfig); e != nil {
 			return e
 		}
@@ -353,6 +368,9 @@ func (s *Server) updatePWA(w http.ResponseWriter, r *http.Request) {
 			return e
 		}
 		if e = s.applyPWAInput(&a, in, false); e != nil {
+			return e
+		}
+		if e = s.validatePWALandingAssets(tx, owner.ID, in.LandingConfig); e != nil {
 			return e
 		}
 		if e = s.validateReturnFlowAsset(tx, owner.ID, in.ReturnFlowConfig); e != nil {

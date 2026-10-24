@@ -25,6 +25,7 @@
  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
  function showGuide() {
+  const modal=document.getElementById('d1-pwa-status');if(modal)modal.hidden=false;
   const message = isIOS
    ? text('Open this page in Safari. Tap Share, then “Add to Home Screen”. Open the installed app to enable notifications (iOS 16.4 or later).', '请用 Safari 打开此页面，点击“分享”，再选择“添加到主屏幕”。从桌面打开应用后可开启通知（需 iOS 16.4 或以上）。')
    : text('Use your browser menu and choose “Install app” or “Add to Home screen”. If neither is available, try a current version of Chrome, Edge, or Safari.', '请在浏览器菜单中选择“安装应用”或“添加到主屏幕”。若没有此选项，请使用较新版本的 Chrome、Edge 或 Safari。');
@@ -34,7 +35,18 @@
  window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); installPrompt = event; if (installButton) installButton.disabled = false; });
  window.addEventListener('appinstalled', () => { installPrompt = null; setStatus(installStatus, text('App installed. Open it from your home screen.', '应用已安装，可以从桌面打开。')); });
  if (standalone) setStatus(installStatus, text('You are using the installed app.', '你正在使用桌面应用。'));
- async function installApp() {
+ function downloadInCurrentPage(url) {
+  const frame=document.createElement('iframe');frame.name='d1-pwa-download-'+Date.now();frame.hidden=true;document.body.appendChild(frame);
+  const link=document.createElement('a');link.href=url;link.target=frame.name;link.download='';link.hidden=true;document.body.appendChild(link);link.click();setTimeout(()=>{frame.remove();link.remove();},15000);return true;
+ }
+ if(document.body.classList.contains('pwa-reference-page'))window.downloadInCurrentPage=downloadInCurrentPage;
+ async function installApp(options = {}) {
+  const settings=window.__APP_CONFIG__?.app?.settings;
+  if(!options.forcePwa && settings?.packagePriority==='w2a_only' && settings.apkUrl) {
+   if(options.source!=='return_flow' && window.scheduleReturnFlowRiskCancelPrompt)window.scheduleReturnFlowRiskCancelPrompt('download_risk_cancel');
+   downloadInCurrentPage(settings.apkUrl);return {outcome:'apk_download'};
+  }
+  if (window.showBrowserGuide && window.showBrowserGuide()) return;
   if (!installPrompt) { showGuide(); return; }
   const prompt = installPrompt; installPrompt = null; if (installButton) installButton.disabled = true;
   try { await prompt.prompt(); const choice = await prompt.userChoice; setStatus(installStatus, choice.outcome === 'accepted' ? text('Installation started. Look for the app on your home screen.', '已开始安装，请在桌面查看应用。') : text('Installation canceled. You can install it later.', '已取消安装，你可以随时重新安装。')); }
@@ -158,5 +170,6 @@
   } catch (error) { setStatus(notificationStatus,error.message || text('Unable to turn off notifications. Please try again.', '关闭失败，请重试。')); }
   finally {busy=false;unsubscribeButton.disabled=false;}
  });
+ const closeGuide=document.getElementById('install-guide-close');if(closeGuide)closeGuide.addEventListener('click',()=>{document.getElementById('d1-pwa-status').hidden=true;});
  setup();
 })();
