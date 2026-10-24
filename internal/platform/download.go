@@ -125,8 +125,8 @@ var pageTemplateFunctions = template.FuncMap{"imageURL": func(raw string) templa
 	return ""
 }}
 
-var downloadTemplate = template.Must(template.New("download").Funcs(pageTemplateFunctions).Parse(downloadPageHTML))
-var googlePlayTemplate = template.Must(template.New("google-play").Funcs(pageTemplateFunctions).Parse(strings.Replace(googlePlayHTML, "/*SOURCE_STYLE*/", googlePlayCSS, 1)))
+var downloadTemplate = template.Must(template.New("download").Funcs(pageTemplateFunctions).Parse(strings.Replace(downloadPageHTML, "/*BUTTON_STYLE*/", downloadButtonCSS, 1)))
+var googlePlayTemplate = template.Must(template.New("google-play").Funcs(pageTemplateFunctions).Parse(strings.Replace(googlePlayHTML, "/*SOURCE_STYLE*/", googlePlayCSS+"\n"+downloadButtonCSS, 1)))
 
 func downloadPageTemplate(layout string) *template.Template {
 	if layout == "google_play" {
@@ -198,19 +198,21 @@ func (s *Server) createDownloadTicket(r *http.Request, a Application, visitor, k
 func (s *Server) downloadClient(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 	_, _ = io.WriteString(w, `"use strict";
+const languages=`+string(pageLocaleJSON)+`;
+const copy=languages[document.documentElement.lang]||languages['zh-CN'];
 const form=document.querySelector('form');
 const button=form.querySelector('button');
 const status=document.getElementById('download-status');
 form.addEventListener('submit',async function(event){
- event.preventDefault();button.disabled=true;status.textContent='正在准备下载…';
+ event.preventDefault();button.disabled=true;status.textContent=copy.preparing;
  try {
   const response=await fetch(form.action,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json'},body:new URLSearchParams(new FormData(form))});
   const data=await response.json();
-  if(!response.ok)throw new Error(data.error||'暂时无法下载，请重试');
-  if(!/^\/d\/[a-f0-9]{64}$/.test(data.download_url))throw new Error('下载地址无效');
-  status.textContent='已准备下载，请查看浏览器下载进度。';
+  if(!response.ok)throw new Error(data.error||copy.download_failed);
+  if(!/^\/d\/[a-f0-9]{64}$/.test(data.download_url))throw new Error(copy.invalid_url);
+  status.textContent=copy.ready;
   window.location.assign(data.download_url);
- }catch(error){status.textContent=error.message||'网络连接失败，请重试';}
+ }catch(error){status.textContent=error.message||copy.network_error;}
  finally{button.disabled=false;}
 });`)
 }

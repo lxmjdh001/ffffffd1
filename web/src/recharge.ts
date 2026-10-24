@@ -1,4 +1,5 @@
 import type { RechargePromotion } from './types';
+import { getLocale } from './i18n';
 
 export function rechargePercent(amountMicros: number, promotion: RechargePromotion): number {
   if (!promotion.recharge_bonus_enabled || !Number.isSafeInteger(amountMicros) || amountMicros < 1000000 || amountMicros > 10000 * 1000000 || amountMicros % 10000 !== 0) return 0;
@@ -17,4 +18,4 @@ export function rechargeBonus(amountMicros: number, promotion: RechargePromotion
 }
 
 // Percentage gifts can contain fractions of a cent, retained in the USD balance.
-export const rechargeMoney = (micros: number) => (micros / 1000000).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+export const rechargeMoney = (micros: number) => (micros / 1000000).toLocaleString(getLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 6 });

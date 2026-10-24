@@ -380,6 +380,8 @@ func (s *Server) frontend(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, p)
 }
 func (s *Server) publicConfig(w http.ResponseWriter, r *http.Request) {
+	// Country hints are visitor-specific, never share them through a CDN cache.
+	w.Header().Set("Cache-Control", "private, no-store")
 	x, e := getSettings(s.DB)
 	if e != nil {
 		fail(w, e)
@@ -410,7 +412,7 @@ func (s *Server) publicConfig(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	jsonOut(w, 200, map[string]any{"currency": "USD", "site_name": x.SiteName, "registration_open": x.RegistrationOpen, "turnstile_site_key": "", "development": !s.Config.Production(), "public_url": s.Config.PublicURL, "download_domain_mode": x.DownloadDomainMode, "download_base_url": downloadBase, "cname_target": s.Config.CNAMEHost, "download_price_micros": x.DownloadPriceMicros, "max_upload_bytes": x.MaxUploadBytes, "domain_limit": x.DomainLimit, "plans": plans, "payment_methods": methods, "support_email": x.SupportEmail, "usdt_rate_micros": x.USDTRateMicros, "alipay_cny_rate_micros": x.AlipayCNYRateMicros, "recharge_bonus_enabled": x.RechargeBonusEnabled, "recharge_bonus_tiers": x.RechargeBonusTiers})
+	jsonOut(w, 200, map[string]any{"country_code": s.cloakRequestCountry(r), "currency": "USD", "site_name": x.SiteName, "registration_open": x.RegistrationOpen, "turnstile_site_key": "", "development": !s.Config.Production(), "public_url": s.Config.PublicURL, "download_domain_mode": x.DownloadDomainMode, "download_base_url": downloadBase, "cname_target": s.Config.CNAMEHost, "download_price_micros": x.DownloadPriceMicros, "max_upload_bytes": x.MaxUploadBytes, "domain_limit": x.DomainLimit, "plans": plans, "payment_methods": methods, "support_email": x.SupportEmail, "usdt_rate_micros": x.USDTRateMicros, "alipay_cny_rate_micros": x.AlipayCNYRateMicros, "recharge_bonus_enabled": x.RechargeBonusEnabled, "recharge_bonus_tiers": x.RechargeBonusTiers})
 }
 func pageParams(r *http.Request) (int, int) {
 	p, _ := strconv.Atoi(r.URL.Query().Get("page"))

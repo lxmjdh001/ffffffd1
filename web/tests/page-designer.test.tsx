@@ -7,11 +7,13 @@ import { PageDesigner, type PageDesign } from '../src/page-designer';
 import { ConfigContext } from '../src/ui';
 import type { Config } from '../src/types';
 import { readPagePicture } from '../src/page-images';
+import { pageButtonText, pageLanguageOptions } from '../src/page-language';
+import { getLocale, setLocale, t } from '../src/i18n';
 
 vi.mock('../src/download-domain', () => ({ useDownloadDomain: () => ({ data: { download_base_url: 'http://localhost:8088' } }) }));
 vi.mock('../src/page-images', () => ({ readPagePicture: vi.fn() }));
 const clients: QueryClient[] = [];
-afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); vi.mocked(readPagePicture).mockReset(); });
+afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals(); vi.mocked(readPagePicture).mockReset(); setLocale('zh-CN', false); });
 it('previews drafts separately and publishes only when saved', async () => {
  const design: PageDesign = { layout: 'store', title: '原始标题', developer: '', summary: '', description: '', icon: '', screenshots: [], tags: [], button_text: '下载应用', theme_color: '#246b55', background_color: '#f4f7f5', show_description: true, show_screenshots: true, show_file_info: true, show_downloads: true };
  let published: PageDesign | undefined;
@@ -120,4 +122,45 @@ it('keeps the current icon and re-enables controls if R2 rejects the upload', as
  await screen.findByText('R2 图片上传失败，请稍后重试');
  expect(screen.getByRole('img', { name: '应用图标' }).getAttribute('src')).toBe(original);
  expect((screen.getByRole('button', { name: '保存并发布' }) as HTMLButtonElement).disabled).toBe(false);
+});
+
+it.each(pageLanguageOptions)('switches template copy to $label in one click, previews it and persists only on save', async option => {
+ const original = { title: '客户自己的应用名称', description: '介绍不能被覆盖', icon: 'https://example.com/app.png', display_download_count: '100K+' };
+ const state = renderDesigner(original), user = userEvent.setup();
+ await screen.findByLabelText('展示名称');
+ expect(screen.getByRole('button', { name: '简体中文', pressed: true })).toBeTruthy();
+ await user.click(screen.getByRole('button', { name: option.label, exact: true }));
+ expect(screen.getByRole('button', { name: option.label, pressed: true })).toBeTruthy();
+ expect((screen.getByRole('textbox', { name: '下载按钮文字', exact: true }) as HTMLInputElement).value).toBe(pageButtonText(option.value));
+ await waitFor(() => expect(state.previews.some(draft => draft.language === option.value && draft.button_text === pageButtonText(option.value))).toBe(true));
+ expect(state.previews.at(-1)).toMatchObject(original);
+ expect(state.published).toBeUndefined();
+ await user.click(screen.getByRole('button', { name: '保存并发布' }));
+ await screen.findByRole('heading', { name: '应用列表' });
+ expect(state.published).toMatchObject({ ...original, language: option.value, button_text: pageButtonText(option.value) });
+});
+
+it('preserves customized button wording and restores the selected language default on request', async () => {
+ renderDesigner({ button_text: '领取专属安装包' }); const user = userEvent.setup();
+ await screen.findByLabelText('展示名称');
+ await user.click(screen.getByRole('button', { name: 'English', exact: true }));
+ expect((screen.getByRole('textbox', { name: '下载按钮文字', exact: true }) as HTMLInputElement).value).toBe('领取专属安装包');
+ await user.click(screen.getByRole('button', { name: '使用语言默认文案' }));
+ expect((screen.getByRole('textbox', { name: '下载按钮文字', exact: true }) as HTMLInputElement).value).toBe('Download app');
+ await user.click(screen.getByRole('button', { name: 'Deutsch', exact: true }));
+ expect((screen.getByRole('textbox', { name: '下载按钮文字', exact: true }) as HTMLInputElement).value).toBe('App herunterladen');
+});
+
+it('keeps template language independent of console language and keeps it when restoring other defaults', async () => {
+ renderDesigner(); const user = userEvent.setup();
+ await screen.findByLabelText('展示名称');
+ await user.click(screen.getByRole('button', { name: '日本語', exact: true }));
+ await user.click(screen.getByRole('button', { name: '恢复默认' }));
+ expect(screen.getByRole('button', { name: '日本語', pressed: true })).toBeTruthy();
+ expect((screen.getByRole('textbox', { name: '下载按钮文字', exact: true }) as HTMLInputElement).value).toBe('ダウンロード');
+ setLocale('en', false);
+ await screen.findByRole('heading', { name: t('详情页设计') });
+ expect(getLocale()).toBe('en');
+ expect(screen.getByRole('button', { name: '日本語', pressed: true })).toBeTruthy();
+ expect((screen.getByRole('textbox', { name: t('下载按钮文字'), exact: true }) as HTMLInputElement).value).toBe('ダウンロード');
 });

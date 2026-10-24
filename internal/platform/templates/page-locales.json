@@ -1,0 +1,44 @@
+{
+  "zh-CN": {
+    "download_button": "下载应用", "page_title": "应用下载", "tagline": "应用发布 · 便捷交付",
+    "platform": "应用平台", "package_size": "安装包大小", "downloads": "下载次数", "rating": "评分", "reviews": "条评价",
+    "screenshots": "应用截图", "about_app": "关于此应用", "app_info": "应用信息", "version": "版本", "version_number": "版本号", "package": "安装包", "app_icon": "应用图标",
+    "ad_consent": "我同意将下载及后续操作用于广告效果统计", "resume_note": "支持断点续传 · 版本", "open_app": "已安装？打开应用并继续",
+    "preparing": "正在准备下载…", "ready": "已准备下载，请查看浏览器下载进度。", "download_failed": "暂时无法下载，请重试", "invalid_url": "下载地址无效", "network_error": "网络连接失败，请重试"
+  },
+  "en": {
+    "download_button": "Download app", "page_title": "App download", "tagline": "Publish your app · Deliver with ease",
+    "platform": "Platform", "package_size": "Size", "downloads": "Downloads", "rating": "Rating", "reviews": "reviews",
+    "screenshots": "Screenshots", "about_app": "About this app", "app_info": "App information", "version": "Version", "version_number": "Version", "package": "Package", "app_icon": "App icon",
+    "ad_consent": "I agree to the use of download and subsequent activity for ad performance measurement", "resume_note": "Resumable downloads · Version", "open_app": "Already installed? Open the app and continue",
+    "preparing": "Preparing your download…", "ready": "Download ready. Check your browser’s download progress.", "download_failed": "Download unavailable. Please try again.", "invalid_url": "Invalid download URL", "network_error": "Connection failed. Please try again."
+  },
+  "zh-TW": {
+    "download_button": "下載應用", "page_title": "應用下載", "tagline": "應用發布 · 輕鬆交付",
+    "platform": "應用平台", "package_size": "安裝套件大小", "downloads": "下載次數", "rating": "評分", "reviews": "則評價",
+    "screenshots": "應用截圖", "about_app": "關於此應用", "app_info": "應用資訊", "version": "版本", "version_number": "版本號", "package": "安裝套件", "app_icon": "應用圖示",
+    "ad_consent": "我同意將下載及後續操作用於廣告成效統計", "resume_note": "支援續傳 · 版本", "open_app": "已安裝？開啟應用並繼續",
+    "preparing": "正在準備下載…", "ready": "下載已準備完成，請查看瀏覽器下載進度。", "download_failed": "暫時無法下載，請重試", "invalid_url": "下載網址無效", "network_error": "網路連線失敗，請重試"
+  },
+  "ja": {
+    "download_button": "ダウンロード", "page_title": "アプリのダウンロード", "tagline": "アプリを公開 · 簡単に配信",
+    "platform": "対応プラットフォーム", "package_size": "サイズ", "downloads": "ダウンロード数", "rating": "評価", "reviews": "件のレビュー",
+    "screenshots": "スクリーンショット", "about_app": "このアプリについて", "app_info": "アプリ情報", "version": "バージョン", "version_number": "バージョン", "package": "パッケージ", "app_icon": "アプリアイコン",
+    "ad_consent": "ダウンロードとその後の操作を広告効果の測定に使用することに同意します", "resume_note": "ダウンロードの再開に対応 · バージョン", "open_app": "インストール済みですか？アプリを開いて続行",
+    "preparing": "ダウンロードを準備しています…", "ready": "準備ができました。ブラウザのダウンロード状況をご確認ください。", "download_failed": "ダウンロードできません。もう一度お試しください。", "invalid_url": "ダウンロードURLが無効です", "network_error": "接続に失敗しました。もう一度お試しください。"
+  },
+  "ko": {
+    "download_button": "앱 다운로드", "page_title": "앱 다운로드", "tagline": "앱 출시 · 간편한 배포",
+    "platform": "지원 플랫폼", "package_size": "크기", "downloads": "다운로드 수", "rating": "평점", "reviews": "개 리뷰",
+    "screenshots": "스크린샷", "about_app": "앱 정보", "app_info": "앱 세부정보", "version": "버전", "version_number": "버전", "package": "설치 파일", "app_icon": "앱 아이콘",
+    "ad_consent": "다운로드 및 후속 활동을 광고 성과 측정에 사용하는 데 동의합니다", "resume_note": "이어받기 지원 · 버전", "open_app": "이미 설치하셨나요? 앱을 열고 계속하기",
+    "preparing": "다운로드를 준비 중입니다…", "ready": "다운로드가 준비되었습니다. 브라우저의 다운로드 진행 상황을 확인하세요.", "download_failed": "다운로드할 수 없습니다. 다시 시도하세요.", "invalid_url": "다운로드 URL이 올바르지 않습니다", "network_error": "연결에 실패했습니다. 다시 시도하세요."
+  },
+  "de": {
+    "download_button": "App herunterladen", "page_title": "App herunterladen", "tagline": "Apps veröffentlichen · Einfach bereitstellen",
+    "platform": "Plattform", "package_size": "Größe", "downloads": "Downloads", "rating": "Bewertung", "reviews": "Bewertungen",
+    "screenshots": "Screenshots", "about_app": "Über diese App", "app_info": "App-Informationen", "version": "Version", "version_number": "Version", "package": "Paket", "app_icon": "App-Symbol",
+    "ad_consent": "Ich stimme der Nutzung des Downloads und nachfolgender Aktivitäten zur Messung der Werbeleistung zu", "resume_note": "Fortsetzbare Downloads · Version", "open_app": "Bereits installiert? App öffnen und fortfahren",
+    "preparing": "Download wird vorbereitet…", "ready": "Download bereit. Prüfen Sie den Download-Fortschritt Ihres Browsers.", "download_failed": "Download nicht verfügbar. Bitte erneut versuchen.", "invalid_url": "Ungültige Download-URL", "network_error": "Verbindung fehlgeschlagen. Bitte erneut versuchen."
+  }
+}

@@ -27,8 +27,12 @@ var googlePlayHTML string
 //go:embed templates/google-play.css
 var googlePlayCSS string
 
+//go:embed templates/download-button.css
+var downloadButtonCSS string
+
 type PageDesign struct {
 	Layout               string   `json:"layout"`
+	Language             string   `json:"language"`
 	Title                string   `json:"title"`
 	Developer            string   `json:"developer"`
 	Summary              string   `json:"summary"`
@@ -54,7 +58,7 @@ type AppPageDesign struct {
 }
 
 func defaultPageDesign(a Application) PageDesign {
-	return PageDesign{Layout: "google_play", Title: a.Name, Description: a.Description, ButtonText: "下载应用", ThemeColor: "#01875f", BackgroundColor: "#ffffff", Screenshots: []string{}, Tags: []string{}, ShowDescription: true, ShowScreenshots: true, ShowFileInfo: true, ShowDownloads: true}
+	return PageDesign{Layout: "google_play", Language: "zh-CN", Title: a.Name, Description: a.Description, ButtonText: "下载应用", ThemeColor: "#01875f", BackgroundColor: "#ffffff", Screenshots: []string{}, Tags: []string{}, ShowDescription: true, ShowScreenshots: true, ShowFileInfo: true, ShowDownloads: true}
 }
 func (s *Server) pageDesign(a Application) (PageDesign, error) {
 	var saved AppPageDesign
@@ -94,6 +98,9 @@ func validPageImage(raw string) bool {
 	return err == nil && u.Scheme == "https" && u.Hostname() != "" && u.User == nil && len(raw) <= 2048
 }
 func validatePageDesign(d PageDesign) error {
+	if _, supported := pageLanguages[d.Language]; d.Language != "" && !supported {
+		return problem(400, "请选择支持的详情页语言")
+	}
 	if (d.Layout != "store" && d.Layout != "minimal" && d.Layout != "google_play") || !pageColor.MatchString(d.ThemeColor) || !pageColor.MatchString(d.BackgroundColor) {
 		return problem(400, "请选择有效模板和十六进制主题颜色")
 	}

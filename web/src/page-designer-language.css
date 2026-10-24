@@ -1,0 +1,11 @@
+.designer-language-field{margin:18px 0 22px}
+.designer-language-field>span{display:block;font-size:12px;font-weight:500;color:#71819d;margin-bottom:10px}
+.designer-language-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.designer-language-options button{min-height:40px;padding:9px 8px;border:1px solid #e0e5f0;border-radius:7px;background:#fff;color:#7889a7;font-size:12px;line-height:1.5}
+.designer-language-options button[aria-pressed="true"]{background:#f0f2ff;border-color:#8996eb;color:#6575d9;box-shadow:0 0 0 1px #8996eb inset}
+.designer-language-options button:focus-visible{outline:3px solid #c5ceff;outline-offset:2px}
+.designer-language-options button:disabled{cursor:default;opacity:.65}
+.designer-language-field>p{margin:10px 0 0;font-size:11px;line-height:1.8;color:#99a7bd}
+.designer-button-copy{display:grid;gap:7px}
+.designer-button-copy .text-btn{justify-self:start;font-size:11px}
+@media(max-width:650px){.designer-language-options{grid-template-columns:repeat(2,minmax(0,1fr))}}

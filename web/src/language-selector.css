@@ -1,0 +1,22 @@
+.language-switcher{display:inline-flex;align-items:center;gap:6px;min-width:0;color:#74839b}
+.language-switcher>svg{flex-shrink:0}
+.language-switcher select{width:128px;max-width:100%;min-width:0;background:#fff;border:1px solid #e1e6ef;padding:7px 23px 7px 9px;border-radius:7px;font-size:11px;color:#53647d;line-height:1.5}
+.home-nav-actions .language-switcher{margin-right:2px}
+.home-nav-actions{flex-wrap:wrap}
+.topbar>div:first-child{min-width:0}
+.breadcrumb{min-width:0}
+.breadcrumb strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-nav{flex-wrap:wrap;padding-block:15px;gap:20px}
+.home-nav-sections{margin-left:0;gap:24px;flex-wrap:wrap}
+.home-nav-actions{gap:16px;margin-left:auto}
+.home-nav>a,.home-nav-actions{flex-shrink:0}
+.auth-top{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.auth-top .language-switcher{margin-right:auto}
+.nav-link{min-height:42px;height:auto}
+.nav-link>span:not(.nav-dot){min-width:0;overflow-wrap:anywhere;line-height:1.5}
+.workspace-label>div{min-width:0;overflow-wrap:anywhere}
+.home-hero-copy,.home-section-top>div{min-width:0}
+html:not([lang^="zh"]):not([lang="ja"]):not([lang="ko"]) .home h1{font-size:clamp(38px,4.6vw,60px);letter-spacing:-1.5px;overflow-wrap:anywhere}
+@media(max-width:1100px){.home-nav-sections{order:3;flex:1 0 100%;justify-content:center}.home-nav-actions{gap:14px}}
+@media(max-width:650px){.home-nav-actions{width:100%;justify-content:space-between}.home-nav-actions .home-button-small{white-space:normal;text-align:center;max-width:155px}.home-hero-actions{flex-wrap:wrap}.home-hero-actions .home-button{max-width:100%;white-space:normal}.topbar-right .language-switcher select{width:100px}.topbar .breadcrumb{max-width:100px}.home-nav-sections{display:none}.auth-top{row-gap:14px}.auth-top .language-switcher{flex-basis:100%}}
+@media(max-width:650px){.language-switcher select{width:108px;font-size:10px}.language-switcher>svg{display:none}.home-nav{flex-wrap:wrap;gap:12px}.home-nav-actions{gap:9px;max-width:100%;margin-left:auto}.topbar-right{flex-shrink:0}.breadcrumb{max-width:135px}}

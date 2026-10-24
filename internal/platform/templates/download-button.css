@@ -1,0 +1,37 @@
+/* Shared by all download templates; PWA-style full-width centered CTA. */
+.d1-download-form{width:100%}
+.d1-download-button.install-button,
+.download-area .d1-download-button{
+  position:relative;isolation:isolate;overflow:hidden;display:flex;
+  align-items:center;justify-content:center;width:100%;max-width:480px;min-width:0;
+  min-height:60px;margin:20px auto 8px;padding:17px 24px;box-sizing:border-box;
+  border:0;border-radius:10px;background:var(--accent,#01875f);color:#fff;
+  font-size:18px;font-weight:600;line-height:1.45;text-align:center;white-space:normal;
+  overflow-wrap:anywhere;cursor:pointer;transition:filter .2s ease,transform .2s ease;
+}
+.d1-download-button-label{position:relative;z-index:1;pointer-events:none}
+.d1-download-button::after{
+  content:"";position:absolute;z-index:0;inset:-50% auto -50% -55%;width:45%;
+  background:linear-gradient(110deg,transparent,rgba(255,255,255,.48),transparent);
+  transform:translateX(0) skewX(-20deg);opacity:0;pointer-events:none;
+  animation:d1-download-shine 3.4s ease-in-out infinite;
+}
+@keyframes d1-download-shine{
+  0%,55%{transform:translateX(0) skewX(-20deg);opacity:0}
+  60%{opacity:1}
+  90%,100%{transform:translateX(450%) skewX(-20deg);opacity:0}
+}
+.d1-download-button:hover:not(:disabled){filter:brightness(1.06);transform:translateY(-1px)}
+.d1-download-button:active:not(:disabled){transform:translateY(0)}
+.d1-download-button:focus-visible{outline:3px solid var(--accent,#01875f);outline-offset:4px}
+.d1-download-button:disabled{cursor:default}
+.d1-download-button:disabled:not(.download-preview)::after{animation:none}
+.d1-download-button.download-preview{opacity:1}
+#download-status,.d1-open-app,.download-note,.open-app{text-align:center}
+@media(max-width:600px){
+  .d1-download-button.install-button,.download-area .d1-download-button{min-height:56px;font-size:17px;padding:15px 20px}
+}
+@media(prefers-reduced-motion:reduce){
+  .d1-download-button::after{animation:none;display:none}
+  .d1-download-button.install-button,.download-area .d1-download-button{transition:none;transform:none}
+}

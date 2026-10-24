@@ -1282,6 +1282,8 @@
 .d1-open-app{display:block;color:var(--play-accent);font-size:13px;margin:8px 0;text-decoration:none}
 .d1-file-row{display:grid;grid-template-columns:80px minmax(0,1fr);gap:12px;font-size:13px;padding:9px 0;border-bottom:1px solid #f0f1f2}
 .d1-file-row span{color:#80868b}.d1-file-row code{word-break:break-all;font-size:11px}
-.d1-footer{padding:22px 16px;color:#80868b;font-size:11px;line-height:1.8;text-align:center}
 .header{border-bottom:1px solid #f0f1f2}.google-play-mobile .main-content{max-width:960px;margin:auto}
-@media(min-width:768px){.app-header-section{padding-top:42px}.app-icon-large{width:112px;height:112px;border-radius:24px}.app-title{font-size:30px}.app-main-info{gap:24px}.app-stats-row{max-width:500px;margin:28px 0}.install-button{max-width:320px}.screenshot-card{width:210px}.screenshots-section,.about-section,.data-safety-section{padding-top:24px;padding-bottom:24px}.main-content{padding-top:70px!important}}
+/* Match pwa/google-play/src/App.vue's centered, mobile-first desktop card. */
+.app-text-info{min-width:0}
+.d1-file-row>div{overflow-wrap:anywhere}
+.stat-main,.stat-sub{overflow-wrap:anywhere;max-width:100%}
