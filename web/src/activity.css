@@ -1,0 +1,7 @@
+.download-ua-value{margin:5px 0 6px;line-height:1.8;color:#69778f}
+.download-ua-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
+.download-ua-actions .text-btn{font-size:11px}
+.download-ua-actions .badge{padding:3px 6px;font-size:10px}
+.download-ua-empty{display:block;margin-top:3px;color:#8992a2}
+.download-ua-confirm{font-size:13px;line-height:1.9;color:#63718a}
+.download-ua-preview{font-size:11px;line-height:1.8;overflow-wrap:anywhere;padding:12px 14px;margin-top:16px;border:1px solid #e7ecf4;border-radius:8px;background:#f8faff;color:#69778f}

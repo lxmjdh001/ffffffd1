@@ -57,6 +57,9 @@ func (s *Server) directDownload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "应用不存在、已暂停或已被下架", 404)
 		return
 	}
+	if s.rejectBlockedUA(w, r, a.UserID, r.UserAgent()) {
+		return
+	}
 	if a.DownloadMode == "info" {
 		target := "/a/" + a.Slug + "/info"
 		if r.URL.RawQuery != "" {
@@ -89,6 +92,9 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 	a, e := s.publicApp(r)
 	if e != nil {
 		http.Error(w, "应用不存在、已暂停或已被下架", 404)
+		return
+	}
+	if s.rejectBlockedUA(w, r, a.UserID, r.UserAgent()) {
 		return
 	}
 	if e = s.rate("landing:"+s.clientIP(r), 1200, time.Minute); e != nil {
@@ -137,6 +143,9 @@ func (s *Server) startDownload(w http.ResponseWriter, r *http.Request) {
 	a, e := s.publicApp(r)
 	if e != nil {
 		http.NotFound(w, r)
+		return
+	}
+	if s.rejectBlockedUA(w, r, a.UserID, r.UserAgent()) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 8192)
@@ -276,6 +285,18 @@ func (s *Server) serveDownload(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	var owner User
+	if a.UserID != t.UserID || s.DB.First(&owner, "id = ? AND disabled = ?", t.UserID, false).Error != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if audience, managed := r.Context().Value(downloadAudienceKey).(string); managed && audience != "all" && owner.PlanID(s.Now()) != audience {
+		http.NotFound(w, r)
+		return
+	}
+	if s.rejectBlockedUA(w, r, t.UserID, r.UserAgent(), t.UserAgent) {
+		return
+	}
 	if a.FileKey != t.FileKey {
 		http.Error(w, "应用已更新，请重新打开应用下载链接", 410)
 		return
@@ -350,7 +371,22 @@ func (s *Server) listDownloads(w http.ResponseWriter, r *http.Request) {
 	if appID := r.URL.Query().Get("app_id"); appID != "" {
 		q = q.Where("app_id = ?", appID)
 	}
-	listOut[Download](w, r, q)
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		fail(w, err)
+		return
+	}
+	offset, limit := pageParams(r)
+	records := []Download{}
+	if err := q.Order("created_at DESC").Offset(offset).Limit(limit).Find(&records).Error; err != nil {
+		fail(w, err)
+		return
+	}
+	if err := s.markBlockedDownloadUAs(userOf(r).ID, records); err != nil {
+		fail(w, problem(http.StatusServiceUnavailable, "访问检查暂时不可用，请稍后重试"))
+		return
+	}
+	jsonOut(w, http.StatusOK, map[string]any{"data": records, "total": total})
 }
 
 func downloadDateRange(r *http.Request, now time.Time) (time.Time, time.Time, error) {

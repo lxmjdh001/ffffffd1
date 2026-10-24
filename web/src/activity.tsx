@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
-import { api } from './api';
+import { useRef, useState, type FormEvent } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ban, Search } from 'lucide-react';
+import { api, send } from './api';
 import type { Download, Page } from './types';
-import { Badge, bytes, date, Empty, ErrorState, Field, FormError, money, PageHeader, Pager, Spinner } from './ui';
+import { Badge, bytes, date, Empty, errorText, ErrorState, Field, FormError, Modal, money, PageHeader, Pager, Spinner } from './ui';
+import './activity.css';
 
 type DateRange = { start: string; end: string };
 const dayMillis = 86400000;
@@ -21,6 +22,11 @@ export function ActivityPage() {
   const [range, setRange] = useState<DateRange>(() => presetRange(1));
   const [draft, setDraft] = useState<DateRange>(range);
   const [formError, setFormError] = useState('');
+  const [uaAction, setUAAction] = useState<{ download: Download; blocked: boolean }>();
+  const [uaError, setUAError] = useState('');
+  const [uaBusy, setUABusy] = useState(false);
+  const uaSubmitting = useRef(false);
+  const cache = useQueryClient();
   const { data, error, refetch, isFetching } = useQuery({
     queryKey: ['downloads', range.start, range.end, page],
     queryFn: () => api<Page<Download>>(`/downloads?${new URLSearchParams({ page: String(page), start_date: range.start, end_date: range.end })}`),
@@ -35,6 +41,17 @@ export function ActivityPage() {
     if (page === 1 && sameRange(next, range)) void refetch();
   };
   const submit = (event: FormEvent) => { event.preventDefault(); applyRange(draft); };
+  const saveUABlock = async () => {
+    if (!uaAction || uaSubmitting.current) return;
+    uaSubmitting.current = true; setUABusy(true); setUAError('');
+    try {
+      const result = await send<{ blocked: boolean }>(`/downloads/${encodeURIComponent(uaAction.download.id)}/ua-block`, { blocked: uaAction.blocked }, 'PUT');
+      cache.setQueriesData<Page<Download>>({ queryKey: ['downloads'] }, current => current ? { ...current, data: current.data.map(download => download.user_agent === uaAction.download.user_agent ? { ...download, ua_blocked: result.blocked } : download) } : current);
+      setUAAction(undefined);
+      await cache.invalidateQueries({ queryKey: ['downloads'] });
+    } catch (error) { setUAError(errorText(error)); }
+    finally { uaSubmitting.current = false; setUABusy(false); }
+  };
   const isToday = sameRange(range, presetRange(1));
 
   return <>
@@ -56,9 +73,15 @@ export function ActivityPage() {
         <FormError>{formError}</FormError>
       </form>
       <div className="panel-heading"><div><h2>{isToday ? '今日下载' : '筛选结果'}</h2><p>{range.start === range.end ? range.start : `${range.start} 至 ${range.end}`}</p></div><span className="muted small">只展示完整传输成功的下载，分段自动合并</span></div>
-      {error ? <ErrorState error={error} retry={() => refetch()} /> : !data ? <Spinner /> : !data.data.length ? <Empty title="所选日期暂无下载记录" detail="可以切换日期范围查看其他下载记录。" /> : <div className="table-wrap"><table><thead><tr><th>应用名称</th><th>IP / 设备</th><th>来源</th><th>计费方式</th><th>本次费用</th><th>完成时间 / 用时</th></tr></thead><tbody>{data.data.map(d => <tr key={d.id}><td className="semibold">{d.app_name}</td><td><strong className="mono small">{d.ip}</strong><small className="cell-sub">{d.device} · {d.os} · {d.browser}</small><details className="ua-detail"><summary>查看 UA</summary>{d.user_agent}</details></td><td className="source-cell" title={d.source}>{d.source || "直接访问 / 未提供"}</td><td><Badge tone={d.amount_micros > 0 ? 'amber' : 'green'}>{d.amount_micros > 0 ? '余额扣费' : '免费额度 / 零单价'}</Badge></td><td>$ {money(d.amount_micros, 6)}</td><td>{date(d.completed_at, true)}<small className="cell-sub">{bytes(d.bytes)} · {Math.max(0, (new Date(d.completed_at).getTime() - new Date(d.started_at).getTime()) / 1000).toFixed(1)} 秒</small></td></tr>)}</tbody></table></div>}
+      {error ? <ErrorState error={error} retry={() => refetch()} /> : !data ? <Spinner /> : !data.data.length ? <Empty title="所选日期暂无下载记录" detail="可以切换日期范围查看其他下载记录。" /> : <div className="table-wrap"><table><thead><tr><th>应用名称</th><th>IP / 设备</th><th>来源</th><th>计费方式</th><th>本次费用</th><th>完成时间 / 用时</th></tr></thead><tbody>{data.data.map(d => <tr key={d.id}><td className="semibold">{d.app_name}</td><td><strong className="mono small">{d.ip}</strong><small className="cell-sub">{d.device} · {d.os} · {d.browser}</small><details className="ua-detail"><summary>查看 UA</summary><p className="download-ua-value">{d.user_agent || '此记录未提供 UA'}</p><div className="download-ua-actions">{d.ua_blocked && <Badge tone="red">已拉黑</Badge>}<button type="button" className={`text-btn ${d.ua_blocked ? '' : 'danger-text'}`} disabled={uaBusy || !d.user_agent.trim()} onClick={() => { setUAAction({ download: d, blocked: !d.ua_blocked }); setUAError(''); }}><Ban size={13} />{d.ua_blocked ? '解除拉黑' : '拉黑 UA'}</button></div>{!d.user_agent.trim() && <small className="download-ua-empty">无法拉黑未提供 UA 的记录。</small>}</details></td><td className="source-cell" title={d.source}>{d.source || "直接访问 / 未提供"}</td><td><Badge tone={d.amount_micros > 0 ? 'amber' : 'green'}>{d.amount_micros > 0 ? '余额扣费' : '免费额度 / 零单价'}</Badge></td><td>$ {money(d.amount_micros, 6)}</td><td>{date(d.completed_at, true)}<small className="cell-sub">{bytes(d.bytes)} · {Math.max(0, (new Date(d.completed_at).getTime() - new Date(d.started_at).getTime()) / 1000).toFixed(1)} 秒</small></td></tr>)}</tbody></table></div>}
       <Pager page={page} total={data?.total || 0} setPage={setPage} />
     </section>
+    {uaAction && <Modal title={uaAction.blocked ? '拉黑此 UA？' : '解除此 UA 的拉黑？'} close={() => { if (!uaBusy) setUAAction(undefined); }}>
+      <p className="download-ua-confirm">{uaAction.blocked ? '拉黑后，使用此 UA 的访问将无法进入你名下的下载、分流及斗篷入口，并显示默认 404 页面。此操作仅对你的账户生效，其他用户不受影响。' : '解除后，此 UA 可以重新访问你名下的下载、分流及斗篷入口，仍须符合入口的其他访问规则。'}</p>
+      <p className="download-ua-preview">{uaAction.download.user_agent}</p>
+      <FormError>{uaError}</FormError>
+      <div className="modal-footer"><button type="button" className="btn secondary" disabled={uaBusy} onClick={() => setUAAction(undefined)}>取消</button><button type="button" className={`btn ${uaAction.blocked ? 'danger' : 'primary'}`} disabled={uaBusy} onClick={() => void saveUABlock()}>{uaBusy ? '处理中…' : uaAction.blocked ? '确认拉黑' : '确认解除'}</button></div>
+    </Modal>}
     <p className="bottom-hint">开始下载时预留额度或余额，服务端完整传输文件后才结算。断点续传合并字节范围，下载凭证过期仍未完成则释放预留。成功表示服务端完整传输，不代表客户端安装或注册成功。</p>
   </>;
 }

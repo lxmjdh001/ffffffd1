@@ -397,6 +397,9 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	if s.rejectBlockedUA(w, r, c.UserID, r.UserAgent()) {
+		return
+	}
 	target := c.SafeURL
 	if !c.Enabled || !cloakBlocked(c, r, s.cloakRequestCountry(r)) {
 		candidate := c.TargetURL

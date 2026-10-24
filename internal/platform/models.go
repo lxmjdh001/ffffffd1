@@ -180,6 +180,7 @@ type Download struct {
 	AmountMicros  int64     `json:"amount_micros"`
 	IP            string    `json:"ip" gorm:"size:64"`
 	UserAgent     string    `json:"user_agent"`
+	UABlocked     bool      `json:"ua_blocked" gorm:"-"`
 	Source        string    `json:"source"`
 	Device        string    `json:"device"`
 	OS            string    `json:"os"`

@@ -212,6 +212,7 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("POST /api/domains/{id}/verify", s.auth(s.verifyDomain))
 	m.Handle("DELETE /api/domains/{id}", s.auth(s.deleteDomain))
 	m.Handle("GET /api/downloads", s.auth(s.listDownloads))
+	m.Handle("PUT /api/downloads/{id}/ua-block", s.auth(s.setDownloadUABlock))
 	m.Handle("GET /api/ledger", s.auth(s.listLedger))
 	m.Handle("GET /api/referrals", s.auth(s.referrals))
 	m.Handle("GET /api/orders", s.auth(s.listOrders))

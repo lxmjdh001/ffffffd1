@@ -61,6 +61,9 @@ func Migrate(db *gorm.DB) error {
 		if err := tx.AutoMigrate(&Application{}); err != nil {
 			return err
 		}
+		if err := tx.AutoMigrate(&UABlock{}); err != nil {
+			return err
+		}
 		if err := tx.AutoMigrate(&Migration{}); err != nil {
 			return err
 		}

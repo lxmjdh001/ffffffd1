@@ -270,6 +270,13 @@ func (s *Server) routeTraffic(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	if audience, managed := r.Context().Value(downloadAudienceKey).(string); managed && audience != "all" && u.PlanID(s.Now()) != audience {
+		http.NotFound(w, r)
+		return
+	}
+	if s.rejectBlockedUA(w, r, p.UserID, r.UserAgent()) {
+		return
+	}
 	target, err := s.trafficTarget(r, p.Slug, p.UserID)
 	if err != nil {
 		fail(w, err)
