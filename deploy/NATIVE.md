@@ -92,7 +92,10 @@ do not restart PostgreSQL, Nginx or unrelated PM2 applications. Keep the databas
 files, and `/etc/d1apk/app.env` backed up together.
 
 After unpacking a release, make static artifacts readable to the service user
-with `chmod -R a+rX RELEASE/web/dist`. Do not apply this to the secret environment
+with `chmod -R a+rX RELEASE/web/dist`. After building as root, also use
+`chmod 0755 RELEASE/bin RELEASE/bin/d1apk`; a restrictive build umask can otherwise
+prevent the service account from executing the binary. Check access as `d1apk`
+before restarting the running release. Do not apply these permissions to the secret environment
 file. Verify both `/healthz` and the actual website `/` after every deployment.
 
 ### Administrator credentials

@@ -42,6 +42,12 @@ def main():
         raise SystemExit('Previous D1 release unavailable')
     if not (release / 'bin/d1apk').is_file() or not (args.backup / 'app.env').is_file():
         raise SystemExit('New binary or environment backup missing')
+    # Check the actual service account before stopping the healthy release.
+    # A root build with a restrictive umask can leave bin/ and its binary 0700.
+    for mode, path in [('-x', release / 'bin/d1apk'), ('-r', release / 'web/dist/index.html')]:
+        access = subprocess.run(['runuser', '-u', 'd1apk', '--', 'test', mode, str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if access.returncode != 0:
+            raise SystemExit('Prepared release is inaccessible to d1apk; fix binary/static permissions before activation')
     try:
         point_to(release)
         subprocess.run(['systemctl', 'restart', 'd1apk'], check=True)
