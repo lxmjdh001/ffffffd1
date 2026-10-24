@@ -39,7 +39,7 @@
   const frame=document.createElement('iframe');frame.name='d1-pwa-download-'+Date.now();frame.hidden=true;document.body.appendChild(frame);
   const link=document.createElement('a');link.href=url;link.target=frame.name;link.download='';link.hidden=true;document.body.appendChild(link);link.click();setTimeout(()=>{frame.remove();link.remove();},15000);return true;
  }
- if(document.body.classList.contains('pwa-reference-page'))window.downloadInCurrentPage=downloadInCurrentPage;
+ if(document.body.hasAttribute('data-d1-pwa-reference'))window.downloadInCurrentPage=downloadInCurrentPage;
  async function installApp(options = {}) {
   const settings=window.__APP_CONFIG__?.app?.settings;
   if (window.showBrowserGuide && window.showBrowserGuide()) return;

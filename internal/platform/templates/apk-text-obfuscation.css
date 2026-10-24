@@ -1,0 +1,4 @@
+/* Out of flow: noise changes DOM text, never the visible name or its layout. */
+.d1-obfuscated-text{display:inline!important;font:inherit!important;letter-spacing:inherit!important}
+.d1-obfuscated-text::before{content:attr(data-d1-display);font:inherit;letter-spacing:inherit}
+.d1-text-noise,.d1-obfuscated-value{position:absolute!important;display:inline-block!important;width:0!important;height:0!important;overflow:hidden!important;font-size:0!important;line-height:0!important;letter-spacing:0!important;opacity:0!important;pointer-events:none!important;user-select:none!important}

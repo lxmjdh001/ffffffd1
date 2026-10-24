@@ -34,6 +34,7 @@ func TestCloakAPKLocalesAndDownloadStayOnCopiedDomain(t *testing.T) {
 					}
 					base := defaultPageDesign(app)
 					base.Layout = layout
+					base.Landing = &APKLandingOptions{TextObfuscation: true}
 					var locales []PageDesign
 					for _, value := range []struct{ code, title string }{{"zh-CN", "简体应用"}, {"zh-TW", "繁體應用"}, {"en-US", "English APK"}, {"fr-FR", "Application française"}} {
 						d := base
@@ -65,7 +66,8 @@ func TestCloakAPKLocalesAndDownloadStayOnCopiedDomain(t *testing.T) {
 					}
 					page := request("GET", host, "/c/"+cloak.Slug, nil, nil)
 					requireCode(t, page, 200)
-					if page.Header().Get("Location") != "" || !strings.Contains(page.Header().Get("Vary"), "Accept-Language") || !strings.Contains(page.Body.String(), language.title) || !strings.Contains(page.Body.String(), language.button) {
+					visible := regexp.MustCompile(`<span class="d1-text-noise" aria-hidden="true">[a-f0-9]{2}</span>`).ReplaceAllString(page.Body.String(), "")
+					if !strings.Contains(page.Body.String(), `class="d1-text-noise"`) || page.Header().Get("Location") != "" || !strings.Contains(page.Header().Get("Vary"), "Accept-Language") || !strings.Contains(visible, language.title) || !strings.Contains(visible, language.button) {
 						t.Fatal("cloak did not render the browser's localized APK page in place")
 					}
 					if !strings.Contains(page.Body.String(), `action="/a/`+app.Slug+`/download"`) {
@@ -78,7 +80,7 @@ func TestCloakAPKLocalesAndDownloadStayOnCopiedDomain(t *testing.T) {
 						config := request("GET", host, "/a/"+app.Slug+suffix, nil, nil)
 						requireCode(t, config, 200)
 						text := config.Body.String()
-						if strings.Contains(text, s.Config.PublicURL) || !strings.Contains(text, `"s3PublicDomain":"https://`+host+`"`) || !strings.Contains(text, `"language":"`+language.code+`"`) || !strings.Contains(text, language.title) || !strings.Contains(text, language.button) {
+						if strings.Contains(text, s.Config.PublicURL) || !strings.Contains(text, `"textObfuscation":true`) || !strings.Contains(text, `"s3PublicDomain":"https://`+host+`"`) || !strings.Contains(text, `"language":"`+language.code+`"`) || !strings.Contains(text, language.title) || !strings.Contains(text, language.button) {
 							t.Fatal("template runtime changed the selected language or domain", suffix)
 						}
 					}

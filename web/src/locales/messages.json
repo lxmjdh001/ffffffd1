@@ -1,5 +1,7 @@
 {
   "en": {
+    "文字混淆": "Text obfuscation",
+    "应用名称和开发者／品牌名显示不变，底层文本加入随机字符。": "The app and developer/brand names look unchanged, with random characters added to the underlying text.",
     "目标不可用": "Target unavailable",
     "详情页": "Details page",
     "应用链接": "App link",
@@ -1966,6 +1968,8 @@
     "请选择今日、7天或近一月统计": "Choose today, 7 days or the past month"
   },
   "pt": {
+    "文字混淆": "Ofuscação de texto",
+    "应用名称和开发者／品牌名显示不变，底层文本加入随机字符。": "Os nomes da aplicação e do programador/marca mantêm a aparência, com caracteres aleatórios adicionados ao texto subjacente.",
     "目标不可用": "Destino indisponível",
     "详情页": "Página de detalhes",
     "应用链接": "Link do aplicativo",
@@ -3932,6 +3936,8 @@
     "请选择今日、7天或近一月统计": "Escolha hoje, 7 dias ou o último mês"
   },
   "de": {
+    "文字混淆": "Textverschleierung",
+    "应用名称和开发者／品牌名显示不变，底层文本加入随机字符。": "App- und Entwickler-/Markennamen sehen unverändert aus; dem zugrunde liegenden Text werden zufällige Zeichen hinzugefügt.",
     "目标不可用": "Ziel nicht verfügbar",
     "详情页": "Detailseite",
     "应用链接": "App-Link",
@@ -5898,6 +5904,8 @@
     "请选择今日、7天或近一月统计": "Heute, 7 Tage oder letzten Monat wählen"
   },
   "fr": {
+    "文字混淆": "Obfuscation du texte",
+    "应用名称和开发者／品牌名显示不变，底层文本加入随机字符。": "Les noms de l’application et du développeur/de la marque restent visuellement identiques ; des caractères aléatoires sont ajoutés au texte sous-jacent.",
     "目标不可用": "Destination indisponible",
     "详情页": "Page de détails",
     "应用链接": "Lien de l’application",
@@ -7864,6 +7872,8 @@
     "请选择今日、7天或近一月统计": "Choisissez aujourd’hui, 7 jours ou le dernier mois"
   },
   "ko": {
+    "文字混淆": "텍스트 난독화",
+    "应用名称和开发者／品牌名显示不变，底层文本加入随机字符。": "앱 및 개발자/브랜드 이름의 표시는 유지하고 내부 텍스트에 임의의 문자를 추가합니다.",
     "目标不可用": "대상을 사용할 수 없음",
     "详情页": "상세 페이지",
     "应用链接": "앱 링크",
@@ -9830,6 +9840,8 @@
     "请选择今日、7天或近一月统计": "오늘, 7일 또는 최근 한 달을 선택하세요"
   },
   "ja": {
+    "文字混淆": "テキスト難読化",
+    "应用名称和开发者／品牌名显示不变，底层文本加入随机字符。": "アプリ名と開発者／ブランド名の見た目はそのままに、内部のテキストへランダムな文字を追加します。",
     "目标不可用": "対象を利用できません",
     "详情页": "詳細ページ",
     "应用链接": "アプリリンク",
@@ -11796,6 +11808,8 @@
     "请选择今日、7天或近一月统计": "今日、7日間、直近1か月から選択してください"
   },
   "zh-TW": {
+    "文字混淆": "文字混淆",
+    "应用名称和开发者／品牌名显示不变，底层文本加入随机字符。": "應用名稱和開發者／品牌名顯示不變，底層文字加入隨機字元。",
     "目标不可用": "目標無法使用",
     "详情页": "詳情頁",
     "应用链接": "應用連結",
@@ -13762,6 +13776,8 @@
     "请选择今日、7天或近一月统计": "請選擇今日、7天或近一月統計"
   },
   "ru": {
+    "文字混淆": "Обфускация текста",
+    "应用名称和开发者／品牌名显示不变，底层文本加入随机字符。": "Названия приложения и разработчика/бренда выглядят как прежде, а в исходный текст добавляются случайные символы.",
     "目标不可用": "Цель недоступна",
     "详情页": "Страница приложения",
     "应用链接": "Ссылка приложения",

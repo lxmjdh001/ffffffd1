@@ -249,7 +249,7 @@ func (s *Server) previewPageDesign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var out bytes.Buffer
-	if err := downloadPageTemplate(d.Layout).Execute(&out, map[string]any{"App": a, "Design": d, "Preview": true, "Size": pageDesignSize(a.Size)}); err != nil {
+	if err := downloadPageTemplate(d.Layout).Execute(&out, map[string]any{"App": a, "Design": d, "Preview": true, "Size": pageDesignSize(a.Size), "Decoration": s.newLandingDecoration("apk", a.UserID)}); err != nil {
 		fail(w, err)
 		return
 	}

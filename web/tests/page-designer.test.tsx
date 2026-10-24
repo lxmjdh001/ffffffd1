@@ -186,7 +186,9 @@ it('uses the reference APK templates and publishes the new content settings only
  const state=renderDesigner({display_rating:'4.8'}),user=userEvent.setup();await screen.findByLabelText('展示名称');
  await user.selectOptions(screen.getByLabelText('页面模板'),'custom');
  await user.selectOptions(screen.getByLabelText('年龄分级'),'18');await user.selectOptions(screen.getByLabelText('按钮位置'),'top');await user.click(screen.getByLabelText('显示桌面二维码'));
+ expect((screen.getByRole('checkbox',{name:/文字混淆/}) as HTMLInputElement).checked).toBe(false);
+ await user.click(screen.getByRole('checkbox',{name:/文字混淆/}));
  expect(document.querySelector('iframe')?.getAttribute('src')).toContain('/api/pwa-landing/preview/custom?preview=true&apk=1');expect(state.published).toBeUndefined();
  await user.click(screen.getByRole('button',{name:'保存并发布'}));await screen.findByRole('heading',{name:'应用列表'});
- expect(state.published).toMatchObject({layout:'custom',landing:{age_rating:'18',button_position:'top',enable_qrcode:true}});
+ expect(state.published).toMatchObject({layout:'custom',landing:{age_rating:'18',button_position:'top',enable_qrcode:true,text_obfuscation:true}});
 });

@@ -40,6 +40,7 @@ func (s *Server) pwaRequestOrigin(r *http.Request) string {
 }
 
 type pwaPageData struct {
+	Decoration      landingDecoration
 	ReturnFlowToken string
 	App             *PWAApp
 	Base            string
@@ -71,6 +72,9 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 	if !launch && (landing.Template == "google_play" || landing.Template == "custom") {
 		err = s.renderPWALanding(a, r, &buf)
 	} else {
+		if !launch {
+			data.Decoration = s.newLandingDecoration("pwa", a.UserID)
+		}
 		err = pwaPageTemplate.Execute(&buf, data)
 	}
 	if err != nil {
@@ -172,6 +176,9 @@ func (s *Server) pwaStyles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	css := pwaPageCSS
+	if r.URL.Query().Get("launch") != "1" {
+		css = strings.ReplaceAll(css, ".install-page", "."+s.landingClass("pwa", a.UserID))
+	}
 	landing := storedPWALanding(a.LandingJSON)
 	if (landing.Template == "google_play" || landing.Template == "custom") && r.URL.Query().Get("launch") != "1" {
 		css = pwaLandingBaseCSS

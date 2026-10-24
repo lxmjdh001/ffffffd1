@@ -142,7 +142,7 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 		w.Write(out.Bytes())
 		return
 	}
-	_ = downloadPageTemplate(design.Layout).Execute(w, map[string]any{"App": a, "Design": design, "Nonce": randomHex(16), "Size": pageDesignSize(a.Size), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled, "ReturnFlowToken": viewToken})
+	_ = downloadPageTemplate(design.Layout).Execute(w, map[string]any{"App": a, "Design": design, "Nonce": randomHex(16), "Size": pageDesignSize(a.Size), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled, "ReturnFlowToken": viewToken, "Decoration": s.newLandingDecoration("apk", a.UserID)})
 }
 
 var pageTemplateFunctions = template.FuncMap{"imageURL": func(raw string) template.URL {

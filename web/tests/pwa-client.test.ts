@@ -17,6 +17,7 @@ function subscription(endpoint = 'https://web.push.apple.com/new-endpoint') {
 }
 
 type Options = {
+  reference?: boolean;
   permission?: string;
   existing?: ReturnType<typeof subscription> | null;
   saved?: typeof capability & { unsubscribed?: boolean };
@@ -35,6 +36,8 @@ type Options = {
 function start(options: Options = {}) {
   document.body.innerHTML = '<button id="install-button"></button><span id="install-status"></span><button id="notification-button">Enable notifications</button><button id="unsubscribe-button" hidden></button><span id="notification-status"></span><div id="install-guide" hidden><span id="install-guide-text"></span></div>';
   document.body.dataset.base = base;
+  document.body.className = options.reference ? 'd1-pwaabc123-reference' : '';
+  document.body.toggleAttribute('data-d1-pwa-reference', !!options.reference);
   document.body.dataset.locale = 'en';
   document.body.dataset.pushEnabled = 'true';
   if (options.saved) localStorage.setItem(storeKey, JSON.stringify(options.saved));
@@ -81,6 +84,15 @@ function start(options: Options = {}) {
 beforeEach(() => localStorage.clear());
 
 describe('PWA subscription renewal follows the reference PWA', () => {
+  it('keeps the reference download bridge with a tenant-specific root class', async () => {
+    const c = start({ reference: true });
+    expect(c.runtimeWindow.downloadInCurrentPage).toBeTypeOf('function');
+    await c.runtimeWindow.D1ReturnFlowInstall();
+    expect(document.getElementById('install-guide')!.hidden).toBe(false);
+    expect(c.notification.requestPermission).not.toHaveBeenCalled();
+    const legacy = start();
+    expect(legacy.runtimeWindow.downloadInCurrentPage).toBeUndefined();
+  });
   it('honors iOS compatibility and never sends an Android package to iOS from return-page installation',async()=>{
     const runtime={iosRedirectUrl:'https://ios.example/install',app:{settings:{packagePriority:'w2a_only',apkUrl:'https://apk.example/app.apk',iosCompatible:false}}};
     const c=start({ios:true,runtime});

@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
-	"strings"
 )
 
 type APKLandingOptions struct {
+	TextObfuscation      bool               `json:"text_obfuscation"`
 	AgeRating            string             `json:"age_rating"`
 	EnableGoogleBadge    bool               `json:"enable_google_badge"`
 	EnableOfficialVerify bool               `json:"enable_official_verify"`
@@ -75,7 +75,7 @@ func (s *Server) apkLandingRuntime(a Application, d PageDesign) map[string]any {
 	settings := map[string]any{"packagePriority": "pwa", "enableIframeEmbed": true, "enableQrcode": c.EnableQRCode, "returnFlowConfig": d.ReturnFlowConfig}
 	app := map[string]any{"id": a.ID, "appIcon": d.Icon, "appName": d.Title, "enableGoogleBadge": c.EnableGoogleBadge, "enableOfficialVerify": c.EnableOfficialVerify, "storeInfo": lang, "settings": settings}
 	custom := map[string]any{"id": a.ID, "appIcon": d.Icon, "appName": d.Title, "setting": lang, "otherSettings": settings, "startupBgColor": d.BackgroundColor, "startupThemeColor": d.ThemeColor}
-	return map[string]any{"app": app, "customApp": custom, "apiBaseUrl": "/a/" + a.Slug, "s3PublicDomain": s.Config.PublicURL, "d1APK": map[string]any{"buttonText": d.DownloadButtonText(), "rating": d.DisplayRating, "showDownloads": d.ShowDownloads, "showDescription": d.ShowDescription, "showScreenshots": d.ShowScreenshots, "showFileInfo": d.ShowFileInfo, "themeColor": d.ThemeColor, "backgroundColor": d.BackgroundColor}}
+	return map[string]any{"app": app, "customApp": custom, "apiBaseUrl": "/a/" + a.Slug, "s3PublicDomain": s.Config.PublicURL, "d1APK": map[string]any{"textObfuscation": c.TextObfuscation, "buttonText": d.DownloadButtonText(), "rating": d.DisplayRating, "showDownloads": d.ShowDownloads, "showDescription": d.ShowDescription, "showScreenshots": d.ShowScreenshots, "showFileInfo": d.ShowFileInfo, "themeColor": d.ThemeColor, "backgroundColor": d.BackgroundColor}}
 }
 func (s *Server) apkLandingConfigData(w http.ResponseWriter, r *http.Request) (map[string]any, error) {
 	a, e := s.publicApp(r)
@@ -147,7 +147,8 @@ func (s *Server) renderAPKLanding(a Application, d PageDesign, nonce, attributio
 		key = "custom-app/src/main.ts"
 	}
 	entry := entries[key]
-	v := map[string]any{"App": a, "Design": d, "JS": entry.File, "CSS": entry.CSS, "Nonce": nonce, "Attribution": attribution, "DeepLink": deepLink, "AdsEnabled": ads, "ReturnFlowToken": viewToken, "Size": pageDesignSize(a.Size)}
+	decoration := s.newLandingDecoration("apk", a.UserID)
+	v := map[string]any{"App": a, "Design": d, "JS": entry.File, "CSS": entry.CSS, "Nonce": nonce, "Attribution": attribution, "DeepLink": deepLink, "AdsEnabled": ads, "ReturnFlowToken": viewToken, "Size": pageDesignSize(a.Size), "Decoration": decoration, "APKStyle": apkReferenceStyles(decoration.Class)}
 	return apkReferenceHTML.Execute(out, v)
 }
 
@@ -157,6 +158,9 @@ var apkLandingBridgeJS string
 //go:embed templates/apk-landing.css
 var apkLandingCSS string
 
+//go:embed templates/apk-text-obfuscation.css
+var apkTextObfuscationCSS string
+
 //go:embed templates/apk-landing.html
 var apkLandingHTML string
-var apkReferenceHTML = template.Must(template.New("apk-reference").Funcs(pageTemplateFunctions).Parse(strings.Replace(apkLandingHTML, "/*APK_STYLE*/", apkLandingCSS+"\n"+returnFlowCSS, 1)))
+var apkReferenceHTML = template.Must(template.New("apk-reference").Funcs(pageTemplateFunctions).Parse(apkLandingHTML))
