@@ -147,6 +147,8 @@ func (s *Server) rate(key string, limit int64, window time.Duration) error {
 }
 func (s *Server) Handler() http.Handler {
 	m := http.NewServeMux()
+	m.HandleFunc("GET /robots.txt", s.robots)
+	m.HandleFunc("GET /sitemap.xml", s.sitemap)
 	m.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		db, e := s.DB.DB()
 		if e != nil {

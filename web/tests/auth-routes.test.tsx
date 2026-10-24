@@ -215,7 +215,7 @@ describe('real application routes', () => {
     open(`/register?invite=${invite}`);
     await screen.findByRole('heading', { name: '创建你的账户' });
     await user.click(screen.getByRole('link', { name: 'D1 Apk', exact: true }));
-    await screen.findByRole('heading', { name: '让好应用，轻松抵达。' });
+    await screen.findByRole('heading', { name: /APK 分发，\s*让下载更简单。/ });
     expect(window.location.hash).toBe(`#/welcome?invite=${invite}`);
     await user.click(screen.getByRole('link', { name: /开始免费分发/ }));
     await screen.findByRole('heading', { name: '创建你的账户' });

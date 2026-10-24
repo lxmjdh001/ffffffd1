@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, CheckCheck, CloudUpload, Copy, Globe2, Layers3, Link2, ListFilter, Monitor, Package, ShieldCheck, Smartphone, Sparkles } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, CheckCheck, CloudUpload, Copy, Globe2, Layers3, Link2, ListFilter, Monitor, Package, Radio, ShieldCheck, Smartphone, Sparkles } from 'lucide-react';
 import { Brand } from './auth';
 import { bytes, money, number, useConfig } from './ui';
+import homeContent from './home-content.json';
 import './landing.css';
 
 function scrollToSection(id: string) {
@@ -43,7 +44,7 @@ export function LandingPage() {
   return <div className="home">
     <header className="home-header"><nav className="home-width home-nav" aria-label="首页导航">
       <Link to={`/welcome${inviteQuery}`} aria-label={`${config.site_name} 首页`}><Brand /></Link>
-      <div className="home-nav-sections"><button onClick={() => scrollToSection('home-features')}>产品功能</button><button onClick={() => scrollToSection('home-how')}>如何开始</button><button onClick={() => scrollToSection('home-pricing')}>套餐价格</button></div>
+      <div className="home-nav-sections"><button onClick={() => scrollToSection('home-solutions')}>产品功能</button><button onClick={() => scrollToSection('home-how')}>如何开始</button><button onClick={() => scrollToSection('home-pricing')}>套餐价格</button><button onClick={() => scrollToSection('home-faq')}>常见问题</button></div>
       <div className="home-nav-actions"><Link className="home-login" to={`/login${inviteQuery}`}>登录</Link><Link className="home-button home-button-small" to={startPath}>{config.registration_open ? '免费开始' : '进入控制台'}<ArrowUpRight size={15} /></Link></div>
     </nav></header>
     <main>
@@ -51,15 +52,28 @@ export function LandingPage() {
         <div className="home-hero-wash" />
         <div className="home-width home-hero-layout">
           <div className="home-hero-copy">
-            <div className="home-kicker"><span /><span>为每一次发布，少一点繁琐</span></div>
-            <h1>让好应用，<br /><span>轻松抵达。</span></h1>
-            <p>从安装包到下载链接，把应用交付的每一步，<br className="home-desktop-break" />变得更简单。上传、管理、分享，一处完成。</p>
+            <div className="home-kicker"><span /><span>{homeContent.hero.kicker}</span></div>
+            <h1>{homeContent.hero.lines[0]}<br /><span>{homeContent.hero.lines[1]}</span></h1>
+            <p>{homeContent.hero.description}</p>
             <div className="home-hero-actions"><Link className="home-button" to={startPath}>{config.registration_open ? '开始免费分发' : '登录控制台'}<ArrowRight size={18} /></Link><button className="home-text-button" onClick={() => scrollToSection('home-how')}>看看如何开始<ArrowDownRight size={17} /></button></div>
             <div className="home-hero-note"><Check size={14} /><span>{config.registration_open ? '免费开启你的第一个应用 · 随时按需升级' : '注册暂未开放 · 已有账户可登录'}</span></div>
           </div>
           <ReleasePreview />
         </div>
         <div className="home-width home-platform-strip"><p>一个入口，<strong>连接每个平台。</strong></p><div><span><Smartphone size={20} strokeWidth={1.5} />Android</span><span><Smartphone size={20} strokeWidth={1.5} />iOS</span><span><Monitor size={21} strokeWidth={1.5} />Windows</span><span><Monitor size={21} strokeWidth={1.5} />macOS</span></div></div>
+      </section>
+
+      <section className="home-width home-solutions" id="home-solutions" aria-labelledby="home-solutions-heading">
+        <div className="home-section-top"><div><div className="home-eyebrow">ONE WORKSPACE, EVERY DOWNLOAD</div><h2 id="home-solutions-heading">{homeContent.solutions.heading}</h2></div><p>{homeContent.solutions.intro}</p></div>
+        <div className="home-solution-grid">{homeContent.solutions.items.map((item, index) => {
+          const Icon = [Package, Link2, ListFilter, Monitor, Radio][index];
+          return <article key={item.id} className={item.id === 'ads' ? 'home-solution-ads' : undefined}>
+            <div className="home-solution-top"><span className="home-solution-icon"><Icon size={23} strokeWidth={1.5} /></span><span>{item.label}</span></div>
+            <h3>{item.title}</h3><p>{item.description}</p>
+            <ul aria-label={`${item.title}功能`}>{item.tags.map(tag => <li key={tag}>{tag}</li>)}</ul>
+            {item.id === 'ads' && <div className="home-ad-flow" aria-label="广告点击、完整下载和接入事件连接到 Meta 或 TikTok"><span>广告点击</span><ArrowRight size={16} /><span>完整下载</span><ArrowRight size={16} /><span>打开 / 注册</span><ArrowRight size={16} /><strong>Meta · TikTok</strong></div>}
+          </article>;
+        })}</div>
       </section>
 
       <section className="home-width home-how" id="home-how" aria-labelledby="home-how-heading">
@@ -76,7 +90,7 @@ export function LandingPage() {
         <div className="home-feature-grid">
           <article className="home-feature-domain"><div className="home-feature-icon"><Globe2 size={23} strokeWidth={1.5} /></div><h3>你的域名，你的品牌</h3><p>使用自己的下载域名，让每一次访问，都延续你的品牌体验。</p><div className="home-domain-illustration" aria-hidden="true"><Globe2 size={17} /><span>download.yourbrand.com</span><Link2 size={14} /></div></article>
           <article className="home-feature-insights"><div className="home-feature-icon"><Layers3 size={23} strokeWidth={1.5} /></div><h3>管理更有条理</h3><p>应用版本、下载记录和账户用量，在一个清晰的工作空间中掌握。</p><div className="home-insight-illustration" aria-hidden="true"><span><Package size={15} />应用管理<Check size={13} /></span><span><ArrowDownRight size={15} />下载记录<Check size={13} /></span></div></article>
-          <article className="home-feature-cloak"><div className="home-feature-icon"><ListFilter size={23} strokeWidth={1.5} /></div><h3>斗篷，让访问按规则抵达</h3><p>选择已有分流链接或直接输入 URL，按语言、UA、国家、平台、设备及系统设置访问规则。命中拦截条件时，自动跳转到你指定的安全页。</p><div className="home-cloak-illustration" aria-hidden="true"><span><ListFilter size={16} />访问规则</span><ArrowRight size={15} /><div><span><Link2 size={14} />目标页</span><span><ShieldCheck size={14} />安全页</span></div></div></article>
+          <article className="home-feature-cloak"><div className="home-feature-icon"><ListFilter size={23} strokeWidth={1.5} /></div><h3>UA 拉黑，按账户独立生效</h3><p>在下载记录中查看并拉黑 UA，被拉黑的 UA 再次访问时显示专用英文 404。黑名单按账户隔离，也可以随时解除拉黑。</p><div className="home-cloak-illustration" aria-hidden="true"><span><ListFilter size={16} />UA 访问规则</span><ArrowRight size={15} /><div><span><Link2 size={14} />正常下载</span><span><ShieldCheck size={14} />专用 404</span></div></div></article>
           <article className="home-feature-security"><div className="home-feature-icon"><ShieldCheck size={23} strokeWidth={1.5} /></div><h3>自动检测域名安全性</h3><p>付费套餐在应用分流中开启安全检测后，系统定时检查域名风险。命中风险的域名会自动停止参与分流，让你及时掌握下载入口状态。</p><div className="home-security-illustration" aria-hidden="true"><ShieldCheck size={34} strokeWidth={1.3} /><div><strong>定时检测 · 风险自动排除</strong><span>付费套餐专属权益</span></div></div></article>
         </div>
       </div></section>
@@ -96,6 +110,11 @@ export function LandingPage() {
           </article>;
         })}</div>
         <p className="home-pricing-note">赠送次数用完后，按 ${money(config.download_price_micros, 3)} / 次扣除账户余额。</p>
+      </section>
+
+      <section className="home-width home-faq" id="home-faq" aria-labelledby="home-faq-heading">
+        <div className="home-section-top"><div><div className="home-eyebrow">BEFORE YOUR FIRST RELEASE</div><h2 id="home-faq-heading">{homeContent.faq.heading}</h2></div><p>{homeContent.faq.intro}</p></div>
+        <div className="home-faq-list">{homeContent.faq.items.map((item, index) => <details key={item.question} open={index === 0}><summary>{item.question}<span aria-hidden="true">+</span></summary><p>{item.answer}</p></details>)}</div>
       </section>
 
       <section className="home-width home-final-cta"><div className="home-cta-layers" aria-hidden="true"><span /><span /><span><CloudUpload size={28} strokeWidth={1.3} /></span></div><div><span>YOUR NEXT RELEASE STARTS HERE</span><h2>下一次发布，就从这里开始。</h2><p>让应用出发，让好想法被更多人看见。</p></div><Link className="home-button" to={startPath}>{config.registration_open ? '创建你的账户' : '进入控制台'}<ArrowRight size={17} /></Link></section>

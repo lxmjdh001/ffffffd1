@@ -188,3 +188,31 @@
 @media(prefers-reduced-motion:reduce){.home *{scroll-behavior:auto;transition:none!important}.home-button:hover{transform:none}}
 
 .home a:focus-visible,.home button:focus-visible{outline:3px solid #3170d6;outline-offset:4px}
+
+.home-solutions{padding-block:76px 8px;scroll-margin-top:32px}
+.home-solutions .home-section-top>p,.home-faq .home-section-top>p{max-width:315px}
+.home-solution-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.home-solution-grid>article{padding:27px 29px 25px;border:1px solid #e0eaf7;border-radius:13px;background:linear-gradient(145deg,#f7fbff,#fff 72%);box-shadow:0 6px 0 -3px #edf4ff}
+.home-solution-top{display:flex;align-items:center;gap:13px;margin-bottom:21px}
+.home-solution-icon{display:grid;place-items:center;width:43px;height:43px;border:1px solid #dce9fa;border-radius:12px;background:#edf5ff;color:#5b8dd1;flex-shrink:0}
+.home-solution-top>span:last-child{font-size:9px;letter-spacing:1.6px;color:#7490b1}
+.home-solution-grid h3{font-size:19px;font-weight:600;color:#2d4c73;margin-bottom:12px;line-height:1.5}
+.home-solution-grid p{font-size:13px;line-height:2;color:#60738e}
+.home-solution-grid ul{display:flex;flex-wrap:wrap;gap:7px;list-style:none;margin:21px 0 0;padding:0}
+.home-solution-grid li{padding:5px 9px;border:1px solid #e2ecf8;border-radius:5px;background:#f4f8ff;font-size:10px;color:#5f7da4;line-height:1.6}
+.home-solution-grid>.home-solution-ads{grid-column:1 / -1;background:linear-gradient(110deg,#edf5ff,#fff 80%)}
+.home-ad-flow{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:25px;padding:20px 18px;border:1px solid #dbe8fa;border-radius:9px;background:#ffffffb8;color:#86a4ca;font-size:12px}
+.home-ad-flow>span{padding:8px 13px;border:1px solid #e3ecf8;border-radius:7px;background:#f7faff;color:#607fa7;white-space:nowrap}
+.home-ad-flow>strong{font-size:13px;font-weight:550;color:#3a70b9;white-space:nowrap}
+.home-faq{padding-block:14px 72px;scroll-margin-top:32px}
+.home-faq-list{border:1px solid #e0eaf7;border-radius:12px;overflow:hidden;background:#fff}
+.home-faq-list details+details{border-top:1px solid #e8eff8}
+.home-faq-list summary{display:flex;align-items:center;justify-content:space-between;gap:20px;list-style:none;padding:22px 25px;color:#365373;font-size:14px;font-weight:550;cursor:pointer;line-height:1.8}
+.home-faq-list summary::-webkit-details-marker{display:none}
+.home-faq-list summary>span{color:#7294c2;font-size:21px;font-weight:400;line-height:1;transition:transform .2s}
+.home-faq-list details[open]{background:#f7faff}
+.home-faq-list details[open] summary>span{transform:rotate(45deg)}
+.home-faq-list p{padding:0 60px 24px 25px;font-size:13px;line-height:2;color:#60738e;max-width:980px}
+.home-faq-list summary:focus-visible{outline:3px solid #3170d6;outline-offset:-4px;border-radius:7px}
+@media(max-width:850px){.home-solutions{padding-top:56px}.home-solution-grid{gap:16px}.home-solution-grid>article{padding:23px}.home-solution-grid h3{font-size:17px}.home-solutions .home-section-top,.home-faq .home-section-top{display:block}.home-solutions .home-section-top>p,.home-faq .home-section-top>p{max-width:580px;margin-top:14px;font-size:12px}.home-ad-flow{gap:12px}.home-ad-flow>span{padding:7px 10px}.home-faq{padding-bottom:56px}}
+@media(max-width:600px){.home h1{font-size:clamp(35px,10.5vw,49px);letter-spacing:-1.8px}.home-solutions{padding-top:46px}.home-solution-grid{grid-template-columns:1fr;gap:18px}.home-solution-grid>article{padding:23px}.home-solution-top{margin-bottom:17px}.home-solution-top>span:last-child{font-size:8px;letter-spacing:1px}.home-solution-grid h3{font-size:18px}.home-solution-grid p{font-size:12px}.home-solution-grid ul{margin-top:17px}.home-solution-grid li{font-size:10px}.home-solution-grid>.home-solution-ads{grid-column:auto}.home-ad-flow{gap:8px;flex-wrap:wrap;padding:15px 9px;font-size:10px}.home-ad-flow>span{padding:6px 8px}.home-ad-flow>svg{width:12px}.home-ad-flow>strong{font-size:11px}.home-faq{padding-block:4px 45px}.home-faq-list summary{padding:19px 18px;font-size:13px;gap:15px}.home-faq-list p{padding:0 18px 21px;font-size:12px}.home-solutions .home-section-top>p,.home-faq .home-section-top>p{font-size:12px}}
