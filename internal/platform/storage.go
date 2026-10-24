@@ -63,19 +63,33 @@ func (l LocalStore) Delete(_ context.Context, key string) error {
 type S3Store struct {
 	Client *minio.Client
 	Bucket string
+	Prefix string
+}
+
+func (b S3Store) prefix() string {
+	if b.Prefix != "" {
+		return b.Prefix
+	}
+	return "apps/"
 }
 
 func (b S3Store) Put(ctx context.Context, key, path string, size int64, sha string) error {
+	if !hexKey.MatchString(key) {
+		return errors.New("invalid blob key")
+	}
 	f, e := os.Open(path)
 	if e != nil {
 		return e
 	}
 	defer f.Close()
-	_, e = b.Client.PutObject(ctx, b.Bucket, "apps/"+key, f, size, minio.PutObjectOptions{ContentType: "application/octet-stream", UserMetadata: map[string]string{"sha256": sha}, PartSize: 16 << 20, NumThreads: 2})
+	_, e = b.Client.PutObject(ctx, b.Bucket, b.prefix()+key, f, size, minio.PutObjectOptions{ContentType: "application/octet-stream", UserMetadata: map[string]string{"sha256": sha}, PartSize: 16 << 20, NumThreads: 2})
 	return e
 }
 func (b S3Store) Open(ctx context.Context, key string) (io.ReadSeekCloser, int64, error) {
-	f, e := b.Client.GetObject(ctx, b.Bucket, "apps/"+key, minio.GetObjectOptions{})
+	if !hexKey.MatchString(key) {
+		return nil, 0, errors.New("invalid blob key")
+	}
+	f, e := b.Client.GetObject(ctx, b.Bucket, b.prefix()+key, minio.GetObjectOptions{})
 	if e != nil {
 		return nil, 0, e
 	}
@@ -87,9 +101,22 @@ func (b S3Store) Open(ctx context.Context, key string) (io.ReadSeekCloser, int64
 	return f, st.Size, nil
 }
 func (b S3Store) Delete(ctx context.Context, key string) error {
-	return b.Client.RemoveObject(ctx, b.Bucket, "apps/"+key, minio.RemoveObjectOptions{})
+	if !hexKey.MatchString(key) {
+		return errors.New("invalid blob key")
+	}
+	return b.Client.RemoveObject(ctx, b.Bucket, b.prefix()+key, minio.RemoveObjectOptions{})
 }
 func NewBlobStore(c Config) (BlobStore, error) {
+	if c.r2Config() != (R2Config{}) {
+		store, err := NewR2MediaStore(c)
+		if err != nil {
+			return nil, err
+		}
+		if err = store.checkBucket(context.Background()); err != nil {
+			return nil, err
+		}
+		return store.packages(), nil
+	}
 	if c.RemoteStorageURL != "" {
 		u, e := url.Parse(c.RemoteStorageURL)
 		if e != nil || u.Host == "" || u.User != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Path != "" || u.RawQuery != "" {

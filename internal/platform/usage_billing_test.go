@@ -473,6 +473,10 @@ func TestMeteredFreeMembershipRiskAndSettings(t *testing.T) {
 func TestMeteredMigrationPreservesMoneyGrantsOrdersAndAdminPrices(t *testing.T) {
 	s := testServer(t)
 	u := seedUser(t, s, 42*Dollar)
+	order := Order{ID: randomHex(16), UserID: u.ID, IdempotencyKey: randomHex(32), Method: "usdt", Status: "pending", AmountMicros: 50 * Dollar, USDTUnits: 49990000, USDTProvider: "uzf", Wallet: "test-existing-wallet", RateMicros: Dollar, ExpiresAt: s.Now().Add(time.Hour)}
+	if e := s.DB.Create(&order).Error; e != nil {
+		t.Fatal(e)
+	}
 	s.DB.Create(&DownloadGrant{ID: "free:" + u.ID, UserID: u.ID, PlanID: "free", Limit: 1000, Used: 23, Reserved: 2, StartsAt: u.CreatedAt})
 	s.DB.Model(&User{}).Where("id = ?", u.ID).Update("held_micros", 1234)
 	s.DB.Model(&Settings{}).Where("id = 1").Update("download_price_micros", 7000)
@@ -500,6 +504,13 @@ func TestMeteredMigrationPreservesMoneyGrantsOrdersAndAdminPrices(t *testing.T) 
 	s.DB.First(&grant, "id = ?", "free:"+u.ID)
 	if grant.Used != 23 || grant.Reserved != 2 || grant.Limit != 1000 {
 		t.Fatal("migration reset gifts")
+	}
+	var unchanged Order
+	if e := s.DB.First(&unchanged, "id = ?", order.ID).Error; e != nil {
+		t.Fatal(e)
+	}
+	if unchanged.Status != order.Status || unchanged.Wallet != order.Wallet || unchanged.USDTUnits != order.USDTUnits || unchanged.AmountMicros != order.AmountMicros || unchanged.USDTProvider != "uzf" {
+		t.Fatal("migration rewrote an existing USDT order")
 	}
 	s.DB.Model(&Settings{}).Where("id = 1").Update("pwa_install_price_micros", 45000)
 	if e := Migrate(s.DB); e != nil {

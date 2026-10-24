@@ -43,6 +43,7 @@ func (s *Server) pwaRequestOrigin(r *http.Request) string {
 }
 
 type pwaPageData struct {
+	ClientJS        string
 	Decoration      landingDecoration
 	ReturnFlowToken string
 	App             *PWAApp
@@ -70,6 +71,7 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 		frameSources += " " + target.Scheme + "://" + target.Host
 	}
 	data := pwaPageData{App: a, Base: "/p/" + a.Slug + "/", Launch: launch, Chinese: pwaWantsChinese(r), ReturnFlowToken: s.returnFlowViewToken("pwa", a.ID, r)}
+	data.ClientJS = s.landingScriptURL("pwa-client.js", data.Base+"client.js")
 	var buf bytes.Buffer
 	landing := storedPWALanding(a.LandingJSON)
 	if !launch && (landing.Template == "google_play" || landing.Template == "custom") {
@@ -94,7 +96,7 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 		policy = strings.Replace(policy, "style-src 'self' 'unsafe-inline'", "style-src 'self'", 1)
 		policy = strings.Replace(policy, "img-src 'self' https: data:", "img-src 'self' https:", 1)
 	}
-	w.Header().Set("Content-Security-Policy", policy)
+	w.Header().Set("Content-Security-Policy", s.landingScriptPolicy(policy))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	w.Header().Add("Vary", "Accept-Language")
@@ -227,12 +229,16 @@ func (s *Server) pwaIcon(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	var blob struct{ IconPNG []byte }
-	if err := s.DB.Model(&PWAApp{}).Select("icon_png").Where("id = ?", a.ID).Take(&blob).Error; err != nil {
+	var blob struct {
+		IconPNG       []byte
+		IconObjectKey string
+	}
+	if err := s.DB.Model(&PWAApp{}).Select("icon_png", "icon_object_key").Where("id = ?", a.ID).Take(&blob).Error; err != nil {
 		http.Error(w, "Icon unavailable", 503)
 		return
 	}
 	a.IconPNG = blob.IconPNG
+	a.IconObjectKey = blob.IconObjectKey
 	s.writePWAIcon(w, r, *a, size, false)
 }
 
@@ -248,6 +254,14 @@ func (s *Server) ownedPWAIcon(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) writePWAIcon(w http.ResponseWriter, r *http.Request, a PWAApp, size int, private bool) {
+	if a.IconObjectKey != "" {
+		data, err := s.Media.readPNG(r.Context(), a.IconObjectKey)
+		if err != nil {
+			http.Error(w, "Icon unavailable", 503)
+			return
+		}
+		a.IconPNG = data
+	}
 	var pngBytes []byte
 	if len(a.IconPNG) > 0 {
 		if size == 512 {

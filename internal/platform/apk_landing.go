@@ -149,6 +149,9 @@ func (s *Server) renderAPKLanding(a Application, d PageDesign, nonce, attributio
 	entry := entries[key]
 	decoration := s.newLandingDecoration("apk", a.UserID)
 	v := map[string]any{"App": a, "Design": d, "JS": entry.File, "CSS": entry.CSS, "Nonce": nonce, "Attribution": attribution, "DeepLink": deepLink, "AdsEnabled": ads, "ReturnFlowToken": viewToken, "Size": pageDesignSize(a.Size), "Decoration": decoration, "APKStyle": apkReferenceStyles(decoration.Class)}
+	v["JSURL"] = s.landingModuleURL(entry.File)
+	v["ScriptType"] = s.landingScriptType()
+	v["ClientJS"] = s.landingScriptURL("apk-client.js", "/a/"+a.Slug+"/client.js")
 	return apkReferenceHTML.Execute(out, v)
 }
 

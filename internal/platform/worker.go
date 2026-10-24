@@ -102,6 +102,7 @@ func (s *Server) maintenance(ctx context.Context) {
 	}
 }
 func (s *Server) cleanupOrphans(ctx context.Context) {
+	s.cleanupR2Media(ctx)
 	if s.Config.Role != "download" {
 		_ = s.cleanupPageImages(ctx, "")
 	}
@@ -114,12 +115,12 @@ func (s *Server) cleanupOrphans(ctx context.Context) {
 		live[a.FileKey] = true
 	}
 	if storage, ok := s.Blobs.(S3Store); ok {
-		for object := range storage.Client.ListObjects(ctx, storage.Bucket, minio.ListObjectsOptions{Prefix: "apps/", Recursive: true}) {
+		for object := range storage.Client.ListObjects(ctx, storage.Bucket, minio.ListObjectsOptions{Prefix: storage.prefix(), Recursive: true}) {
 			if object.Err != nil {
 				slog.Error("object cleanup listing failed", "error", object.Err)
 				return
 			}
-			key := strings.TrimPrefix(object.Key, "apps/")
+			key := strings.TrimPrefix(object.Key, storage.prefix())
 			if !hexKey.MatchString(key) || live[key] || object.LastModified.After(s.Now().Add(-24*time.Hour)) {
 				continue
 			}

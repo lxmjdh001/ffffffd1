@@ -29,7 +29,7 @@ export function Modal({ title, children, close, wide = false, side = false }: { 
   useLocale();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { const dialog = ref.current!; dialog.showModal(); const old = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = old; if (dialog.open) dialog.close(); }; }, []);
-  return <dialog ref={ref} className={`modal ${wide ? 'wide' : ''} ${side ? 'side-drawer' : ''}`} onCancel={e => { e.preventDefault(); close(); }} onClick={e => { if (e.target === ref.current) close(); }}><div className="modal-inner"><div className="modal-head"><h2>{title}</h2><button className="icon-btn" aria-label={t("关闭")} onClick={close}><X size={20} /></button></div>{children}</div></dialog>;
+  return <dialog ref={ref} className={`modal ${wide ? 'wide' : ''} ${side ? 'side-drawer' : ''}`} onCancel={e => { e.preventDefault(); e.stopPropagation(); close(); }} onClick={e => { if (e.target === ref.current) close(); }}><div className="modal-inner"><div className="modal-head"><h2>{title}</h2><button type="button" className="icon-btn" aria-label={t("关闭")} onClick={close}><X size={20} /></button></div>{children}</div></dialog>;
 }
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   useLocale(); return <label className="field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>; }

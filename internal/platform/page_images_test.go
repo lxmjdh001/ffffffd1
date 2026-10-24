@@ -54,6 +54,16 @@ func attachPageImageFixture(t *testing.T, s *Server) *pageImageFixture {
 			}
 			f.objects[key], _ = io.ReadAll(r.Body)
 			w.Header().Set("ETag", `"0123456789abcdef0123456789abcdef"`)
+		case "GET":
+			data, ok := f.objects[key]
+			if !ok {
+				w.WriteHeader(404)
+				return
+			}
+			w.Header().Set("Content-Type", "image/jpeg")
+			w.Header().Set("ETag", `"0123456789abcdef0123456789abcdef"`)
+			w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+			w.Write(data)
 		case "DELETE":
 			if f.failDel {
 				http.Error(w, "forbidden", 403)

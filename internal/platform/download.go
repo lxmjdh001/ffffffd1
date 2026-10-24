@@ -150,7 +150,7 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 		w.Write(out.Bytes())
 		return
 	}
-	_ = downloadPageTemplate(design.Layout).Execute(w, map[string]any{"App": a, "Design": design, "Nonce": randomHex(16), "Size": pageDesignSize(a.Size), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled, "ReturnFlowToken": viewToken, "Decoration": s.newLandingDecoration("apk", a.UserID)})
+	_ = downloadPageTemplate(design.Layout).Execute(w, map[string]any{"App": a, "Design": design, "ClientJS": s.landingScriptURL("apk-client.js", "/a/"+a.Slug+"/client.js"), "Nonce": randomHex(16), "Size": pageDesignSize(a.Size), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled, "ReturnFlowToken": viewToken, "Decoration": s.newLandingDecoration("apk", a.UserID)})
 }
 
 var pageTemplateFunctions = template.FuncMap{"imageURL": func(raw string) template.URL {
@@ -236,8 +236,12 @@ func (s *Server) createDownloadTicket(r *http.Request, a Application, visitor, k
 // WebViews that do not preserve POST navigation can request a ticket via fetch.
 func (s *Server) downloadClient(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-	_, _ = io.WriteString(w, `"use strict";
-const languages=`+string(pageLocaleJSON)+`;
+	_, _ = io.WriteString(w, apkClientScript())
+}
+
+func apkClientScript() string {
+	return `"use strict";
+const languages=` + string(pageLocaleJSON) + `;
 const copy=languages[document.documentElement.lang]||languages['zh-CN'];
 const form=document.querySelector('form');
 const button=form.querySelector('button');
@@ -256,7 +260,7 @@ form.addEventListener('submit',async function(event){
   window.location.assign(data.download_url);
  }catch(error){status.textContent=error.message||copy.network_error;}
  finally{button.disabled=false;}
-});`+"\n"+returnFlowJS+"\n"+apkLandingBridgeJS)
+});` + "\n" + returnFlowJS + "\n" + apkLandingBridgeJS
 }
 
 type billingWriter struct {

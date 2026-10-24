@@ -23,6 +23,12 @@ function openLanding(registration_open = true) {
 }
 
 describe('public landing page', () => {
+  it('replaces subscription cards with five usage prices and shared welcome credit', () => {
+    render(<MemoryRouter><ConfigContext.Provider value={{config:{...config,metered_billing:true,plans:[{...config.plans[0],name:'按量计费'}],registration_gift_limit:1000},reload:vi.fn()}}><LandingPage/></ConfigContext.Provider></MemoryRouter>);
+    const pricing=document.getElementById('home-pricing')!;
+    expect(pricing.textContent).toContain('全部功能免费开放');expect(pricing.textContent).toContain('只为实际用量付费');expect(pricing.textContent).toContain('共用 1,000 次');
+    expect(pricing.querySelectorAll('.usage-rate-grid article')).toHaveLength(5);expect(pricing.querySelector('.home-plan')).toBeNull();expect(pricing.textContent).not.toContain('/ 月');expect(document.getElementById('home-security')!.textContent).not.toContain('付费会员');
+  });
   it('shows configured plan data and keeps the security benefit on the paid plan', () => {
     openLanding();
     const free = screen.getByRole('heading', { name: '起步套餐' }).closest('article')!;

@@ -9,6 +9,9 @@ import (
 // PWA applications and push state live in independent tables. Existing package,
 // billing, referral, and authentication records are not rewritten.
 func migratePWA(tx *gorm.DB) error {
+	if err := tx.AutoMigrate(&PWAApp{}, &PWAPushAsset{}, &ReturnFlowAsset{}, &R2MediaObject{}); err != nil {
+		return err
+	}
 	var count int64
 	if err := tx.Model(&Migration{}).Where("version = ?", 13).Count(&count).Error; err != nil {
 		return err

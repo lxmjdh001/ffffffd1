@@ -179,10 +179,12 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
+	var importedImages []string
 	committed := false
 	defer func() {
 		if !committed {
 			_ = s.Blobs.Delete(context.Background(), key)
+			s.discardImportedImages(importedImages)
 		}
 	}()
 	var app Application
@@ -236,6 +238,19 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 		app.FileName = filename
 		app.Size = size
 		app.SHA256 = hex.EncodeToString(h.Sum(nil))
+		if fields["import_from"] != "" {
+			if r.PathValue("id") != "" {
+				return problem(400, "只能在新建应用时导入配置")
+			}
+			var source Application
+			if err = tx.First(&source, "id = ? AND user_id = ?", fields["import_from"], u.ID).Error; err != nil {
+				return err
+			}
+			app.DownloadMode = source.DownloadMode
+			if err = s.importAppDesign(r.Context(), tx, source, app, &importedImages); err != nil {
+				return err
+			}
+		}
 		return appSaveError(tx.Save(&app).Error)
 	})
 	if e != nil {

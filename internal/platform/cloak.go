@@ -27,40 +27,44 @@ type CloakDeviceRule struct {
 
 // Cloaks contain redirect rules only. Neither destination is fetched by D1.
 type Cloak struct {
-	ID               string            `json:"id" gorm:"primaryKey;size:32"`
-	UserID           string            `json:"-" gorm:"index;size:32;not null"`
-	Slug             string            `json:"slug" gorm:"uniqueIndex;size:16;not null"`
-	Name             string            `json:"name" gorm:"size:60"`
-	Enabled          bool              `json:"enabled"`
-	TargetType       string            `json:"target_type" gorm:"size:20;not null"`
-	TargetURL        string            `json:"target_url"`
-	TargetID         string            `json:"target_id" gorm:"size:32"`
-	AppTargetMode    string            `json:"app_target_mode" gorm:"size:10"`
-	TrafficPoolSlug  string            `json:"traffic_pool_slug" gorm:"size:32"`
-	SafeURL          string            `json:"safe_url"`
-	BlockedLanguages []string          `json:"blocked_languages" gorm:"serializer:json;type:text"`
-	BlockedUAs       []string          `json:"blocked_uas" gorm:"serializer:json;type:text"`
-	BlockedCountries []string          `json:"blocked_countries" gorm:"serializer:json;type:text"`
-	AllowedPlatforms []string          `json:"allowed_platforms" gorm:"serializer:json;type:text"`
-	BlockedDevices   []CloakDeviceRule `json:"blocked_devices" gorm:"serializer:json;type:text"`
-	CreatedAt        time.Time         `json:"created_at"`
-	UpdatedAt        time.Time         `json:"updated_at"`
+	ID                 string            `json:"id" gorm:"primaryKey;size:32"`
+	UserID             string            `json:"-" gorm:"index;size:32;not null"`
+	Slug               string            `json:"slug" gorm:"uniqueIndex;size:16;not null"`
+	Name               string            `json:"name" gorm:"size:60"`
+	Enabled            bool              `json:"enabled"`
+	TargetType         string            `json:"target_type" gorm:"size:20;not null"`
+	TargetURL          string            `json:"target_url"`
+	TargetID           string            `json:"target_id" gorm:"size:32"`
+	AppTargetMode      string            `json:"app_target_mode" gorm:"size:10"`
+	TrafficPoolSlug    string            `json:"traffic_pool_slug" gorm:"size:32"`
+	SafeURL            string            `json:"safe_url"`
+	BlockEmptyLanguage bool              `json:"block_empty_language" gorm:"not null;default:false"`
+	BlockedLanguages   []string          `json:"blocked_languages" gorm:"serializer:json;type:text"`
+	BlockedBrowsers    []string          `json:"blocked_browsers" gorm:"serializer:json;type:text"`
+	BlockedUAs         []string          `json:"blocked_uas" gorm:"serializer:json;type:text"`
+	BlockedCountries   []string          `json:"blocked_countries" gorm:"serializer:json;type:text"`
+	AllowedPlatforms   []string          `json:"allowed_platforms" gorm:"serializer:json;type:text"`
+	BlockedDevices     []CloakDeviceRule `json:"blocked_devices" gorm:"serializer:json;type:text"`
+	CreatedAt          time.Time         `json:"created_at"`
+	UpdatedAt          time.Time         `json:"updated_at"`
 }
 
 type cloakInput struct {
-	Name             string            `json:"name"`
-	Enabled          bool              `json:"enabled"`
-	TargetType       string            `json:"target_type"`
-	TargetURL        string            `json:"target_url"`
-	TargetID         string            `json:"target_id"`
-	AppTargetMode    string            `json:"app_target_mode"`
-	TrafficPoolSlug  string            `json:"traffic_pool_slug"`
-	SafeURL          string            `json:"safe_url"`
-	BlockedLanguages []string          `json:"blocked_languages"`
-	BlockedUAs       []string          `json:"blocked_uas"`
-	BlockedCountries []string          `json:"blocked_countries"`
-	AllowedPlatforms []string          `json:"allowed_platforms"`
-	BlockedDevices   []CloakDeviceRule `json:"blocked_devices"`
+	Name               string            `json:"name"`
+	Enabled            bool              `json:"enabled"`
+	TargetType         string            `json:"target_type"`
+	TargetURL          string            `json:"target_url"`
+	TargetID           string            `json:"target_id"`
+	AppTargetMode      string            `json:"app_target_mode"`
+	TrafficPoolSlug    string            `json:"traffic_pool_slug"`
+	SafeURL            string            `json:"safe_url"`
+	BlockEmptyLanguage bool              `json:"block_empty_language"`
+	BlockedLanguages   []string          `json:"blocked_languages"`
+	BlockedBrowsers    []string          `json:"blocked_browsers"`
+	BlockedUAs         []string          `json:"blocked_uas"`
+	BlockedCountries   []string          `json:"blocked_countries"`
+	AllowedPlatforms   []string          `json:"allowed_platforms"`
+	BlockedDevices     []CloakDeviceRule `json:"blocked_devices"`
 }
 
 type cloakView struct {
@@ -195,7 +199,7 @@ var cloakSystems = map[string]map[string]bool{
 }
 
 func normalizeCloak(in cloakInput) (Cloak, error) {
-	c := Cloak{Name: strings.TrimSpace(in.Name), Enabled: in.Enabled, TargetType: in.TargetType, TargetURL: strings.TrimSpace(in.TargetURL), TrafficPoolSlug: strings.TrimSpace(in.TrafficPoolSlug), SafeURL: strings.TrimSpace(in.SafeURL)}
+	c := Cloak{Name: strings.TrimSpace(in.Name), Enabled: in.Enabled, TargetType: in.TargetType, TargetURL: strings.TrimSpace(in.TargetURL), TrafficPoolSlug: strings.TrimSpace(in.TrafficPoolSlug), SafeURL: strings.TrimSpace(in.SafeURL), BlockEmptyLanguage: in.BlockEmptyLanguage}
 	if len([]rune(c.Name)) > 60 {
 		return c, problem(400, "斗篷名称最多 60 字")
 	}
@@ -243,6 +247,13 @@ func normalizeCloak(in cloakInput) (Cloak, error) {
 	})
 	if err != nil {
 		return c, problem(400, "语言拦截配置无效")
+	}
+	c.BlockedBrowsers, err = normalizeCloakStrings(in.BlockedBrowsers, 4, func(v string) (string, bool) {
+		v = strings.ToLower(v)
+		return v, v == "chrome" || v == "safari" || v == "firefox" || v == "edge"
+	})
+	if err != nil {
+		return c, problem(400, "客户端拦截配置无效")
 	}
 	c.BlockedUAs, err = normalizeCloakStrings(in.BlockedUAs, 100, func(v string) (string, bool) {
 		v = strings.TrimSpace(strings.Map(func(r rune) rune {
@@ -507,7 +518,11 @@ func cloakBlocked(c Cloak, r *http.Request, country string) bool {
 			return true
 		}
 	}
-	for _, raw := range strings.Split(r.Header.Get("Accept-Language"), ",") {
+	if len(c.BlockedBrowsers) > 0 && containsCloak(c.BlockedBrowsers, classifyCloakBrowser(r.UserAgent())) {
+		return true
+	}
+	hasLanguage := false
+	for _, raw := range strings.Split(strings.Join(r.Header.Values("Accept-Language"), ","), ",") {
 		parts := strings.Split(strings.TrimSpace(raw), ";")
 		lang := strings.ToLower(strings.TrimSpace(parts[0]))
 		quality := 1.0
@@ -525,11 +540,15 @@ func cloakBlocked(c Cloak, r *http.Request, country string) bool {
 		if quality <= 0 || !cloakLanguage.MatchString(lang) {
 			continue
 		}
+		hasLanguage = true
 		for _, blocked := range c.BlockedLanguages {
 			if lang == blocked || strings.HasPrefix(lang, blocked+"-") {
 				return true
 			}
 		}
+	}
+	if c.BlockEmptyLanguage && !hasLanguage {
+		return true
 	}
 	if len(c.AllowedPlatforms) > 0 {
 		allowed := false
@@ -553,6 +572,27 @@ func cloakBlocked(c Cloak, r *http.Request, country string) bool {
 		}
 	}
 	return false
+}
+
+// Match the browser before its compatibility tokens (Edge includes Chrome and
+// Safari; Chrome and iOS Firefox include Safari). Unknown clients stay allowed
+// unless another rule matches them.
+func classifyCloakBrowser(ua string) string {
+	u := strings.ToLower(ua)
+	switch {
+	case strings.Contains(u, "edg/") || strings.Contains(u, "edge/") || strings.Contains(u, "edga/") || strings.Contains(u, "edgios/"):
+		return "edge"
+	case strings.Contains(u, "firefox/") || strings.Contains(u, "fxios/"):
+		return "firefox"
+	case strings.Contains(u, "opr/") || strings.Contains(u, "opera") || strings.Contains(u, "opios/") || strings.Contains(u, "samsungbrowser/") || strings.Contains(u, "vivaldi/"):
+		return ""
+	case strings.Contains(u, "chrome/") || strings.Contains(u, "crios/"):
+		return "chrome"
+	case strings.Contains(u, "safari/"):
+		return "safari"
+	default:
+		return ""
+	}
 }
 
 func classifyCloakDevice(ua string) (device, system string) {

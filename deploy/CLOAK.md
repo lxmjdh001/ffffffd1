@@ -4,9 +4,11 @@
 
 ## 匹配与跳转
 
-- 语言、UA、国家、设备中的任一拦截条件命中，进入安全页。未选择的条件不限制访问。
+- 语言、客户端、UA、国家、设备中的任一拦截条件命中，进入安全页。未选择的条件不限制访问。
 - 安全页 URL 可选，保存时会去除首尾空白。不填写时，需进入安全页的访问返回真正的 HTTP 404，显示独立的英文 “Account not found” 页面及 “Please contact customer support for assistance.” 说明；正常通过规则的访问仍跳转目标页。后台配置了有效客服邮箱时显示 “Contact support” 邮件链接，未配置时不显示按钮。
 - 语言读取 `Accept-Language` 中 `q > 0` 的语言，`zh` 同时匹配 `zh-CN` 等子标签；`zh-CN` 不匹配 `zh-TW`。
+- “屏蔽空语言访问”默认关闭。开启后，`Accept-Language` 缺失、空白或没有任何有效且 `q > 0` 的具体语言标识时进入安全页；只有通配符 `*`、无效语言或全部 `q=0` 也视为空语言。语言不从 UA 字符串推断，多条语言请求头合并判断。
+- “客户端”是浏览器黑名单，勾选 Chrome、Safari、Firefox、Edge 后拦截对应浏览器，未勾选的不受该条件限制。依据 UA 识别桌面及移动端标识（包括 `CriOS`、`FxiOS`、`EdgA`、`EdgiOS`、旧 `Edge`），优先识别 Edge/Firefox，避免 UA 里的 Chrome/Safari 兼容标识造成重复匹配。可识别的 Opera、Samsung Internet、Vivaldi 不算作 Chrome/Safari；未知客户端不命中浏览器黑名单，仍按其他规则判断。
 - UA 关键词按不区分大小写的子串匹配，最多 100 项，每项最多 200 个字符，保存时清理控制字符。
 - 国家为黑名单，只有选中的国家被拦截。无法取得可信地区信息时统一为 `XX`（未知地区），只有选中“未知地区”才拦截；Cloudflare 的 Tor 标记 `T1` 对应独立的“Tor 网络”选项。
 - “广告允许”读取入口顶层查询参数：TikTok `ttclid`、Facebook `fbclid`、Google `gclid`、Bigo `bbg`。选择多个广告平台时，任一参数具有非空值即可通过广告条件；选择零个平台时不限制。空参数或嵌套 URL 中的同名参数不会通过。该条件依据访客提交的点击参数，不是平台签名认证。
@@ -16,7 +18,7 @@
 - 应用详情页及 PWA 在斗篷入口直接渲染，安装、图标、接口与下载沿用该入口域名；应用直接下载仍使用原有同域下载票据流程。分流保持自己的目标 URL 与跳转逻辑，不强制替换域名，也不内联分流目标。
 - 既有 URL 目标及已填写的安全页使用浏览器重定向，D1 不在服务器抓取目标页或安全页。禁止将本站、官网的 www/根域名别名或已登记绑定域名的斗篷入口配置为目标页/安全页，访问时也会再次检查循环。
 
-语言、UA、设备和点击参数都来自客户端；浏览器的桌面模式和 UA 变更可能影响设备识别。
+语言、UA、设备和点击参数都来自客户端；浏览器的桌面模式和 UA 变更可能影响设备及浏览器识别。
 
 ## 可信国家来源
 
@@ -52,7 +54,9 @@ TRUSTED_PROXY_CIDRS=127.0.0.1/32,::1/128
   "target_url": "https://example.com/landing",
   "traffic_pool_slug": "",
   "safe_url": "https://example.com/help",
+  "block_empty_language": false,
   "blocked_languages": ["zh"],
+  "blocked_browsers": ["edge"],
   "blocked_uas": ["ExampleCrawler"],
   "blocked_countries": ["CN", "XX"],
   "allowed_platforms": ["tiktok", "facebook"],
@@ -62,8 +66,10 @@ TRUSTED_PROXY_CIDRS=127.0.0.1/32,::1/128
 
 `safe_url` 可省略或传空字符串，空白会被归一化为空；非空值仍须为完整 HTTP/HTTPS URL，并通过循环检测。既有非空但无效的安全页配置在需要回退时仍返回 503。
 
+`block_empty_language` 是布尔值；`blocked_browsers` 最多四项，只接受 `chrome`、`safari`、`firefox`、`edge`，保存时去除首尾空白、转为小写并去重。新字段省略时为 `false` / 空列表，不影响旧客户端和旧规则。更新时传 `false` / `[]` 可清除这两项拦截；关闭总“拦截规则”开关会旁路它们。
+
 `target_type` 支持 `traffic_pool`、`app`、`pwa` 与兼容保留的 `url`。分流填写当前账号的 `traffic_pool_slug`；应用/PWA 填写 `target_id`，应用额外填写 `app_target_mode: direct|info`。保存与访问均校验所有权及可用状态。`GET /api/cloak-targets` 返回当前账号可用应用/PWA 的最小列表。设备为 `desktop`、`tablet`、`mobile`。电脑系统可选 `windows`、`macos`、`linux`、`chromeos`、`other`；平板和手机可选 `ios`、`android`、`harmonyos`、`windows`、`other`；各设备均支持 `all`。
 
 公开入口支持 `GET` 和 `HEAD`：应用详情/PWA 直接返回页面；分流目标、兼容 URL 目标与已配置安全页仍重定向。未配置安全页的回退返回 `text/html; charset=utf-8` 的 404，同时设置 `Cache-Control: no-store` 和 `X-Robots-Tag: noindex, nofollow`。HEAD 使用相同状态与响应头、不返回正文。默认 404 页面不包含账号信息、入口参数、目标地址或规则内容。绑定域名也可使用 `/c/<slug>`，仅能访问该域名所属账号的规则。
 
-现有迁移启动流程会自动创建 `cloaks` 表，不改写既有账号、分流配置、订单或余额。
+现有迁移启动流程会自动创建 `cloaks` 表，并为已有表增加 `block_empty_language` 和 `blocked_browsers` 字段；已有规则的空语言开关默认为关闭，浏览器黑名单为空，不影响旧规则的访问结果。不改写既有账号、分流配置、订单或余额。

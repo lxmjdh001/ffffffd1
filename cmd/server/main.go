@@ -57,6 +57,11 @@ func main() {
 		os.Exit(1)
 	}
 	app := platform.NewServer(db, c)
+	app.Media, e = platform.NewR2MediaStore(c)
+	if e != nil {
+		slog.Error("R2 media storage unavailable", "error", e)
+		os.Exit(1)
+	}
 	app.Blobs, e = platform.NewBlobStore(c)
 	if e != nil {
 		slog.Error("storage unavailable", "error", e)
@@ -66,6 +71,34 @@ func main() {
 	if e != nil {
 		slog.Error("page image storage unavailable", "error", e)
 		os.Exit(1)
+	}
+	if len(os.Args) > 1 && os.Args[1] == "migrate-r2" {
+		if e = app.MigrateFilesToR2(context.Background()); e != nil {
+			slog.Error("R2 migration failed; local originals retained", "error", e)
+			os.Exit(1)
+		}
+		slog.Info("R2 migration verified; local originals retained as backup")
+		return
+	}
+	if app.PageImages != nil {
+		publishCtx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		e = app.PublishLandingScripts(publishCtx)
+		cancel()
+		if e != nil {
+			slog.Warn("landing JS publication unavailable; using local scripts", "error", e)
+			if len(os.Args) > 1 && os.Args[1] == "publish-landing-js" {
+				os.Exit(1)
+			}
+		} else {
+			slog.Info("landing assets published to R2", "scripts", len(app.LandingScripts.Files), "images", len(app.LandingScripts.Images), "url", app.LandingScripts.BaseURL)
+		}
+	}
+	if len(os.Args) > 1 && os.Args[1] == "publish-landing-js" {
+		if app.LandingScripts == nil {
+			slog.Error("public R2 page-image configuration is required for landing JS")
+			os.Exit(1)
+		}
+		return
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
