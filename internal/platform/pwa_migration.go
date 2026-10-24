@@ -13,11 +13,29 @@ func migratePWA(tx *gorm.DB) error {
 	if err := tx.Model(&Migration{}).Where("version = ?", 13).Count(&count).Error; err != nil {
 		return err
 	}
+	if count == 0 {
+		if err := tx.AutoMigrate(&PWAApp{}, &PWAPushSubscription{}, &PWAPushTask{}, &PWAPushDelivery{}); err != nil {
+			return err
+		}
+		if err := tx.Create(&Migration{Version: 13, AppliedAt: time.Now().UTC()}).Error; err != nil {
+			return err
+		}
+	}
+	return migratePWAPushRichContent(tx)
+}
+
+func migratePWAPushRichContent(tx *gorm.DB) error {
+	var count int64
+	if err := tx.Model(&Migration{}).Where("version = ?", 14).Count(&count).Error; err != nil {
+		return err
+	}
 	if count != 0 {
 		return nil
 	}
-	if err := tx.AutoMigrate(&PWAApp{}, &PWAPushSubscription{}, &PWAPushTask{}, &PWAPushDelivery{}); err != nil {
+	// Extend tasks in place: old tasks retain their content, scheduling and
+	// delivery IDs. New actions default to an empty JSON array.
+	if err := tx.AutoMigrate(&PWAPushTask{}, &PWAPushTemplate{}, &PWAPushAsset{}); err != nil {
 		return err
 	}
-	return tx.Create(&Migration{Version: 13, AppliedAt: time.Now().UTC()}).Error
+	return tx.Create(&Migration{Version: 14, AppliedAt: time.Now().UTC()}).Error
 }

@@ -231,7 +231,9 @@ func (s *Server) sendPWAPush(ctx context.Context, d PWAPushDelivery) pwaPushOutc
 	if e != nil {
 		return pwaPushOutcome{message: "推送身份密钥不可用"}
 	}
-	payload, e := json.Marshal(map[string]any{"title": task.Title, "body": task.Body, "icon": task.Icon, "url": task.URL, "delivery_id": d.ID, "event_token": s.pwaEventToken(d)})
+	content := pwaPushContentPayload(task.Title, task.Body, task.URL, task.Icon, task.Image, pwaTaskActions(task))
+	content["delivery_id"], content["event_token"] = d.ID, s.pwaEventToken(d)
+	payload, e := json.Marshal(content)
 	if e != nil {
 		return pwaPushOutcome{message: "通知内容无效"}
 	}

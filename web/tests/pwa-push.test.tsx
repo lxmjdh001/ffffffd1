@@ -19,6 +19,7 @@ beforeEach(() => {
     const url = new URL(String(input), 'https://console.example'); requests.push(url); const method = options.method || 'GET';
     if (method !== 'GET') { const body = options.body ? JSON.parse(String(options.body)) : {}; writes.push({ path: url.pathname, method, body, headers: new Headers(options.headers) }); if (deferred) await deferred; if (failWrite) return new Response(JSON.stringify({ error: '网络暂时异常，请重试' }), { status: 503 }); if (method === 'DELETE') tasks = tasks.map(row => row.id === url.pathname.split('/').at(-1) ? { ...row, status: 'cancelled' } : row); return new Response(JSON.stringify({ ...task, ...body })); }
     if (url.pathname === '/api/pwas') return new Response(JSON.stringify({ data: apps }));
+    if (url.pathname === '/api/pwa-push/templates') return new Response(JSON.stringify({ data: [], total: 0 }));
     if (url.pathname === '/api/pwa-push/tasks') return new Response(JSON.stringify({ data: tasks, total: tasks.length }));
     if (url.pathname === '/api/pwa-push/tasks/task-one') return new Response(JSON.stringify(tasks[0]));
     if (url.pathname === '/api/pwa-push/subscriptions') return new Response(JSON.stringify({ data: [{ id: 'sub-one', pwa_id: app.id, pwa_name: app.name, country: 'US', status: 'active', browser: 'Chrome', device: 'Android', created_at: task.created_at, last_seen_at: task.created_at, endpoint: 'never-show-endpoint', keys: { auth: 'never-show-auth-key' } }], total: 1 }));
@@ -58,6 +59,11 @@ describe('PWA notification management', () => {
 
   it('shows per-delivery display/click outcomes without revealing subscription secrets or internal errors', async () => {
     const user = setup(); await user.click(await screen.findByRole('button', { name: '查看详情' })); const dialog = within(screen.getByRole('dialog')); expect(dialog.getByText('已发送表示消息已交付通知服务；展示与点击以设备回报为准。')).toBeTruthy(); expect(await dialog.findByRole('cell', { name: '已发送' })).toBeTruthy(); expect(dialog.getByRole('columnheader', { name: '点击时间' })).toBeTruthy(); expect(screen.queryByText(/never-show/)).toBeNull(); expect(writes).toHaveLength(0);
+  });
+
+  it('shows the actual icon, large image and separate button destinations in task details', async () => {
+    tasks[0] = { ...tasks[0], icon: 'https://images.example/icon.png', image: 'https://images.example/offer.png', actions: [{ action: 'action_1', title: '查看优惠', url: 'https://shop.example/offer' }, { action: 'action_2', title: '联系我们', url: 'https://shop.example/contact' }] };
+    const user = setup(); await user.click(await screen.findByRole('button', { name: '查看详情' })); const dialog = within(screen.getByRole('dialog')); expect(dialog.getByRole('img', { name: '通知图标' }).getAttribute('src')).toBe('https://images.example/icon.png'); expect(dialog.getByRole('img', { name: '通知大图' }).getAttribute('src')).toBe('https://images.example/offer.png'); expect(dialog.getByText('查看优惠')).toBeTruthy(); expect(dialog.getByText('https://shop.example/offer')).toBeTruthy(); expect(dialog.getByText('联系我们')).toBeTruthy(); expect(dialog.getByText('https://shop.example/contact')).toBeTruthy(); expect(writes).toHaveLength(0);
   });
 
   it('disables notification creation without an enabled app and validates delay and HTTPS destinations', async () => {

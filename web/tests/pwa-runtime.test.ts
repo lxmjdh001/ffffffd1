@@ -7,7 +7,7 @@ const worker = readFileSync(resolve(process.cwd(), '../internal/platform/templat
 const client = readFileSync(resolve(process.cwd(), '../internal/platform/templates/pwa-client.js'), 'utf8');
 const base = 'https://d1.example/p/0123456789abcdef/';
 
-function workerContext(workerBase = base) {
+function workerContext(workerBase = base, notificationSupport?: { maxActions?: number; permission?: string }) {
   const listeners = new Map<string, (event: any) => void>();
   const fetcher = vi.fn().mockResolvedValue(new Response('{}'));
   const show = vi.fn().mockResolvedValue(undefined);
@@ -21,7 +21,7 @@ function workerContext(workerBase = base) {
     clients: { claim: vi.fn(), matchAll, openWindow: open },
     skipWaiting: vi.fn(),
   };
-  runInNewContext(worker, { self, URL, Response, fetch: fetcher });
+  runInNewContext(worker, { self, URL, Response, fetch: fetcher, ...(notificationSupport ? { Notification: notificationSupport } : {}) });
   const dispatch = async (name: string, values: Record<string, any>) => {
     let pending: Promise<any> | undefined;
     listeners.get(name)!({ ...values, waitUntil: (value: Promise<any>) => { pending = value; } });
@@ -42,7 +42,7 @@ describe('PWA service worker boundaries and notifications', () => {
 
   it('displays a notification before acknowledging it, uses a stable tag and safe app icon', async () => {
     const w = workerContext();
-    const payload = { title: 'Hello', body: 'A new message', icon: 'https://untrusted.example/icon', url: 'javascript:alert(1)', delivery_id: 'delivery-one', event_token: 'event-capability' };
+    const payload = { title: 'Hello', body: 'A new message', icon: 'javascript:alert(1)', url: 'javascript:alert(1)', delivery_id: 'delivery-one', event_token: 'event-capability' };
     await w.dispatch('push', { data: { json: () => payload } });
     await w.dispatch('push', { data: { json: () => payload } });
     const first = w.show.mock.calls[0];
@@ -152,6 +152,133 @@ describe('PWA service worker boundaries and notifications', () => {
     }
     expect(w.open).toHaveBeenCalledOnce();
     expect(w.focus).toHaveBeenCalledTimes(2);
+  });
+
+  it('displays configured HTTPS notification icons and large images', async () => {
+    const w = workerContext();
+    const icon = 'https://cdn.example/notification-icon.png';
+    const image = 'https://d1.example/pwa-push-assets/0123456789abcdef.png';
+    await w.dispatch('push', { data: { json: () => ({ title: 'News', icon, image }) } });
+    expect(w.show).toHaveBeenCalledExactlyOnceWith('News', expect.objectContaining({ icon, image, badge: base + 'icon/192.png' }));
+  });
+
+  it.each(['javascript:alert(1)', 'data:image/png;base64,AA', 'http://cdn.example/image.png', 'https://user:secret@cdn.example/image.png', 'https://[invalid', ''])('rejects unsafe notification image and icon URL %s', async image => {
+    const w = workerContext();
+    await w.dispatch('push', { data: { json: () => ({ title: 'Safe defaults', icon: image, image }) } });
+    const options = w.show.mock.calls[0][1];
+    expect(options.icon).toBe(base + 'icon/192.png');
+    expect(options).not.toHaveProperty('image');
+  });
+
+  it('accepts uploaded image paths and limits HTTP images to the exact development origin', async () => {
+    const devBase = 'http://127.0.0.1:18088/p/0123456789abcdef/';
+    const w = workerContext(devBase);
+    await w.dispatch('push', { data: { json: () => ({ icon: '/pwa-push-assets/icon.png', image: 'http://127.0.0.1:18088/pwa-push-assets/banner.png' }) } });
+    expect(w.show.mock.calls[0][1]).toMatchObject({ icon: 'http://127.0.0.1:18088/pwa-push-assets/icon.png', image: 'http://127.0.0.1:18088/pwa-push-assets/banner.png' });
+    for (const image of ['http://127.0.0.1:18089/image.png', 'http://127.0.0.1.attacker.example:18088/image.png', 'http://localhost:18088/image.png']) {
+      await w.dispatch('push', { data: { json: () => ({ image }) } });
+      expect(w.show.mock.calls.at(-1)![1]).not.toHaveProperty('image');
+    }
+  });
+
+  it('uses separate destinations for both notification action buttons and reports one click per event', async () => {
+    const w = workerContext();
+    const first = 'https://landing.example/offer';
+    const second = 'https://d1.example/d/example?from=push-button';
+    await w.dispatch('push', { data: { json: () => ({ title: 'Offer', url: base + 'launch', delivery_id: 'one', event_token: 'proof', actions: [{ action: 'view', title: 'View offer', url: first }, { action: 'download', title: 'Download', url: second }] }) } });
+    const options = w.show.mock.calls[0][1];
+    expect(options.actions).toEqual([{ action: 'view', title: 'View offer' }, { action: 'download', title: 'Download' }]);
+    expect(options.data.actions).toEqual({ view: first, download: second });
+    for (const [action, target] of [['view', first], ['download', second]]) {
+      w.fetcher.mockClear();
+      w.open.mockClear();
+      await w.dispatch('notificationclick', { action, notification: { close: vi.fn(), data: options.data } });
+      expect(w.open).toHaveBeenCalledExactlyOnceWith(target);
+      expect(w.fetcher).toHaveBeenCalledOnce();
+      expect(JSON.parse(w.fetcher.mock.calls[0][1].body)).toEqual({ delivery_id: 'one', token: 'proof', event: 'clicked' });
+    }
+  });
+
+  it.each(['', 'unknown', 'toString'])('uses the main notification URL for body or unknown action %s', async action => {
+    const w = workerContext();
+    const main = 'https://landing.example/main';
+    await w.dispatch('notificationclick', { action, notification: { close: vi.fn(), data: { url: main, actions: { view: 'https://landing.example/button' } } } });
+    expect(w.open).toHaveBeenCalledExactlyOnceWith(main);
+  });
+
+  it('normalizes unsafe button URLs to the main URL and validates them again on click', async () => {
+    const w = workerContext();
+    const main = 'https://landing.example/main';
+    await w.dispatch('push', { data: { json: () => ({ url: main, actions: [{ action: 'unsafe', title: 'Open', url: 'javascript:alert(1)' }] }) } });
+    expect(w.show.mock.calls[0][1].data.actions).toEqual({ unsafe: main });
+    await w.dispatch('notificationclick', { action: 'unsafe', notification: { close: vi.fn(), data: { url: main, actions: { unsafe: 'data:text/html,unsafe' } } } });
+    expect(w.open).toHaveBeenCalledExactlyOnceWith(main);
+  });
+
+  it('keeps at most two valid unique buttons and ignores malformed actions', async () => {
+    const w = workerContext();
+    await w.dispatch('push', { data: { json: () => ({ actions: [null, { action: '', title: 'Empty' }, { action: 'missing-title' }, { action: 'first', title: 'First', url: 'https://one.example/' }, { action: 'first', title: 'Duplicate', url: 'https://duplicate.example/' }, { action: 'second', title: 'Second', url: 'https://two.example/' }, { action: 'third', title: 'Third', url: 'https://three.example/' }] }) } });
+    const options = w.show.mock.calls[0][1];
+    expect(options.actions).toEqual([{ action: 'first', title: 'First' }, { action: 'second', title: 'Second' }]);
+    expect(options.data.actions).toEqual({ first: 'https://one.example/', second: 'https://two.example/' });
+  });
+
+  it('preserves Unicode button titles within the server character limit', async () => {
+    const w = workerContext();
+    const title = '📣'.repeat(40);
+    await w.dispatch('push', { data: { json: () => ({ actions: [{ action: 'view', title }] }) } });
+    expect(w.show.mock.calls[0][1].actions).toEqual([{ action: 'view', title }]);
+  });
+
+  it.each([0, 1, 2])('respects a browser maximum of %i action buttons while retaining the notification', async maxActions => {
+    const w = workerContext(base, { maxActions });
+    await w.dispatch('push', { data: { json: () => ({ title: 'Core notification', body: 'Still shown', actions: [{ action: 'first', title: 'First' }, { action: 'second', title: 'Second' }] }) } });
+    expect(w.show).toHaveBeenCalledOnce();
+    expect(w.show.mock.calls[0][0]).toBe('Core notification');
+    expect(w.show.mock.calls[0][1].body).toBe('Still shown');
+    expect(w.show.mock.calls[0][1].actions?.length ?? 0).toBe(maxActions);
+  });
+
+  it('retries unsupported rich options as a basic notification and acknowledges only the successful display', async () => {
+    const w = workerContext();
+    w.show.mockRejectedValueOnce(new TypeError('image/actions unsupported'));
+    await w.dispatch('push', { data: { json: () => ({ title: 'Compatible', body: 'Basic fallback', image: 'https://cdn.example/banner.png', delivery_id: 'one', event_token: 'proof', actions: [{ action: 'view', title: 'View', url: 'https://landing.example/' }] }) } });
+    expect(w.show).toHaveBeenCalledTimes(2);
+    expect(w.show.mock.calls[1]).toEqual(['Compatible', expect.objectContaining({ body: 'Basic fallback', tag: 'd1-one', renotify: false, data: expect.objectContaining({ actions: {} }) })]);
+    expect(w.show.mock.calls[1][1]).not.toHaveProperty('image');
+    expect(w.show.mock.calls[1][1]).not.toHaveProperty('actions');
+    expect(w.fetcher).toHaveBeenCalledOnce();
+    expect(w.show.mock.invocationCallOrder[1]).toBeLessThan(w.fetcher.mock.invocationCallOrder[0]);
+    expect(JSON.parse(w.fetcher.mock.calls[0][1].body).event).toBe('displayed');
+  });
+
+  it('does not retry successful rich notifications or non-compatibility failures', async () => {
+    const w = workerContext();
+    const payload = { image: 'https://cdn.example/banner.png', delivery_id: 'one', event_token: 'proof' };
+    await w.dispatch('push', { data: { json: () => payload } });
+    expect(w.show).toHaveBeenCalledOnce();
+    expect(w.fetcher).toHaveBeenCalledOnce();
+    w.show.mockClear().mockRejectedValueOnce(new Error('permission denied'));
+    w.fetcher.mockClear();
+    await expect(w.dispatch('push', { data: { json: () => payload } })).rejects.toThrow('permission denied');
+    expect(w.show).toHaveBeenCalledOnce();
+    expect(w.fetcher).not.toHaveBeenCalled();
+  });
+
+  it('does not report a display when both rich and basic notifications fail', async () => {
+    const w = workerContext();
+    w.show.mockRejectedValueOnce(new TypeError('unsupported image')).mockRejectedValueOnce(new Error('permission denied'));
+    await expect(w.dispatch('push', { data: { json: () => ({ image: 'https://cdn.example/banner.png', delivery_id: 'one', event_token: 'proof' }) } })).rejects.toThrow('permission denied');
+    expect(w.show).toHaveBeenCalledTimes(2);
+    expect(w.fetcher).not.toHaveBeenCalled();
+  });
+
+  it('does not retry a TypeError from denied notification permission as a compatibility issue', async () => {
+    const w = workerContext(base, { permission: 'denied' });
+    w.show.mockRejectedValueOnce(new TypeError('permission denied'));
+    await expect(w.dispatch('push', { data: { json: () => ({ image: 'https://cdn.example/banner.png', delivery_id: 'one', event_token: 'proof' }) } })).rejects.toThrow('permission denied');
+    expect(w.show).toHaveBeenCalledOnce();
+    expect(w.fetcher).not.toHaveBeenCalled();
   });
 });
 

@@ -9,15 +9,35 @@ self.addEventListener('fetch', event => {
  if (url.origin !== appBase.origin || !url.pathname.startsWith(appBase.pathname)) return;
  event.respondWith(fetch(event.request).catch(() => new Response('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>You are offline</title><body><h1>You are offline</h1><p>Reconnect to the internet and open the app again.</p></body></html>',{status:503,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"}})));
 });
-function safeTarget(raw) {
- const fallback=new URL('launch',appBase).href;
+function safeTarget(raw,fallback=new URL('launch',appBase).href) {
  try {
-  const url=new URL(typeof raw==='string' && raw.trim() ? raw : 'launch',appBase);
+  if (typeof raw!=='string' || !raw.trim()) return fallback;
+  const url=new URL(raw,appBase);
   if (url.username || url.password) return fallback;
   if (url.protocol==='https:') return url.href;
   const localOrigin=['localhost','127.0.0.1','[::1]'].includes(appBase.hostname);
   return localOrigin && url.protocol==='http:' && url.origin===appBase.origin ? url.href : fallback;
  } catch (_) {return fallback;}
+}
+function safeImage(raw) {
+ if (typeof raw!=='string' || !raw.trim() || raw.length>2048) return undefined;
+ // Notification images are loaded by the browser; they never pass through the server.
+ return safeTarget(raw,'') || undefined;
+}
+function notificationActions(raw,mainURL) {
+ if (!Array.isArray(raw)) return [];
+ let limit=2;
+ if (typeof Notification!=='undefined' && Number.isInteger(Notification.maxActions) && Notification.maxActions>=0) limit=Math.min(limit,Notification.maxActions);
+ const actions=[];
+ const seen=new Set();
+ for (const item of raw) {
+  if (actions.length>=limit) break;
+  if (!item || typeof item!=='object' || typeof item.action!=='string' || !/^[A-Za-z0-9_-]{1,50}$/.test(item.action) || typeof item.title!=='string' || !item.title.trim()) continue;
+  if (seen.has(item.action)) continue;
+  seen.add(item.action);
+  actions.push({action:item.action,title:Array.from(item.title).slice(0,40).join(''),url:safeTarget(item.url,mainURL)});
+ }
+ return actions;
 }
 function report(data,event) {
  if (!data || typeof data.delivery_id!=='string' || typeof data.event_token!=='string') return Promise.resolve();
@@ -26,21 +46,39 @@ function report(data,event) {
 self.addEventListener('push', event => {
  let payload={}; try {payload=event.data ? event.data.json() : {};} catch (_) {}
  if (!payload || typeof payload!=='object' || Array.isArray(payload)) payload={};
- const data={delivery_id:payload.delivery_id,event_token:payload.event_token,url:safeTarget(payload.url)};
+ const mainURL=safeTarget(payload.url);
+ const actions=notificationActions(payload.actions,mainURL);
+ const data={delivery_id:payload.delivery_id,event_token:payload.event_token,url:mainURL,actions:Object.fromEntries(actions.map(item=>[item.action,item.url]))};
  const title=typeof payload.title==='string' && payload.title ? payload.title.slice(0,200) : 'New update';
  const body=typeof payload.body==='string' ? payload.body.slice(0,2000) : '';
- // Only the app's own normalized image is used, even if a payload is malformed.
+ const appIcon=new URL('icon/192.png',appBase).href;
+ const image=safeImage(payload.image);
+ const options={body,icon:safeImage(payload.icon) || appIcon,badge:appIcon,tag:typeof payload.delivery_id==='string' ? 'd1-'+payload.delivery_id : undefined,renotify:false,data};
+ if (image) options.image=image;
+ if (actions.length) options.actions=actions.map(item=>({action:item.action,title:item.title}));
  event.waitUntil((async () => {
   // Web Push must produce a visible notification for every push event on iOS.
   // A stable delivery tag replaces an existing notification without re-alerting.
-  await self.registration.showNotification(title,{body,icon:new URL('icon/192.png',appBase).href,badge:new URL('icon/192.png',appBase).href,tag:typeof payload.delivery_id==='string' ? 'd1-'+payload.delivery_id : undefined,renotify:false,data});
+  try {
+   await self.registration.showNotification(title,options);
+  } catch (error) {
+   // Older browsers may reject rich options instead of ignoring them.
+   if (!error || error.name!=='TypeError' || (!options.image && !options.actions) || (typeof Notification!=='undefined' && Notification.permission==='denied')) throw error;
+   const basic={...options,data:{...data,actions:{}}};
+   delete basic.image;
+   delete basic.actions;
+   await self.registration.showNotification(title,basic);
+  }
   await report(data,'displayed');
  })());
 });
 self.addEventListener('notificationclick', event => {
  event.notification.close();
  const data=event.notification.data || {};
- const target=safeTarget(data.url);
+ const mainURL=safeTarget(data.url);
+ const action=typeof event.action==='string' ? event.action : '';
+ const urls=data.actions;
+ const target=action && urls && typeof urls==='object' && !Array.isArray(urls) && Object.prototype.hasOwnProperty.call(urls,action) ? safeTarget(urls[action],mainURL) : mainURL;
  event.waitUntil(Promise.all([report(data,'clicked'),self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async windows=>{
   const client=windows.find(window=>window.url===target);
   if (client) return client.focus();

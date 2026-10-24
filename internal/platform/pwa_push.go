@@ -6,13 +6,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
 	"net/url"
 	"sort"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -45,7 +43,10 @@ type PWAPushTask struct {
 	Title              string     `json:"title" gorm:"size:400;not null"`
 	Body               string     `json:"body" gorm:"size:2000;not null"`
 	URL                string     `json:"url" gorm:"size:2048;not null"`
-	Icon               string     `json:"-" gorm:"size:2048"`
+	Icon               string     `json:"icon" gorm:"size:2048"`
+	TemplateID         *string    `json:"template_id,omitempty" gorm:"size:32;index"`
+	Image              string     `json:"image" gorm:"size:2048;not null;default:''"`
+	ActionsJSON        string     `json:"-" gorm:"type:text;not null;default:'[]'"`
 	ScheduleType       string     `json:"schedule_type" gorm:"size:20;not null"`
 	ScheduledAt        *time.Time `json:"scheduled_at" gorm:"index:idx_pwa_push_due,priority:2"`
 	DelayMinutes       int        `json:"delay_minutes"`
@@ -92,27 +93,33 @@ type pwaSubscriptionInput struct {
 var errPWASubscriptionUnsubscribed = errors.New("subscription_unsubscribed")
 
 type pwaPushTaskInput struct {
-	PWAID           string     `json:"pwa_id"`
-	Title           string     `json:"title"`
-	Body            string     `json:"body"`
-	URL             string     `json:"url"`
-	ScheduleType    string     `json:"schedule_type"`
-	ScheduledAt     *time.Time `json:"scheduled_at"`
-	DelayMinutes    int        `json:"delay_minutes"`
-	TargetCountries []string   `json:"target_countries"`
+	PWAID           string          `json:"pwa_id"`
+	Title           string          `json:"title"`
+	Body            string          `json:"body"`
+	URL             string          `json:"url"`
+	ScheduleType    string          `json:"schedule_type"`
+	ScheduledAt     *time.Time      `json:"scheduled_at"`
+	DelayMinutes    int             `json:"delay_minutes"`
+	TargetCountries []string        `json:"target_countries"`
+	TemplateID      string          `json:"template_id,omitempty"`
+	Icon            string          `json:"icon,omitempty"`
+	Image           string          `json:"image,omitempty"`
+	Actions         []PWAPushAction `json:"actions,omitempty"`
 }
 
 type pwaPushTaskView struct {
 	PWAPushTask
-	TargetCountries []string `json:"target_countries"`
-	TotalCount      int64    `json:"total_count"`
-	SentCount       int64    `json:"sent_count"`
-	FailedCount     int64    `json:"failed_count"`
-	DisplayedCount  int64    `json:"displayed_count"`
-	ClickedCount    int64    `json:"clicked_count"`
+	TargetCountries []string        `json:"target_countries"`
+	Actions         []PWAPushAction `json:"actions"`
+	TotalCount      int64           `json:"total_count"`
+	SentCount       int64           `json:"sent_count"`
+	FailedCount     int64           `json:"failed_count"`
+	DisplayedCount  int64           `json:"displayed_count"`
+	ClickedCount    int64           `json:"clicked_count"`
 }
 
 func (s *Server) registerPWAPushRoutes(m *http.ServeMux) {
+	s.registerPWAPushTemplateRoutes(m)
 	m.Handle("GET /api/pwa-push/subscriptions", s.auth(s.listPWAPushSubscriptions))
 	m.Handle("GET /api/pwa-push/tasks", s.auth(s.listPWAPushTasks))
 	m.Handle("POST /api/pwa-push/tasks", s.auth(s.createPWAPushTask))
@@ -466,24 +473,12 @@ func (s *Server) listPWAPushSubscriptions(w http.ResponseWriter, r *http.Request
 	jsonOut(w, 200, map[string]any{"data": rows, "total": total, "page": p, "per_page": n})
 }
 func normalizedPWATaskInput(in *pwaPushTaskInput, app PWAApp, now time.Time, publicURL string) error {
-	in.Title = strings.TrimSpace(in.Title)
-	in.Body = strings.TrimSpace(in.Body)
 	in.URL = strings.TrimSpace(in.URL)
-	if utf8.RuneCountInString(in.Title) < 1 || utf8.RuneCountInString(in.Title) > 100 || utf8.RuneCountInString(in.Body) < 1 || utf8.RuneCountInString(in.Body) > 500 {
-		return problem(400, "通知标题须为 1–100 字，正文须为 1–500 字")
-	}
 	if in.URL == "" {
 		in.URL = publicURL + "/p/" + app.Slug + "/launch"
 	}
-	u, err := url.Parse(in.URL)
-	localOrigin := false
-	if origin, parseErr := url.Parse(publicURL); parseErr == nil && origin.Scheme == "http" && err == nil {
-		ip := net.ParseIP(origin.Hostname())
-		loopback := origin.Hostname() == "localhost" || ip != nil && ip.IsLoopback()
-		localOrigin = loopback && u.Scheme == "http" && u.Host == origin.Host
-	}
-	if err != nil || u.Scheme != "https" && !localOrigin || u.Hostname() == "" || u.User != nil || len(in.URL) > 2048 || strings.ContainsAny(in.URL, "\r\n") {
-		return problem(400, "点击链接须为有效的 HTTPS 地址")
+	if err := normalizePWAPushContent(&in.Title, &in.Body, &in.URL, &in.Icon, &in.Image, &in.Actions, publicURL, false); err != nil {
+		return err
 	}
 	switch in.ScheduleType {
 	case "now":
@@ -521,7 +516,11 @@ func normalizedPWATaskInput(in *pwaPushTaskInput, app PWAApp, now time.Time, pub
 	sort.Strings(countries)
 	in.TargetCountries = countries
 	// Reserve room for per-delivery IDs and Web Push encryption overhead.
-	payload, _ := json.Marshal(map[string]any{"title": in.Title, "body": in.Body, "url": in.URL, "icon": publicURL + "/p/" + app.Slug + "/icon/192.png"})
+	icon := in.Icon
+	if icon == "" {
+		icon = publicURL + "/p/" + app.Slug + "/icon/192.png"
+	}
+	payload, _ := json.Marshal(pwaPushContentPayload(in.Title, in.Body, in.URL, icon, in.Image, in.Actions))
 	if len(payload) > 3400 {
 		return problem(400, "通知内容过长，请缩短正文或链接")
 	}
@@ -543,6 +542,7 @@ func (s *Server) createPWAPushTask(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
+	requested := in
 	var task PWAPushTask
 	status := 201
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
@@ -562,10 +562,61 @@ func (s *Server) createPWAPushTask(w http.ResponseWriter, r *http.Request) {
 		if existingErr == nil {
 			reference = task.CreatedAt
 		}
+		in.TemplateID = strings.TrimSpace(in.TemplateID)
+		implicitTemplate := in.TemplateID != "" && strings.TrimSpace(requested.Title) == "" && strings.TrimSpace(requested.Body) == ""
+		if in.TemplateID != "" {
+			// Retries use the task's immutable content, including after a source
+			// template was edited or removed. New tasks validate template ownership.
+			var title, body, target, icon, image string
+			var actions []PWAPushAction
+			if existingErr == nil && task.TemplateID != nil && *task.TemplateID == in.TemplateID {
+				title, body, target, icon, image = task.Title, task.Body, task.URL, task.Icon, task.Image
+				actions = pwaTaskActions(task)
+			} else {
+				var template PWAPushTemplate
+				if err := tx.Where("id = ? AND user_id = ?", in.TemplateID, u.ID).First(&template).Error; err != nil {
+					return err
+				}
+				title, body, target, icon, image = template.Title, template.Body, template.URL, template.Icon, template.Image
+				if err := json.Unmarshal([]byte(template.ActionsJSON), &actions); err != nil {
+					return err
+				}
+			}
+			if implicitTemplate {
+				in.Title, in.Body = title, body
+				if strings.TrimSpace(in.URL) == "" {
+					in.URL = target
+				}
+				if strings.TrimSpace(in.Icon) == "" {
+					in.Icon = icon
+				}
+				if strings.TrimSpace(in.Image) == "" {
+					in.Image = image
+				}
+				if in.Actions == nil {
+					in.Actions = actions
+				}
+			}
+		}
 		if err := normalizedPWATaskInput(&in, app, reference, s.Config.PublicURL); err != nil {
 			return err
 		}
-		fingerprintRaw, _ := json.Marshal(in)
+		fingerprintInput := in
+		if implicitTemplate {
+			// Fingerprint the caller's choices, not mutable template content.
+			fingerprintInput.Title, fingerprintInput.Body = "", ""
+			fingerprintInput.URL, fingerprintInput.Icon, fingerprintInput.Image = strings.TrimSpace(requested.URL), strings.TrimSpace(requested.Icon), strings.TrimSpace(requested.Image)
+			if requested.Actions == nil {
+				fingerprintInput.Actions = nil
+			}
+		}
+		fingerprintRaw, _ := json.Marshal(fingerprintInput)
+		if implicitTemplate {
+			fingerprintRaw, _ = json.Marshal(struct {
+				Input           pwaPushTaskInput `json:"input"`
+				ActionsOverride bool             `json:"actions_override"`
+			}{fingerprintInput, requested.Actions != nil})
+		}
 		fingerprint := hashString(string(fingerprintRaw))
 		if existingErr == nil {
 			if task.RequestFingerprint != fingerprint {
@@ -598,7 +649,15 @@ func (s *Server) createPWAPushTask(w http.ResponseWriter, r *http.Request) {
 		}
 		now := s.Now()
 		countries, _ := json.Marshal(in.TargetCountries)
-		task = PWAPushTask{ID: randomHex(16), UserID: u.ID, RequestKeyHash: hashString(key), RequestFingerprint: fingerprint, PWAID: app.ID, PWAName: app.Name, Title: in.Title, Body: in.Body, URL: in.URL, Icon: s.Config.PublicURL + "/p/" + app.Slug + "/icon/192.png", ScheduleType: in.ScheduleType, ScheduledAt: in.ScheduledAt, DelayMinutes: in.DelayMinutes, CountriesJSON: string(countries), Status: "queued", CreatedAt: now}
+		actions, _ := json.Marshal(in.Actions)
+		icon := in.Icon
+		if icon == "" {
+			icon = s.Config.PublicURL + "/p/" + app.Slug + "/icon/192.png"
+		}
+		task = PWAPushTask{ID: randomHex(16), UserID: u.ID, RequestKeyHash: hashString(key), RequestFingerprint: fingerprint, PWAID: app.ID, PWAName: app.Name, Title: in.Title, Body: in.Body, URL: in.URL, Icon: icon, Image: in.Image, ActionsJSON: string(actions), ScheduleType: in.ScheduleType, ScheduledAt: in.ScheduledAt, DelayMinutes: in.DelayMinutes, CountriesJSON: string(countries), Status: "queued", CreatedAt: now}
+		if in.TemplateID != "" {
+			task.TemplateID = &in.TemplateID
+		}
 		if task.ScheduleType == "now" {
 			task.ScheduledAt = &now
 		}
@@ -647,7 +706,7 @@ func (s *Server) pwaPushTaskViews(tasks []PWAPushTask) ([]pwaPushTaskView, error
 		countries := []string{}
 		_ = json.Unmarshal([]byte(t.CountriesJSON), &countries)
 		c := byID[t.ID]
-		result = append(result, pwaPushTaskView{PWAPushTask: t, TargetCountries: countries, TotalCount: c.TotalCount, SentCount: c.SentCount, FailedCount: c.FailedCount, DisplayedCount: c.DisplayedCount, ClickedCount: c.ClickedCount})
+		result = append(result, pwaPushTaskView{PWAPushTask: t, TargetCountries: countries, Actions: pwaTaskActions(t), TotalCount: c.TotalCount, SentCount: c.SentCount, FailedCount: c.FailedCount, DisplayedCount: c.DisplayedCount, ClickedCount: c.ClickedCount})
 	}
 	return result, nil
 }
