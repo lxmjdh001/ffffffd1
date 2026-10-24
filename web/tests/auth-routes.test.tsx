@@ -28,10 +28,12 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 let requests: string[];
 let signedIn: boolean;
 let identityGate: Promise<void>;
+let registrationSubmissions: Record<string, unknown>[];
 beforeEach(() => {
   requests = [];
   signedIn = false;
   identityGate = Promise.resolve();
+  registrationSubmissions = [];
   const storage = new Map<string, string>();
   vi.stubGlobal('localStorage', {
     getItem: (key: string) => storage.get(key) ?? null,
@@ -42,16 +44,24 @@ beforeEach(() => {
     get length() { return storage.size; },
   });
   vi.stubGlobal('scrollTo', vi.fn());
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
     const path = String(input).split('?')[0];
     requests.push(path);
     switch (path) {
       case '/api/config': return json(config);
       case '/api/auth/captcha': return json({ id: 'test-challenge', image: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>' });
-      case '/api/me':
-        await identityGate;
-        return signedIn ? json({ user: account, plan, csrf_token: 'test-csrf' }) : json({ error: '请先登录' }, 401);
-      case '/api/auth/login': signedIn = true; return json({ csrf_token: 'test-csrf' });
+      case '/api/me': {
+        // Capture the server response when the request starts. An anonymous
+        // response can arrive after registration has established a session.
+        const response = signedIn ? json({ user: account, plan, csrf_token: 'test-csrf' }) : json({ error: '请先登录' }, 401);
+        if (!signedIn) await identityGate;
+        return response;
+      }
+      case '/api/auth/register':
+        registrationSubmissions.push(JSON.parse(String(options?.body)));
+        signedIn = true;
+        return json({ user: account, csrf_token: 'test-csrf' });
+      case '/api/auth/login': signedIn = true; return json({ user: account, csrf_token: 'test-csrf' });
       case '/api/auth/logout': signedIn = false; return json({ ok: true });
       case '/api/download-domain': return json({ mode: 'unified', plan_id: 'free', download_base_url: '' });
       case '/api/dashboard': return json(dashboard);
@@ -83,9 +93,89 @@ describe('anonymous visitors and permissions', () => {
     vi.mocked(fetch).mockResolvedValueOnce(json({ user: { ...account, role } }));
     await expect(authProvider.getPermissions!({})).resolves.toBe(role);
   });
+
+  it('ignores a cancelled old identity response before it can replace the new session CSRF token', async () => {
+    let finishOldIdentity!: () => void;
+    const oldIdentityGate = new Promise<void>(resolve => { finishOldIdentity = resolve; });
+    vi.mocked(fetch).mockImplementationOnce(async () => {
+      await oldIdentityGate;
+      return json({ user: { ...account, role: 'admin' }, plan, csrf_token: 'old-session-csrf' });
+    });
+    const controller = new AbortController();
+    const oldIdentity = authProvider.getIdentity!({ signal: controller.signal });
+    controller.abort();
+    await authProvider.login({ action: 'register', email: account.email });
+    finishOldIdentity();
+    await expect(oldIdentity).rejects.toMatchObject({ name: 'AbortError' });
+    await authProvider.logout({});
+    const logoutCall = vi.mocked(fetch).mock.calls.find(([path]) => path === '/api/auth/logout');
+    expect(new Headers(logoutCall?.[1]?.headers).get('X-CSRF-Token')).toBe('test-csrf');
+  });
 });
 
 describe('real application routes', () => {
+  async function submitRegistration(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByRole('textbox', { name: '用户名称', exact: true }), '受邀好友');
+    await user.type(screen.getByRole('textbox', { name: '邮箱地址', exact: true }), account.email);
+    await user.type(screen.getByLabelText(/^密码/), 'test-password-123');
+    await user.type(screen.getByRole('textbox', { name: /图形验证码/ }), '12345');
+    await user.click(screen.getByRole('button', { name: '免费创建账户' }));
+  }
+
+  it('registers an invited user directly into the console, survives a remount, and supports logout and login', async () => {
+    const user = userEvent.setup();
+    const inviteCode = '0123456789abcdef';
+    const view = open(`/register?invite=${inviteCode}`);
+    await screen.findByRole('heading', { name: '创建你的账户' });
+    await waitFor(() => expect(requests).toContain('/api/me'));
+    await submitRegistration(user);
+    await screen.findByRole('heading', { name: '工作台' });
+    expect(window.location.hash).toBe('#/');
+    expect(signedIn).toBe(true);
+    expect(registrationSubmissions).toEqual([{ email: account.email, name: '受邀好友', password: 'test-password-123', captcha_id: 'test-challenge', captcha_code: '12345', invite_code: inviteCode }]);
+    expect(requests.filter(path => path === '/api/auth/register')).toHaveLength(1);
+    expect(requests).not.toContain('/api/auth/login');
+    expect(requests).not.toContain('/api/auth/logout');
+
+    // A fresh app instance rechecks the established server session, as on reload.
+    view.unmount();
+    render(<StrictMode><Root /></StrictMode>);
+    await screen.findByRole('heading', { name: '工作台' });
+    await expect(authProvider.checkAuth({})).resolves.toBeUndefined();
+    expect(requests).not.toContain('/api/auth/logout');
+
+    await user.click(screen.getByTitle('退出登录'));
+    await screen.findByRole('heading', { name: '登录控制台' });
+    expect(signedIn).toBe(false);
+    await user.type(screen.getByRole('textbox', { name: '账号', exact: true }), account.email);
+    await user.type(screen.getByLabelText('密码', { exact: true }), 'test-password-123');
+    await user.type(screen.getByRole('textbox', { name: /图形验证码/ }), '12345');
+    await user.click(screen.getByRole('button', { name: /登 录/ }));
+    await screen.findByRole('heading', { name: '工作台' });
+    expect(signedIn).toBe(true);
+    expect(requests.filter(path => path === '/api/auth/logout')).toHaveLength(1);
+    expect(requests.filter(path => path === '/api/auth/login')).toHaveLength(1);
+  });
+
+  it('keeps the registered session when an earlier anonymous check finishes with a delayed 401', async () => {
+    let finishAnonymousChecks!: () => void;
+    identityGate = new Promise<void>(resolve => { finishAnonymousChecks = resolve; });
+    const user = userEvent.setup();
+    open('/register?invite=0123456789abcdef');
+    await screen.findByRole('heading', { name: '创建你的账户' });
+    await waitFor(() => expect(requests).toContain('/api/me'));
+    await submitRegistration(user);
+    await screen.findByRole('heading', { name: '工作台' });
+    await act(async () => { finishAnonymousChecks(); });
+    await waitFor(() => expect(screen.getByRole('heading', { name: '工作台' })).toBeTruthy());
+    expect(window.location.hash).toBe('#/');
+    expect(signedIn).toBe(true);
+    expect(requests).not.toContain('/api/auth/login');
+    expect(requests).not.toContain('/api/auth/logout');
+    expect(screen.queryByText(/平台管理/)).toBeNull();
+    await expect(authProvider.checkAuth({})).resolves.toBeUndefined();
+  });
+
   it('preserves a half-typed registration email after delayed anonymous checks and their retry window', async () => {
     let finishChecks!: () => void;
     identityGate = new Promise<void>(resolve => { finishChecks = resolve; });
