@@ -1981,7 +1981,16 @@
     "查看{0}访问统计": "View visit statistics for {0}",
     "统计": "Statistics",
     "近一月访问统计仅限有效付费会员使用": "Past-month statistics require an active paid membership",
-    "请选择今日、7天或近一月统计": "Choose today, 7 days or the past month"
+    "请选择今日、7天或近一月统计": "Choose today, 7 days or the past month",
+    "客户端": "Browsers",
+    "客户端 ": "Browsers ",
+    "空语言": "Empty language",
+    "屏蔽空语言访问": "Block visits without a language",
+    "开启后，Accept-Language 缺失或没有有效语言（q > 0）的访问将进入安全页。": "When enabled, visits with a missing Accept-Language header or no valid language (q > 0) go to the safe page.",
+    "拦截指定客户端": "Block selected browsers",
+    "根据浏览器 User-Agent 判断客户端；勾选的浏览器访问将进入安全页。": "The browser is identified by its User-Agent. Visits from selected browsers go to the safe page.",
+    "语言、客户端、UA、国家和设备均为选中即拦截；广告平台可单独设置允许条件。": "Selected languages, browsers, UA keywords, countries and devices are blocked. Allowed ad platforms can be configured separately.",
+    "客户端拦截配置无效": "Invalid browser blocking settings"
   },
   "pt": {
     "导入已有应用配置": "Importar configurações existentes",
@@ -3965,7 +3974,16 @@
     "查看{0}访问统计": "Ver estatísticas de visitas de {0}",
     "统计": "Estatísticas",
     "近一月访问统计仅限有效付费会员使用": "As estatísticas do último mês exigem uma assinatura paga ativa",
-    "请选择今日、7天或近一月统计": "Escolha hoje, 7 dias ou o último mês"
+    "请选择今日、7天或近一月统计": "Escolha hoje, 7 dias ou o último mês",
+    "客户端": "Navegadores",
+    "客户端 ": "Navegadores ",
+    "空语言": "Idioma ausente",
+    "屏蔽空语言访问": "Bloquear acessos sem idioma",
+    "开启后，Accept-Language 缺失或没有有效语言（q > 0）的访问将进入安全页。": "Quando ativado, acessos sem o cabeçalho Accept-Language ou sem um idioma válido (q > 0) vão para a página segura.",
+    "拦截指定客户端": "Bloquear navegadores selecionados",
+    "根据浏览器 User-Agent 判断客户端；勾选的浏览器访问将进入安全页。": "O navegador é identificado pelo User-Agent. Acessos dos navegadores selecionados vão para a página segura.",
+    "语言、客户端、UA、国家和设备均为选中即拦截；广告平台可单独设置允许条件。": "Idiomas, navegadores, palavras-chave de UA, países e dispositivos selecionados são bloqueados. As plataformas de anúncios permitidas podem ser configuradas separadamente.",
+    "客户端拦截配置无效": "Configurações de bloqueio de navegador inválidas"
   },
   "de": {
     "导入已有应用配置": "App-Konfiguration importieren",
@@ -5949,7 +5967,16 @@
     "查看{0}访问统计": "Besuchsstatistik für {0} anzeigen",
     "统计": "Statistik",
     "近一月访问统计仅限有效付费会员使用": "Statistiken des letzten Monats erfordern eine aktive kostenpflichtige Mitgliedschaft",
-    "请选择今日、7天或近一月统计": "Heute, 7 Tage oder letzten Monat wählen"
+    "请选择今日、7天或近一月统计": "Heute, 7 Tage oder letzten Monat wählen",
+    "客户端": "Browser",
+    "客户端 ": "Browser ",
+    "空语言": "Keine Sprache",
+    "屏蔽空语言访问": "Zugriffe ohne Sprache blockieren",
+    "开启后，Accept-Language 缺失或没有有效语言（q > 0）的访问将进入安全页。": "Wenn aktiviert, werden Zugriffe ohne Accept-Language-Header oder gültige Sprache (q > 0) zur sicheren Seite geleitet.",
+    "拦截指定客户端": "Ausgewählte Browser blockieren",
+    "根据浏览器 User-Agent 判断客户端；勾选的浏览器访问将进入安全页。": "Der Browser wird anhand des User-Agent erkannt. Zugriffe mit ausgewählten Browsern werden zur sicheren Seite geleitet.",
+    "语言、客户端、UA、国家和设备均为选中即拦截；广告平台可单独设置允许条件。": "Ausgewählte Sprachen, Browser, UA-Schlüsselwörter, Länder und Geräte werden blockiert. Erlaubte Werbeplattformen lassen sich separat konfigurieren.",
+    "客户端拦截配置无效": "Ungültige Einstellungen zum Blockieren von Browsern"
   },
   "fr": {
     "导入已有应用配置": "Importer une configuration",
@@ -7933,7 +7960,16 @@
     "查看{0}访问统计": "Voir les statistiques de visites de {0}",
     "统计": "Statistiques",
     "近一月访问统计仅限有效付费会员使用": "Les statistiques du dernier mois nécessitent un abonnement payant actif",
-    "请选择今日、7天或近一月统计": "Choisissez aujourd’hui, 7 jours ou le dernier mois"
+    "请选择今日、7天或近一月统计": "Choisissez aujourd’hui, 7 jours ou le dernier mois",
+    "客户端": "Navigateurs",
+    "客户端 ": "Navigateurs ",
+    "空语言": "Langue absente",
+    "屏蔽空语言访问": "Bloquer les visites sans langue",
+    "开启后，Accept-Language 缺失或没有有效语言（q > 0）的访问将进入安全页。": "Si activé, les visites sans en-tête Accept-Language ou sans langue valide (q > 0) sont redirigées vers la page sûre.",
+    "拦截指定客户端": "Bloquer les navigateurs sélectionnés",
+    "根据浏览器 User-Agent 判断客户端；勾选的浏览器访问将进入安全页。": "Le navigateur est identifié par son User-Agent. Les visites depuis les navigateurs sélectionnés sont redirigées vers la page sûre.",
+    "语言、客户端、UA、国家和设备均为选中即拦截；广告平台可单独设置允许条件。": "Les langues, navigateurs, mots-clés UA, pays et appareils sélectionnés sont bloqués. Les plateformes publicitaires autorisées se configurent séparément.",
+    "客户端拦截配置无效": "Paramètres de blocage des navigateurs invalides"
   },
   "ko": {
     "导入已有应用配置": "기존 앱 설정 가져오기",
@@ -9917,7 +9953,16 @@
     "查看{0}访问统计": "{0} 방문 통계 보기",
     "统计": "통계",
     "近一月访问统计仅限有效付费会员使用": "최근 한 달 통계는 유효한 유료 회원만 이용할 수 있습니다",
-    "请选择今日、7天或近一月统计": "오늘, 7일 또는 최근 한 달을 선택하세요"
+    "请选择今日、7天或近一月统计": "오늘, 7일 또는 최근 한 달을 선택하세요",
+    "客户端": "브라우저",
+    "客户端 ": "브라우저 ",
+    "空语言": "언어 없음",
+    "屏蔽空语言访问": "언어 없는 방문 차단",
+    "开启后，Accept-Language 缺失或没有有效语言（q > 0）的访问将进入安全页。": "켜면 Accept-Language 헤더가 없거나 유효한 언어(q > 0)가 없는 방문은 안전 페이지로 이동합니다.",
+    "拦截指定客户端": "선택한 브라우저 차단",
+    "根据浏览器 User-Agent 判断客户端；勾选的浏览器访问将进入安全页。": "브라우저 User-Agent로 클라이언트를 식별합니다. 선택한 브라우저의 방문은 안전 페이지로 이동합니다.",
+    "语言、客户端、UA、国家和设备均为选中即拦截；广告平台可单独设置允许条件。": "선택한 언어, 브라우저, UA 키워드, 국가 및 기기를 차단합니다. 허용할 광고 플랫폼은 별도로 설정할 수 있습니다.",
+    "客户端拦截配置无效": "브라우저 차단 설정이 올바르지 않습니다"
   },
   "ja": {
     "导入已有应用配置": "既存アプリ設定を取り込む",
@@ -11901,7 +11946,16 @@
     "查看{0}访问统计": "{0}のアクセス統計を表示",
     "统计": "統計",
     "近一月访问统计仅限有效付费会员使用": "直近1か月の統計には有効な有料会員資格が必要です",
-    "请选择今日、7天或近一月统计": "今日、7日間、直近1か月から選択してください"
+    "请选择今日、7天或近一月统计": "今日、7日間、直近1か月から選択してください",
+    "客户端": "ブラウザー",
+    "客户端 ": "ブラウザー ",
+    "空语言": "言語なし",
+    "屏蔽空语言访问": "言語のないアクセスをブロック",
+    "开启后，Accept-Language 缺失或没有有效语言（q > 0）的访问将进入安全页。": "有効にすると、Accept-Language ヘッダーがない、または有効な言語（q > 0）がないアクセスは安全ページに移動します。",
+    "拦截指定客户端": "選択したブラウザーをブロック",
+    "根据浏览器 User-Agent 判断客户端；勾选的浏览器访问将进入安全页。": "ブラウザーの User-Agent で判定します。選択したブラウザーからのアクセスは安全ページに移動します。",
+    "语言、客户端、UA、国家和设备均为选中即拦截；广告平台可单独设置允许条件。": "選択した言語、ブラウザー、UA、国、デバイスをブロックします。広告プラットフォームの許可条件は個別に設定できます。",
+    "客户端拦截配置无效": "ブラウザーのブロック設定が無効です"
   },
   "zh-TW": {
     "导入已有应用配置": "匯入現有應用設定",
@@ -13885,7 +13939,16 @@
     "查看{0}访问统计": "查看{0}訪問統計",
     "统计": "統計",
     "近一月访问统计仅限有效付费会员使用": "近一月訪問統計僅限有效付費會員使用",
-    "请选择今日、7天或近一月统计": "請選擇今日、7天或近一月統計"
+    "请选择今日、7天或近一月统计": "請選擇今日、7天或近一月統計",
+    "客户端": "用戶端",
+    "客户端 ": "用戶端 ",
+    "空语言": "空語言",
+    "屏蔽空语言访问": "封鎖空語言存取",
+    "开启后，Accept-Language 缺失或没有有效语言（q > 0）的访问将进入安全页。": "開啟後，Accept-Language 缺失或沒有有效語言（q > 0）的存取將進入安全頁。",
+    "拦截指定客户端": "攔截指定用戶端",
+    "根据浏览器 User-Agent 判断客户端；勾选的浏览器访问将进入安全页。": "根據瀏覽器 User-Agent 判斷用戶端；勾選的瀏覽器存取將進入安全頁。",
+    "语言、客户端、UA、国家和设备均为选中即拦截；广告平台可单独设置允许条件。": "語言、用戶端、UA、國家和裝置均為選中即攔截；廣告平台可單獨設定允許條件。",
+    "客户端拦截配置无效": "用戶端攔截設定無效"
   },
   "ru": {
     "导入已有应用配置": "Импорт настроек приложения",
@@ -15869,6 +15932,15 @@
     "查看{0}访问统计": "Статистика посещений {0}",
     "统计": "Статистика",
     "近一月访问统计仅限有效付费会员使用": "Статистика за последний месяц доступна только с активной платной подпиской",
-    "请选择今日、7天或近一月统计": "Выберите сегодня, 7 дней или последний месяц"
+    "请选择今日、7天或近一月统计": "Выберите сегодня, 7 дней или последний месяц",
+    "客户端": "Браузеры",
+    "客户端 ": "Браузеры ",
+    "空语言": "Язык не указан",
+    "屏蔽空语言访问": "Блокировать посещения без языка",
+    "开启后，Accept-Language 缺失或没有有效语言（q > 0）的访问将进入安全页。": "Если включено, посещения без заголовка Accept-Language или допустимого языка (q > 0) переходят на безопасную страницу.",
+    "拦截指定客户端": "Блокировать выбранные браузеры",
+    "根据浏览器 User-Agent 判断客户端；勾选的浏览器访问将进入安全页。": "Браузер определяется по User-Agent. Посещения из выбранных браузеров переходят на безопасную страницу.",
+    "语言、客户端、UA、国家和设备均为选中即拦截；广告平台可单独设置允许条件。": "Выбранные языки, браузеры, ключевые слова UA, страны и устройства блокируются. Разрешённые рекламные платформы настраиваются отдельно.",
+    "客户端拦截配置无效": "Недопустимые настройки блокировки браузеров"
   }
 }

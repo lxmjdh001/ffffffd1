@@ -6,10 +6,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloaksPage, type Cloak, type CloakDraft } from '../src/cloaks';
 
-const editableKeys = ['name', 'enabled', 'target_type', 'target_url', 'traffic_pool_slug', 'target_id', 'app_target_mode', 'safe_url', 'blocked_languages', 'blocked_uas', 'blocked_countries', 'allowed_platforms', 'blocked_devices'].sort();
+const editableKeys = ['name', 'enabled', 'target_type', 'target_url', 'traffic_pool_slug', 'target_id', 'app_target_mode', 'safe_url', 'blocked_languages', 'block_empty_language', 'blocked_browsers', 'blocked_uas', 'blocked_countries', 'allowed_platforms', 'blocked_devices'].sort();
 const baseDraft: CloakDraft = {
   name: '海外应用推广', enabled: true, target_type: 'url', target_url: 'https://download.example/app.apk', traffic_pool_slug: '', target_id: '', app_target_mode: '', safe_url: 'https://brand.example/help',
-  blocked_languages: [], blocked_uas: [], blocked_countries: [], allowed_platforms: [], blocked_devices: [],
+  blocked_languages: [], block_empty_language: false, blocked_browsers: [], blocked_uas: [], blocked_countries: [], allowed_platforms: [], blocked_devices: [],
 };
 const appDraft: CloakDraft = { ...baseDraft, target_type: 'app', target_url: '', target_id: 'a'.repeat(32), app_target_mode: 'direct' };
 const fixture = (overrides: Partial<Cloak> = {}): Cloak => ({
@@ -161,6 +161,58 @@ describe('cloak editor API integration', () => {
     expect(Object.keys(mutations[1].body!).sort()).toEqual(editableKeys);
   });
 
+  it('creates, restores, and removes empty-language and browser blocks without affecting selected languages', async () => {
+    const user = await showPage();
+    await newEditor(user); await chooseURL(user);
+    const emptyLanguage = screen.getByRole('switch', { name: '屏蔽空语言访问' }) as HTMLInputElement;
+    expect(emptyLanguage.checked).toBe(false);
+    expect(screen.getByText(/Accept-Language 缺失/).textContent).toContain('q > 0');
+    await user.click(emptyLanguage);
+    expect(within(screen.getByRole('complementary')).getByText('已设置 1 类规则')).toBeTruthy();
+    await user.click(screen.getByRole('checkbox', { name: /^英语/ }));
+    const browsers = within(await openTab(user, '客户端'));
+    expect(browsers.getByText(/勾选的浏览器访问将进入安全页/)).toBeTruthy();
+    for (const name of ['Chrome', 'Safari', 'Firefox', 'Edge']) {
+      const browser = browsers.getByRole('checkbox', { name: new RegExp(`^${name}`, 'i') }) as HTMLInputElement;
+      expect(browser.checked).toBe(false);
+      await user.click(browser);
+    }
+    expect(within(screen.getByRole('complementary')).getByText('已设置 2 类规则')).toBeTruthy();
+    await saveNew(user);
+    expect(mutations[0].body).toEqual({ ...appDraft, blocked_languages: ['en'], block_empty_language: true, blocked_browsers: ['chrome', 'safari', 'firefox', 'edge'] });
+    expect(screen.getByText('空语言')).toBeTruthy();
+    expect(screen.getByText('客户端 4')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    expect((screen.getByRole('switch', { name: '屏蔽空语言访问' }) as HTMLInputElement).checked).toBe(true);
+    await user.click(screen.getByRole('switch', { name: '屏蔽空语言访问' }));
+    expect((screen.getByRole('checkbox', { name: /^英语/ }) as HTMLInputElement).checked).toBe(true);
+    const restoredBrowsers = within(await openTab(user, '客户端'));
+    for (const name of ['Chrome', 'Safari', 'Firefox', 'Edge']) expect((restoredBrowsers.getByRole('checkbox', { name: new RegExp(`^${name}`, 'i') }) as HTMLInputElement).checked).toBe(true);
+    await user.click(restoredBrowsers.getByRole('button', { name: '清空选择' }));
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[1].body).toEqual({ ...appDraft, blocked_languages: ['en'] });
+    expect(screen.queryByText('空语言')).toBeNull();
+    expect(screen.queryByText('客户端 4')).toBeNull();
+  });
+
+  it('treats absent rules from older cloak responses as disabled and persists their defaults', async () => {
+    const legacy = fixture();
+    Reflect.deleteProperty(legacy, 'block_empty_language');
+    Reflect.deleteProperty(legacy, 'blocked_browsers');
+    rows = [legacy];
+    const user = await showPage();
+    expect(screen.getByText('未设置条件')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    expect((screen.getByRole('switch', { name: '屏蔽空语言访问' }) as HTMLInputElement).checked).toBe(false);
+    const browsers = within(await openTab(user, '客户端'));
+    expect(browsers.getAllByRole('checkbox').every(input => !(input as HTMLInputElement).checked)).toBe(true);
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[0].body).toEqual(baseDraft);
+  });
+
   it('previews custom safe URLs and lets an existing cloak switch back to the default 404 page', async () => {
     rows = [fixture()];
     const user = await showPage();
@@ -234,7 +286,7 @@ describe('cloak editor API integration', () => {
   });
 
   it('turns interception off and back on using only editable fields while preserving all configured rules', async () => {
-    rows = [fixture({ blocked_languages: ['zh-cn'], blocked_countries: ['US'], blocked_uas: ['curl'], allowed_platforms: ['google', 'bigo'], blocked_devices: [{ device: 'mobile', systems: ['android'] }] })];
+    rows = [fixture({ blocked_languages: ['zh-cn'], block_empty_language: true, blocked_browsers: ['edge', 'firefox'], blocked_countries: ['US'], blocked_uas: ['curl'], allowed_platforms: ['google', 'bigo'], blocked_devices: [{ device: 'mobile', systems: ['android'] }] })];
     const user = await showPage();
     await user.click(screen.getByRole('button', { name: '关闭拦截' }));
     await screen.findByRole('button', { name: '开启拦截' });
@@ -243,7 +295,7 @@ describe('cloak editor API integration', () => {
     expect(mutations.map(item => ({ path: item.path, method: item.method, enabled: item.body?.enabled }))).toEqual([{ path: '/api/cloaks/11111111111111111111111111111111', method: 'PUT', enabled: false }, { path: '/api/cloaks/11111111111111111111111111111111', method: 'PUT', enabled: true }]);
     for (const { body } of mutations) {
       expect(Object.keys(body!).sort()).toEqual(editableKeys);
-      expect(body).toMatchObject({ blocked_languages: ['zh-cn'], blocked_countries: ['US'], blocked_uas: ['curl'], allowed_platforms: ['google', 'bigo'], blocked_devices: [{ device: 'mobile', systems: ['android'] }] });
+      expect(body).toMatchObject({ blocked_languages: ['zh-cn'], block_empty_language: true, blocked_browsers: ['edge', 'firefox'], blocked_countries: ['US'], blocked_uas: ['curl'], allowed_platforms: ['google', 'bigo'], blocked_devices: [{ device: 'mobile', systems: ['android'] }] });
     }
   });
 

@@ -77,6 +77,15 @@
 .cloak-rule-intro{margin-bottom:20px}
 .cloak-rule-intro h3{font-size:12px;font-weight:550;color:#5c7495;margin-bottom:7px}
 .cloak-rule-intro p{font-size:10px;color:#8192ab;line-height:1.95}
+.cloak-empty-language{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px 16px;margin-bottom:20px;border:1px solid #e4ebf5;background:#f8fbff;border-radius:8px;cursor:pointer}
+.cloak-empty-language>span{min-width:0}
+.cloak-empty-language strong{display:block;color:#5c7495;font-size:12px;font-weight:550;line-height:1.7}
+.cloak-empty-language small{display:block;color:#62748e;font-size:11px;line-height:1.9;margin-top:5px}
+.cloak-page .cloak-empty-language input[type=checkbox]{appearance:none;width:36px;height:20px;border-radius:12px;background:#cbd5e5;position:relative;transition:background .15s}
+.cloak-page .cloak-empty-language input[type=checkbox]:checked{background:#6889c8}
+.cloak-empty-language input:before{content:'';display:block;position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s}
+.cloak-empty-language input:checked:before{transform:translateX(16px)}
+.cloak-empty-language input:focus-visible{outline:3px solid #bccbf1;outline-offset:3px}
 .cloak-picker-toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;font-size:10px;color:#8c9cb3;margin-bottom:14px}
 .cloak-picker-toolbar>.text-btn{font-size:10px;flex-shrink:0}
 .cloak-search{display:flex;align-items:center;gap:7px;background:#f9fbfe;border:1px solid #e4ebf5;border-radius:7px;padding:0 10px;width:238px;color:#8ea4c2}
@@ -90,6 +99,8 @@
 .cloak-page input[type=checkbox]{accent-color:#6889c8;width:13px;height:13px;flex-shrink:0;margin:0;cursor:pointer;padding:0}
 .cloak-choice>span{font-size:10px;color:#6f84a1;line-height:1.7;min-width:0;overflow-wrap:anywhere}
 .cloak-choice small{display:block;font-size:8px;color:#8b9fba;line-height:1.5;margin-top:3px}
+.cloak-browser-options .cloak-choice-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:650px){.cloak-browser-options .cloak-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .cloak-no-results{font-size:11px;color:#8a9bb3;grid-column:1/-1;padding:30px 0;text-align:center}
 .cloak-rule-hint{display:flex;align-items:flex-start;gap:6px;margin-top:18px;font-size:9px;color:#8b9db6;line-height:1.9}
 .cloak-rule-hint svg{flex-shrink:0;margin-top:2px}
