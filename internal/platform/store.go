@@ -109,7 +109,10 @@ func Migrate(db *gorm.DB) error {
 			return err
 		}
 		if count > 0 {
-			return migrateMembershipVersion(tx)
+			if err := migrateMembershipVersion(tx); err != nil {
+				return err
+			}
+			return migrateReferrals(tx)
 		}
 		if err := tx.AutoMigrate(&Settings{}); err != nil {
 			return err
@@ -128,7 +131,10 @@ func Migrate(db *gorm.DB) error {
 		if err := tx.Create(&Migration{Version: 3, AppliedAt: time.Now().UTC()}).Error; err != nil {
 			return err
 		}
-		return migrateMembershipVersion(tx)
+		if err := migrateMembershipVersion(tx); err != nil {
+			return err
+		}
+		return migrateReferrals(tx)
 	})
 }
 func BootstrapAdmin(db *gorm.DB, c Config) error {

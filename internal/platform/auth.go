@@ -47,6 +47,7 @@ type authInput struct {
 	Password    string `json:"password"`
 	CaptchaID   string `json:"captcha_id"`
 	CaptchaCode string `json:"captcha_code"`
+	InviteCode  string `json:"invite_code"`
 }
 
 func (s *Server) captcha(w http.ResponseWriter, r *http.Request) {
@@ -141,7 +142,14 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 	}
 	u := User{ID: randomHex(16), Email: email, Name: name, PasswordHash: string(hash), Role: "member", CreatedAt: s.Now()}
 	if e = s.DB.Transaction(func(tx *gorm.DB) error {
+		inviterID, err := registrationInviter(tx, in.InviteCode, u.ID)
+		if err != nil {
+			return err
+		}
 		if err := tx.Create(&u).Error; err != nil {
+			return err
+		}
+		if _, err := createReferralAccount(tx, u.ID, inviterID, u.CreatedAt); err != nil {
 			return err
 		}
 		plan, err := getPlan(tx, u, s.Now())

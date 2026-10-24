@@ -236,10 +236,15 @@ func (s *Server) settleAudited(orderID, tradeID, method string, amount int64, ac
 		return e
 	}
 	return s.DB.Transaction(func(tx *gorm.DB) error {
-		u, e := lockUser(tx, pre.UserID)
+		ancestors, e := referralAncestors(tx, pre.UserID)
 		if e != nil {
 			return e
 		}
+		users, e := lockRechargeUsers(tx, pre.UserID, ancestors)
+		if e != nil {
+			return e
+		}
+		u := users[pre.UserID]
 		var o Order
 		if e = tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&o, "id = ?", orderID).Error; e != nil {
 			return e
@@ -268,13 +273,16 @@ func (s *Server) settleAudited(orderID, tradeID, method string, amount int64, ac
 			}
 			return e
 		}
-		if e = changeBalance(tx, &u, o.AmountMicros, "recharge:"+o.ID, "recharge", "余额充值 · "+o.Method); e != nil {
+		if e = changeBalance(tx, u, o.AmountMicros, "recharge:"+o.ID, "recharge", "余额充值 · "+o.Method); e != nil {
 			return e
 		}
 		if o.BonusMicros > 0 {
-			if e = changeBalance(tx, &u, o.BonusMicros, "recharge-bonus:"+o.ID, "recharge_bonus", "充值活动赠送"); e != nil {
+			if e = changeBalance(tx, u, o.BonusMicros, "recharge-bonus:"+o.ID, "recharge_bonus", "充值活动赠送"); e != nil {
 				return e
 			}
+		}
+		if e = creditReferralRewards(tx, o, ancestors, users, now); e != nil {
+			return e
 		}
 		if actor != "" {
 			return recordAudit(tx, actor, "order.settle", o.ID, tradeID+" · "+note)

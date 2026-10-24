@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { Notification, useGetIdentity, useLogout, usePermissions } from 'react-admin';
-import { LayoutDashboard, Boxes, Globe2, Wallet, ChartNoAxesCombined, Settings2, Users, ShieldCheck, ScrollText, SlidersHorizontal, LogOut, ArrowUpRight, Menu, X, CircleHelp, ChevronRight, CreditCard, Sparkles, Radio } from 'lucide-react';
+import { LayoutDashboard, Boxes, Globe2, Wallet, ChartNoAxesCombined, Settings2, Users, ShieldCheck, ScrollText, SlidersHorizontal, LogOut, ArrowUpRight, Menu, X, CircleHelp, ChevronRight, CreditCard, Sparkles, Radio, Gift } from 'lucide-react';
 import { Brand } from './auth';
 import { useConfig } from './ui';
 
-const navItems = [{ to: '/', label: '工作台', icon: LayoutDashboard }, { to: '/apps', label: '应用管理', icon: Boxes }, { to: '/domains', label: '域名管理', icon: Globe2 }, { to: '/traffic', label: '应用分流', icon: Globe2 }, { to: '/billing', label: '会员与账单', icon: Wallet }, { to: '/activity', label: '下载记录', icon: ChartNoAxesCombined }, { to: '/integrations', label: '广告回传', icon: Radio }, { to: '/account', label: '账户设置', icon: Settings2 }];
+const navItems = [{ to: '/', label: '工作台', icon: LayoutDashboard }, { to: '/apps', label: '应用管理', icon: Boxes }, { to: '/domains', label: '域名管理', icon: Globe2 }, { to: '/traffic', label: '应用分流', icon: Globe2 }, { to: '/billing', label: '会员与账单', icon: Wallet }, { to: '/referrals', label: '邀请好友', icon: Gift }, { to: '/activity', label: '下载记录', icon: ChartNoAxesCombined }, { to: '/integrations', label: '广告回传', icon: Radio }, { to: '/account', label: '账户设置', icon: Settings2 }];
 const adminItems = [{ to: '/admin/users', label: '用户管理', icon: Users }, { to: '/admin/apps', label: '应用审核', icon: ShieldCheck }, { to: '/admin/orders', label: '充值订单', icon: CreditCard }, { to: '/admin/settings', label: '平台设置', icon: SlidersHorizontal }, { to: '/admin/audit', label: '操作日志', icon: ScrollText }];
 export function AppLayout({ children }: { children: ReactNode }) {
   const { data: identity } = useGetIdentity(); const { permissions } = usePermissions(); const logout = useLogout(); const { config } = useConfig(); const [open, setOpen] = useState(false); const location = useLocation(); const current = [...navItems, ...adminItems].find(x => x.to === location.pathname || (x.to !== '/' && location.pathname.startsWith(x.to)))?.label || '应用详情';

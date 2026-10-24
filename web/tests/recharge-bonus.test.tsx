@@ -5,7 +5,7 @@ import { AdminContext } from 'react-admin';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BillingPage } from '../src/billing';
 import { ConfigContext } from '../src/ui';
-import type { Config, Dashboard, Order, Plan, User } from '../src/types';
+import type { Config, Dashboard, Ledger, Order, Plan, User } from '../src/types';
 
 const free: Plan = { id: 'free', name: '免费套餐', price_micros: 0, app_limit: 10, download_limit: 1000, storage_bytes: 10 * 2 ** 30 };
 const account: User = { id: 'test-member', email: 'member@example.com', name: '测试用户', role: 'member', disabled: false, balance_micros: 0, held_micros: 0, pro_until: null, created_at: '2026-10-01T00:00:00Z' };
@@ -23,6 +23,7 @@ let config: Config;
 let client: QueryClient;
 let submissions: unknown[];
 let existingOrders: Order[];
+let existingLedger: Ledger[];
 let createdOrder: Order | undefined;
 const dialogMethods = {
   showModal: Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'showModal'),
@@ -37,7 +38,7 @@ beforeEach(() => {
     plans: [free, { ...free, id: 'pro', name: '尊享套餐', price_micros: 99000000, app_limit: 500, storage_bytes: 30 * 2 ** 30, download_limit: 10000 }], download_price_micros: 500,
     max_upload_bytes: 2 ** 30, domain_limit: 5, payment_methods: ['manual'], support_email: '', usdt_rate_micros: 1000000,
   };
-  submissions = []; existingOrders = []; createdOrder = undefined;
+  submissions = []; existingOrders = []; existingLedger = []; createdOrder = undefined;
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   vi.stubGlobal('scrollTo', vi.fn());
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value(this: HTMLDialogElement) { this.setAttribute('open', ''); } });
@@ -52,6 +53,7 @@ beforeEach(() => {
       return json(createdOrder);
     }
     if (path === '/api/orders') return json({ data: existingOrders, total: existingOrders.length });
+    if (path === '/api/ledger') return json({ data: existingLedger, total: existingLedger.length });
     if (path === `/api/orders/${order.id}`) return json(createdOrder || order);
     throw new Error(`Unexpected request: ${input}`);
   }));
@@ -70,6 +72,16 @@ function openBilling() {
 }
 
 describe('recharge promotion', () => {
+  it('identifies referral credits in the ledger and retains fractional-cent rewards', async () => {
+    existingLedger = [{ id: 'referral-ledger', kind: 'referral_reward', amount_micros: 20200, balance_micros: 20200, note: '二级邀请返利 · 好友充值 1.010000 USD', reference: 'referral:test-order:2', created_at: '2026-10-24T03:00:00Z' }];
+    const user = openBilling();
+    await user.click(await screen.findByRole('button', { name: '余额流水' }));
+    expect(await screen.findByText('邀请返利')).toBeTruthy();
+    expect(screen.getByText('二级邀请返利 · 好友充值 1.010000 USD')).toBeTruthy();
+    expect(screen.getByText('+ $0.0202')).toBeTruthy();
+    expect(screen.getByText('$0.0202')).toBeTruthy();
+  });
+
   it('shows the two compact plans with the balance-card recharge action', async () => {
     const user = openBilling();
     const freeCard = (await screen.findByRole('heading', { name: '免费套餐' })).closest('section')!;

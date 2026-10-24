@@ -110,7 +110,7 @@ describe('real application routes', () => {
     expect((screen.getByRole('textbox', { name: '邮箱地址', exact: true }) as HTMLInputElement).value).toBe('half.typed@example.com');
   }, 15000);
 
-  it.each(['/apps', '/admin/settings'])('redirects an anonymous visitor away from protected %s', async path => {
+  it.each(['/apps', '/referrals', '/admin/settings'])('redirects an anonymous visitor away from protected %s', async path => {
     open(path);
     await screen.findByRole('heading', { name: '登录控制台' });
     expect(window.location.hash).toBe('#/login');

@@ -14,3 +14,6 @@ export type Settings = RechargePromotion & { usdt_wallet?: string | null; id: nu
 export type SettingsResponse = { settings: Settings; plans: Plan[]; runtime: Record<string, string | boolean>; risk_usage?: { month: string; requests: number; free_limit: number; free_remaining: number } };
 export type Dashboard = { user: User; plan: Plan; usage: { period: string; free_used: number; free_reserved: number; paid_used: number; spent_micros: number }; app_count: number; storage_bytes: number; total_downloads: number; active_domains: number; quota_resets_at: string | null; quota_limit: number; quota_used: number; quota_reserved: number; quota_remaining: number; quota_renews_at: string | null; series: { date: string; count: number; paid: number }[] };
 export type Page<T> = { data: T[]; total: number };
+export type ReferralReward = { id: string; level: number; amount_micros: number; recharge_micros: number; created_at: string; source_name: string };
+export type ReferralMember = { id: string; name: string; level: number; created_at: string };
+export type Referrals = { invite_code: string; invite_url: string; rates: [number, number, number]; total_reward_micros: number; team_count: number; direct_count: number; level_counts: [number, number, number]; rewards: Page<ReferralReward>; members: Page<ReferralMember> };

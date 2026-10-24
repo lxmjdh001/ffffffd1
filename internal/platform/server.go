@@ -206,6 +206,7 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("DELETE /api/domains/{id}", s.auth(s.deleteDomain))
 	m.Handle("GET /api/downloads", s.auth(s.listDownloads))
 	m.Handle("GET /api/ledger", s.auth(s.listLedger))
+	m.Handle("GET /api/referrals", s.auth(s.referrals))
 	m.Handle("GET /api/orders", s.auth(s.listOrders))
 	m.Handle("POST /api/orders", s.auth(s.createOrder))
 	m.Handle("GET /api/orders/{id}", s.auth(s.getOrder))

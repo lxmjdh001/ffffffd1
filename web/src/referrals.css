@@ -1,0 +1,25 @@
+.referral-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-bottom:24px}
+.referral-stats .stat-value{font-size:28px;overflow-wrap:anywhere}
+.referrals-page .referral-share,.referrals-page .referral-rules,.referral-records{margin-bottom:24px}
+.referral-share .panel-heading{padding:0 0 20px}
+.referral-share .panel-heading>svg{color:#8996de;flex-shrink:0}
+.referral-share-fields{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:20px}
+.referral-share-fields .field{min-width:0;margin:0}
+.referral-copy-row{display:flex;gap:8px;align-items:center}
+.referral-copy-row input{min-width:0;width:100%;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
+.referral-copy-row .btn{flex-shrink:0;white-space:nowrap;padding:11px 13px;font-size:11px}
+.referral-copy-success{display:flex;align-items:center;gap:6px;color:#2e936f;font-size:12px;margin:14px 0 0}
+.referral-share .form-error{margin:14px 0 0}
+.referral-rules h2{margin-bottom:18px}
+.referral-rates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.referral-rates>div{padding:19px;border:1px solid #e5e9f7;border-radius:9px;background:#f7f8ff}
+.referral-rates>div>span{display:block;color:#7b8aa5;font-size:12px}
+.referral-rates strong{display:block;font-size:31px;font-weight:600;color:#7786d1;line-height:1.1;margin:14px 0}
+.referral-rates strong small{font-size:15px;margin-left:3px}
+.referral-rates p{color:#929fba;font-size:11px;line-height:1.7;margin:0}
+.referral-rules>p{font-size:12px;line-height:1.9;margin-bottom:15px}
+.referral-rules>.notice{margin:0;line-height:1.9}
+.referral-pager{border:0;margin:0;padding:0;min-width:0}
+.referral-pager:disabled{opacity:.6}
+@media(max-width:1050px){.referral-share-fields{grid-template-columns:1fr}.referral-stats{gap:12px}.referral-stats .stat-value{font-size:24px}}
+@media(max-width:650px){.referral-stats{gap:10px;margin-bottom:18px}.referral-stats .stat-card{padding:13px 10px 0}.referral-stats .stat-heading{font-size:10px;gap:5px}.referral-stats .stat-icon{display:none}.referral-stats .stat-value{font-size:21px;line-height:1.5;margin:13px 0}.referral-stats .stat-value small{font-size:10px;margin-left:3px}.referral-stats .stat-footer{font-size:8px;min-height:40px;line-height:1.7}.referral-rates{gap:9px}.referral-rates>div{padding:14px 10px}.referral-rates>div>span{font-size:11px}.referral-rates p{font-size:10px}.referral-rates strong{font-size:28px}.referral-rules>p{font-size:11px}.referral-copy-row .btn{padding:11px 10px}.referrals-page .referral-share,.referrals-page .referral-rules,.referral-records{margin-bottom:18px}}
