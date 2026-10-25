@@ -32,7 +32,7 @@ afterEach(() => {
 
 function openDomains() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
-  const config = { cname_target: 'dns.example.com', domain_limit: 10, download_base_url: 'https://test.d1apk.com' } as Config;
+  const config = { cname_target: 'dns.example.com', domain_limit: 20, download_base_url: 'https://test.d1apk.com' } as Config;
   render(<AdminContext queryClient={client}><ConfigContext.Provider value={{ config, reload: vi.fn() }}><DomainsPage /></ConfigContext.Provider></AdminContext>);
   return userEvent.setup();
 }
@@ -45,6 +45,7 @@ it('hides internal assigned-domain and main-site explanations without changing D
   expect(screen.queryByText(/官网仅用于登录和管理|官网与下载入口独立运行/)).toBeNull();
   expect(screen.getByText('dns.example.com')).toBeTruthy();
   expect(screen.getByRole('heading', { name: '我的域名' })).toBeTruthy();
+  expect(screen.getByText('每个账号可绑定 20 个域名，如需更多请联系客服升级。')).toBeTruthy();
   expect(vi.mocked(api).mock.calls.every(([path]) => String(path).startsWith('/domains?'))).toBe(true);
 });
 

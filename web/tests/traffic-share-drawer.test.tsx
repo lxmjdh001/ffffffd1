@@ -14,7 +14,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 it('opens a right drawer before copying, searches domains, and copies the selected pool URL', async () => {
  const json = (value: unknown) => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } });
  vi.stubGlobal('fetch', vi.fn(async (input: string) => {
-  if (input.endsWith('/download-domains')) return json({ data: [
+  if (input.endsWith('/download-domains?usage=traffic')) return json({ data: [
    { url: 'https://facebook-google-down.godownd1.com', remark: '公共一', source: 'platform', audience: 'all' },
    { url: 'https://tiktok-google-down.godownd1.com', remark: '公共二', source: 'platform', audience: 'all' },
    { url: 'https://mine.example.com', remark: '自有域名', source: 'custom', audience: 'owner' },

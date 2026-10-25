@@ -286,6 +286,7 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	x.MeteredBilling = currentSettings.MeteredBilling
 	if x.MeteredBilling {
+		x.DomainLimit = standardDomainLimit
 		if in.Section == "plan_free" || in.Section == "plan_pro" {
 			fail(w, problem(410, "会员套餐已取消，请使用计费设置"))
 			return
@@ -330,6 +331,10 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	for i := range x.DownloadDomainRules {
 		rule := &x.DownloadDomainRules[i]
+		if rule.Usage != "" && rule.Usage != "all" && rule.Usage != "traffic" {
+			fail(w, problem(400, "域名使用范围无效"))
+			return
+		}
 		rule.Remark = strings.TrimSpace(rule.Remark)
 		if len([]rune(rule.Remark)) > 120 {
 			fail(w, problem(400, "域名备注最多 120 字"))

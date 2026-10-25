@@ -45,6 +45,9 @@ func (s *Server) saveDomainRemark(w http.ResponseWriter, r *http.Request) {
 	jsonOut(w, 200, map[string]string{"remark": in.Remark})
 }
 func (s *Server) downloadDomainsFor(u User) ([]availableDomain, error) {
+	return s.downloadDomainsForUsage(u, "all")
+}
+func (s *Server) downloadDomainsForUsage(u User, usage string) ([]availableDomain, error) {
 	x, err := getSettings(s.DB)
 	if err != nil {
 		return nil, err
@@ -62,7 +65,7 @@ func (s *Server) downloadDomainsFor(u User) ([]availableDomain, error) {
 	plan := u.PlanID(s.Now())
 	if len(x.DownloadDomainRules) > 0 {
 		for _, rule := range x.DownloadDomainRules {
-			if !rule.LegacyOnly && (x.MeteredBilling || rule.Audience == "all" || rule.Audience == "paid" && plan == "pro") {
+			if !rule.LegacyOnly && (rule.Usage != "traffic" || usage == "traffic") && (x.MeteredBilling || rule.Audience == "all" || rule.Audience == "paid" && plan == "pro") {
 				add(rule.URL, rule.Remark, "platform", rule.Audience, "")
 			}
 		}
@@ -90,7 +93,15 @@ func (s *Server) downloadDomainsFor(u User) ([]availableDomain, error) {
 	return out, nil
 }
 func (s *Server) availableDownloadDomains(w http.ResponseWriter, r *http.Request) {
-	ds, err := s.downloadDomainsFor(userOf(r))
+	usage := r.URL.Query().Get("usage")
+	if usage == "" {
+		usage = "all"
+	}
+	if usage != "all" && usage != "traffic" {
+		fail(w, problem(400, "域名使用范围无效"))
+		return
+	}
+	ds, err := s.downloadDomainsForUsage(userOf(r), usage)
 	if err != nil {
 		fail(w, err)
 		return
@@ -118,7 +129,7 @@ func (s *Server) saveDownloadDomainNote(w http.ResponseWriter, r *http.Request) 
 		}
 		scoped := *s
 		scoped.DB = tx
-		ds, err := scoped.downloadDomainsFor(u)
+		ds, err := scoped.downloadDomainsForUsage(u, "traffic")
 		if err != nil {
 			return err
 		}

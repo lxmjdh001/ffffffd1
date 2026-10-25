@@ -71,16 +71,22 @@ func (s *Server) createDomain(w http.ResponseWriter, r *http.Request) {
 			return problem(400, "此域名已用于公共下载入口")
 		}
 		var n int64
+		if e = tx.Model(&Domain{}).Where("hostname = ?", in.Hostname).Count(&n).Error; e != nil {
+			return e
+		}
+		if n > 0 {
+			return problem(409, "该域名已被添加过,请更换")
+		}
 		if e = tx.Model(&Domain{}).Where("user_id = ?", u.ID).Count(&n).Error; e != nil {
 			return e
 		}
 		if n >= settings.DomainLimit {
-			return problem(403, "域名数量已达上限")
+			return problem(403, "域名数量已达上限，请联系客服升级")
 		}
 		d = Domain{ID: randomHex(16), UserID: u.ID, Hostname: in.Hostname, Token: randomHex(24), Remark: in.Remark}
 		if e = tx.Create(&d).Error; e != nil {
 			if e == gorm.ErrDuplicatedKey {
-				return problem(409, "该域名已被绑定，请联系管理员处理")
+				return problem(409, "该域名已被添加过,请更换")
 			}
 			return e
 		}

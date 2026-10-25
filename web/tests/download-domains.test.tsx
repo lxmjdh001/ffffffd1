@@ -79,11 +79,12 @@ it('allows administrators to save multiple domains with independent audience per
   await user.click(screen.getByRole('button', { name: '添加域名' }));
   await user.type(screen.getByRole('textbox', { name: '域名 2' }), 'https://paid.example.com');
   await user.selectOptions(screen.getAllByRole('combobox', { name: /权限/ })[1], 'paid');
+  await user.selectOptions(screen.getAllByRole('combobox', { name: '域名使用范围' })[1], 'traffic');
   await user.click(screen.getByRole('button', { name: '保存域名配置' }));
   await waitFor(() => expect(saved?.section).toBe('domains'));
   expect(saved?.settings.download_domain_rules).toEqual([
     { url: 'https://all.example.com', audience: 'all' },
-    { url: 'https://paid.example.com', audience: 'paid' },
+    { url: 'https://paid.example.com', audience: 'paid', usage: 'traffic' },
   ]);
   expect(screen.queryByRole('combobox', { name: '分配方式' })).toBeNull();
   expect(screen.queryByRole('button', { name: '保存全部设置' })).toBeNull();

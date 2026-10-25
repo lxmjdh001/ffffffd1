@@ -10,7 +10,8 @@ type ShareDomain = { url: string; remark: string; source: 'platform'|'custom'; a
 
 export function DomainShareDrawer({ path, close, title = t("选择域名复制链接"), settingsAction }: { path: string; close: () => void; title?: string; settingsAction?: ReactNode }) {
   useLocale();
- const { data,error,refetch }=useQuery({queryKey:['available-download-domains'],queryFn:()=>api<{data:ShareDomain[]}>('/download-domains')});
+ const usage=path.startsWith('/r/')?'traffic':'all';
+ const { data,error,refetch }=useQuery({queryKey:['available-download-domains',usage],queryFn:()=>api<{data:ShareDomain[]}>(usage==='traffic'?'/download-domains?usage=traffic':'/download-domains')});
  const [query,setQuery]=useState('');
  const [messages,setMessages]=useState<Record<string,string>>({});
  const [copied,setCopied]=useState('');
@@ -25,7 +26,7 @@ export function DomainShareDrawer({ path, close, title = t("选择域名复制�
   setBusy(true);setNoteError('');
   try{
    const result=await send<{remark:string}>('/download-domains/note',{url:editing.url,remark:noteDraft},'PATCH');
-   cache.setQueryData<{data:ShareDomain[]}>(['available-download-domains'],previous=>previous?{data:previous.data.map(d=>d.url===editing.url?{...d,remark:result.remark}:d)}:previous);
+   cache.setQueriesData<{data:ShareDomain[]}>({queryKey:['available-download-domains']},previous=>previous?{data:previous.data.map(d=>d.url===editing.url?{...d,remark:result.remark}:d)}:previous);
    await cache.invalidateQueries({queryKey:['available-download-domains']});
    await cache.invalidateQueries({queryKey:['domains']});
    setEditing(undefined);

@@ -53,7 +53,7 @@ func (s *Server) getTrafficPool(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	domains, err := s.downloadDomainsFor(userOf(r))
+	domains, err := s.downloadDomainsForUsage(userOf(r), "traffic")
 	if err != nil {
 		fail(w, err)
 		return

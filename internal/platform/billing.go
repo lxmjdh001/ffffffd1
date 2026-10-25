@@ -148,14 +148,15 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		quotaLimit, quotaUsed, quotaReserved = 0, 0, 0
 		quotaExpiry, renewsAt = nil, nil
 	}
-	var appCount, storage, downloads, domains int64
-	checks := []error{s.DB.Model(&Application{}).Where("user_id = ?", u.ID).Count(&appCount).Error, s.DB.Model(&Application{}).Where("user_id = ?", u.ID).Select("COALESCE(SUM(size),0)").Scan(&storage).Error, s.DB.Model(&Download{}).Where("user_id = ?", u.ID).Count(&downloads).Error, s.DB.Model(&Domain{}).Where("user_id = ? AND verified_at > ?", u.ID, s.Now().Add(-48*time.Hour)).Count(&domains).Error}
+	var appCount, pwaCount, storage, downloads, domains int64
+	checks := []error{s.DB.Model(&Application{}).Where("user_id = ?", u.ID).Count(&appCount).Error, s.DB.Model(&PWAApp{}).Where("user_id = ?", u.ID).Count(&pwaCount).Error, s.DB.Model(&Application{}).Where("user_id = ?", u.ID).Select("COALESCE(SUM(size),0)").Scan(&storage).Error, s.DB.Model(&Download{}).Where("user_id = ?", u.ID).Count(&downloads).Error, s.DB.Model(&Domain{}).Where("user_id = ? AND verified_at > ?", u.ID, s.Now().Add(-48*time.Hour)).Count(&domains).Error}
 	for _, e := range checks {
 		if e != nil {
 			fail(w, e)
 			return
 		}
 	}
+	appCount += pwaCount
 	now := s.Now().In(billingZone)
 	const trendDays = 7
 	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, billingZone).AddDate(0, 0, -(trendDays - 1))

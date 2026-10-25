@@ -44,6 +44,7 @@ type RechargeTier struct {
 	Percent         int64 `json:"percent"`
 }
 type DownloadDomainRule struct {
+	Usage      string `json:"usage,omitempty"`
 	URL        string `json:"url"`
 	Audience   string `json:"audience"`
 	Remark     string `json:"remark"`

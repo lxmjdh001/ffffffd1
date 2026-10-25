@@ -88,6 +88,7 @@ describe('recharge promotion', () => {
     const rates=await screen.findByRole('region',{name:'按量计费'});
     expect(within(rates).getAllByText('$0.05')).toHaveLength(2);expect(within(rates).getAllByText('免费',{exact:true})).toHaveLength(5);expect(within(rates).getByRole('heading',{name:'应用分流',exact:true})).toBeTruthy();expect(within(rates).getByRole('heading',{name:'域名安全检测',exact:true})).toBeTruthy();expect(within(rates).getByText('注册即赠 $100 用量额度。')).toBeTruthy();expect(screen.getByRole('heading',{name:'赠送用量额度'})).toBeTruthy();expect(screen.getByText('$ 99.95')).toBeTruthy();expect(screen.queryByText('注册共享赠送')).toBeNull();
     expect(screen.queryByText('选择适合你的套餐')).toBeNull();expect(screen.queryByRole('button',{name:/开通|续费/})).toBeNull();expect(screen.getByRole('button',{name:'充值余额'})).toBeTruthy();
+    expect(screen.queryByText('赠送额度优先抵扣 APK/PWA 用量，不可提现。')).toBeNull();
   });
   it('retains historical Alipay payment instructions without offering new Alipay orders', async () => {
     existingOrders = [{ ...order, method: 'alipay', amount_micros: 100000000, bonus_micros: 0,

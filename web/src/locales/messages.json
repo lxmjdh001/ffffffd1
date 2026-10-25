@@ -1,5 +1,12 @@
 {
   "en": {
+    "域名使用范围无效": "Invalid domain usage scope",
+    "域名使用范围": "Domain usage scope",
+    "全部功能可用": "All features",
+    "仅应用分流": "Traffic routing only",
+    "仅应用分流的域名只在分流复制列表展示，不影响已有链接访问。": "Traffic-only domains appear only in the routing copy list. Existing links remain accessible.",
+    "该域名已被添加过,请更换": "This domain has already been added. Please use another one.",
+    "若域名服务商不支持根域名，请解析二级域名。": "If your DNS provider does not support apex domains, use a subdomain.",
     "域名安全检测": "Domain safety checks",
     "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "Traffic routing, domain safety checks, Smart Cloak, return pages and push notifications are free.",
     "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "Domain safety checks are free and available with a positive spendable balance or promotional credit.",
@@ -2077,9 +2084,19 @@
     "智能斗篷、回流页和消息推送免费。": "Smart Cloak, return pages, and notifications are free.",
     "注册赠送额度（美元）": "Welcome credit (USD)",
     "赠送额度抵扣": "Promotional credit applied",
-    "注册赠送用量额度": "Welcome usage credit"
+    "注册赠送用量额度": "Welcome usage credit",
+    "域名数量已达上限，请联系客服升级": "Domain limit reached. Contact support to upgrade.",
+    "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "Each account can bind {0} domains. Contact support if you need more.",
+    "安装包上限 {0} · PWA 上限 {1}": "Package limit {0} · PWA limit {1}"
   },
   "pt": {
+    "域名使用范围无效": "Âmbito de utilização do domínio inválido",
+    "域名使用范围": "Âmbito de utilização do domínio",
+    "全部功能可用": "Todas as funcionalidades",
+    "仅应用分流": "Apenas roteamento de tráfego",
+    "仅应用分流的域名只在分流复制列表展示，不影响已有链接访问。": "Estes domínios aparecem apenas na lista de cópia do roteamento. Os links existentes continuam acessíveis.",
+    "该域名已被添加过,请更换": "Este domínio já foi adicionado. Use outro.",
+    "若域名服务商不支持根域名，请解析二级域名。": "Se o provedor DNS não suportar o domínio raiz, use um subdomínio.",
     "域名安全检测": "Segurança de domínios",
     "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "O roteamento de tráfego, as verificações de segurança de domínios, o Smart Cloak, as páginas de retorno e as notificações push são gratuitos.",
     "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "As verificações de segurança de domínios são gratuitas e podem ser ativadas com saldo disponível ou crédito promocional positivo.",
@@ -4157,9 +4174,19 @@
     "智能斗篷、回流页和消息推送免费。": "Smart Cloak, páginas de retorno e notificações são gratuitos.",
     "注册赠送额度（美元）": "Crédito inicial (USD)",
     "赠送额度抵扣": "Crédito promocional utilizado",
-    "注册赠送用量额度": "Crédito inicial de uso"
+    "注册赠送用量额度": "Crédito inicial de uso",
+    "域名数量已达上限，请联系客服升级": "Limite de domínios atingido. Contacte o suporte para aumentar o limite.",
+    "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "Cada conta pode associar {0} domínios. Contacte o suporte se precisar de mais.",
+    "安装包上限 {0} · PWA 上限 {1}": "Limite de pacotes {0} · Limite de PWA {1}"
   },
   "de": {
+    "域名使用范围无效": "Ungültiger Domain-Nutzungsbereich",
+    "域名使用范围": "Domain-Nutzungsbereich",
+    "全部功能可用": "Alle Funktionen",
+    "仅应用分流": "Nur Traffic-Routing",
+    "仅应用分流的域名只在分流复制列表展示，不影响已有链接访问。": "Diese Domains erscheinen nur in der Kopierliste des Traffic-Routings. Bestehende Links bleiben erreichbar.",
+    "该域名已被添加过,请更换": "Diese Domain wurde bereits hinzugefügt. Bitte verwenden Sie eine andere.",
+    "若域名服务商不支持根域名，请解析二级域名。": "Falls Ihr DNS-Anbieter keine Stammdomains unterstützt, verwenden Sie eine Subdomain.",
     "域名安全检测": "Domain-Sicherheitsprüfung",
     "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "Traffic-Routing, Domain-Sicherheitsprüfungen, Smart Cloak, Rückkehrseiten und Push-Nachrichten sind kostenlos.",
     "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "Domain-Sicherheitsprüfungen sind kostenlos und bei positivem verfügbarem Guthaben oder Aktionsguthaben nutzbar.",
@@ -6237,9 +6264,19 @@
     "智能斗篷、回流页和消息推送免费。": "Smart Cloak, Rückkehrseiten und Benachrichtigungen sind kostenlos.",
     "注册赠送额度（美元）": "Startguthaben (USD)",
     "赠送额度抵扣": "Geschenktes Guthaben verrechnet",
-    "注册赠送用量额度": "Nutzungsstartguthaben"
+    "注册赠送用量额度": "Nutzungsstartguthaben",
+    "域名数量已达上限，请联系客服升级": "Domainlimit erreicht. Kontaktieren Sie den Support für ein Upgrade.",
+    "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "Jedes Konto kann {0} Domains verknüpfen. Für weitere Domains kontaktieren Sie den Support.",
+    "安装包上限 {0} · PWA 上限 {1}": "Paketlimit {0} · PWA-Limit {1}"
   },
   "fr": {
+    "域名使用范围无效": "Périmètre d’utilisation du domaine invalide",
+    "域名使用范围": "Utilisation du domaine",
+    "全部功能可用": "Toutes les fonctionnalités",
+    "仅应用分流": "Routage du trafic uniquement",
+    "仅应用分流的域名只在分流复制列表展示，不影响已有链接访问。": "Ces domaines apparaissent uniquement dans la liste de copie du routage. Les liens existants restent accessibles.",
+    "该域名已被添加过,请更换": "Ce domaine a déjà été ajouté. Veuillez en utiliser un autre.",
+    "若域名服务商不支持根域名，请解析二级域名。": "Si votre fournisseur DNS ne prend pas en charge le domaine racine, utilisez un sous-domaine.",
     "域名安全检测": "Sécurité des domaines",
     "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "Le routage du trafic, les contrôles de sécurité des domaines, Smart Cloak, les pages de retour et les notifications push sont gratuits.",
     "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "Les contrôles de sécurité des domaines sont gratuits et peuvent être activés avec un solde disponible ou un crédit promotionnel positif.",
@@ -8317,9 +8354,19 @@
     "智能斗篷、回流页和消息推送免费。": "Smart Cloak, pages de retour et notifications sont gratuits.",
     "注册赠送额度（美元）": "Crédit de bienvenue (USD)",
     "赠送额度抵扣": "Crédit offert utilisé",
-    "注册赠送用量额度": "Crédit d’utilisation de bienvenue"
+    "注册赠送用量额度": "Crédit d’utilisation de bienvenue",
+    "域名数量已达上限，请联系客服升级": "Limite de domaines atteinte. Contactez le support pour augmenter la limite.",
+    "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "Chaque compte peut associer {0} domaines. Contactez le support pour en ajouter davantage.",
+    "安装包上限 {0} · PWA 上限 {1}": "Limite de paquets {0} · Limite de PWA {1}"
   },
   "ko": {
+    "域名使用范围无效": "잘못된 도메인 사용 범위",
+    "域名使用范围": "도메인 사용 범위",
+    "全部功能可用": "모든 기능",
+    "仅应用分流": "트래픽 분배 전용",
+    "仅应用分流的域名只在分流复制列表展示，不影响已有链接访问。": "이 도메인은 트래픽 분배 복사 목록에만 표시됩니다. 기존 링크는 계속 사용할 수 있습니다.",
+    "该域名已被添加过,请更换": "이미 추가된 도메인입니다. 다른 도메인을 사용하세요.",
+    "若域名服务商不支持根域名，请解析二级域名。": "DNS 제공업체가 루트 도메인을 지원하지 않으면 하위 도메인을 사용하세요.",
     "域名安全检测": "도메인 안전 검사",
     "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "트래픽 분배, 도메인 안전 검사, 스마트 클로킹, 복귀 페이지 및 푸시 알림은 무료입니다.",
     "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "도메인 안전 검사는 무료이며 사용 가능한 잔액 또는 프로모션 크레딧이 있으면 활성화할 수 있습니다.",
@@ -10397,9 +10444,19 @@
     "智能斗篷、回流页和消息推送免费。": "스마트 클로크, 리턴 페이지와 알림은 무료입니다.",
     "注册赠送额度（美元）": "가입 크레딧 (USD)",
     "赠送额度抵扣": "무료 크레딧 사용",
-    "注册赠送用量额度": "가입 무료 사용 크레딧"
+    "注册赠送用量额度": "가입 무료 사용 크레딧",
+    "域名数量已达上限，请联系客服升级": "도메인 한도에 도달했습니다. 한도 상향은 고객센터에 문의하세요.",
+    "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "계정당 도메인 {0}개를 연결할 수 있습니다. 추가 연결은 고객센터에 문의하세요.",
+    "安装包上限 {0} · PWA 上限 {1}": "설치 패키지 한도 {0} · PWA 한도 {1}"
   },
   "ja": {
+    "域名使用范围无效": "ドメインの使用範囲が無効です",
+    "域名使用范围": "ドメインの使用範囲",
+    "全部功能可用": "すべての機能",
+    "仅应用分流": "トラフィック振り分け専用",
+    "仅应用分流的域名只在分流复制列表展示，不影响已有链接访问。": "これらのドメインは振り分けのコピー一覧にのみ表示されます。既存のリンクには引き続きアクセスできます。",
+    "该域名已被添加过,请更换": "このドメインは既に追加されています。別のドメインを使用してください。",
+    "若域名服务商不支持根域名，请解析二级域名。": "DNS事業者がルートドメインに対応していない場合は、サブドメインを使用してください。",
     "域名安全检测": "ドメイン安全チェック",
     "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "トラフィック振り分け、ドメイン安全チェック、スマートクローキング、復帰ページ、プッシュ通知は無料です。",
     "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "ドメイン安全チェックは無料で、利用可能な残高または特典クレジットがあれば有効にできます。",
@@ -12477,9 +12534,19 @@
     "智能斗篷、回流页和消息推送免费。": "スマート Cloak、リターンページ、通知は無料です。",
     "注册赠送额度（美元）": "登録クレジット（米ドル）",
     "赠送额度抵扣": "無料クレジット適用",
-    "注册赠送用量额度": "登録無料利用クレジット"
+    "注册赠送用量额度": "登録無料利用クレジット",
+    "域名数量已达上限，请联系客服升级": "ドメイン数の上限に達しました。上限の引き上げはサポートにお問い合わせください。",
+    "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "各アカウントに {0} 個のドメインを登録できます。追加をご希望の場合はサポートにお問い合わせください。",
+    "安装包上限 {0} · PWA 上限 {1}": "パッケージ上限 {0} · PWA 上限 {1}"
   },
   "zh-TW": {
+    "域名使用范围无效": "網域使用範圍無效",
+    "域名使用范围": "網域使用範圍",
+    "全部功能可用": "全部功能可用",
+    "仅应用分流": "僅應用分流",
+    "仅应用分流的域名只在分流复制列表展示，不影响已有链接访问。": "僅應用分流的網域只在分流複製清單顯示，不影響既有連結存取。",
+    "该域名已被添加过,请更换": "該域名已被新增過，請更換",
+    "若域名服务商不支持根域名，请解析二级域名。": "若網域服務商不支援根網域，請解析子網域。",
     "域名安全检测": "網域安全檢測",
     "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "應用分流、網域安全檢測、智慧斗篷、回流頁和訊息推播免費。",
     "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "網域安全檢測免費，帳戶有可用餘額或贈送額度即可開啟。",
@@ -14557,9 +14624,19 @@
     "智能斗篷、回流页和消息推送免费。": "智慧斗篷、回流頁和訊息推播免費。",
     "注册赠送额度（美元）": "註冊贈送額度（美元）",
     "赠送额度抵扣": "贈送額度抵扣",
-    "注册赠送用量额度": "註冊贈送用量額度"
+    "注册赠送用量额度": "註冊贈送用量額度",
+    "域名数量已达上限，请联系客服升级": "網域數量已達上限，請聯絡客服升級",
+    "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "每個帳號可綁定 {0} 個網域，如需更多請聯絡客服升級。",
+    "安装包上限 {0} · PWA 上限 {1}": "安裝包上限 {0} · PWA 上限 {1}"
   },
   "ru": {
+    "域名使用范围无效": "Недопустимая область использования домена",
+    "域名使用范围": "Область использования домена",
+    "全部功能可用": "Все функции",
+    "仅应用分流": "Только маршрутизация трафика",
+    "仅应用分流的域名只在分流复制列表展示，不影响已有链接访问。": "Эти домены видны только в списке копирования маршрутизации. Существующие ссылки остаются доступными.",
+    "该域名已被添加过,请更换": "Этот домен уже добавлен. Используйте другой.",
+    "若域名服务商不支持根域名，请解析二级域名。": "Если DNS-провайдер не поддерживает корневой домен, используйте поддомен.",
     "域名安全检测": "Проверка безопасности доменов",
     "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "Маршрутизация трафика, проверки безопасности доменов, Smart Cloak, страницы возврата и push-уведомления бесплатны.",
     "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "Проверки безопасности доменов бесплатны и доступны при положительном доступном балансе или подарочном кредите.",
@@ -16637,6 +16714,9 @@
     "智能斗篷、回流页和消息推送免费。": "Smart Cloak, страницы возврата и уведомления бесплатны.",
     "注册赠送额度（美元）": "Кредит при регистрации (USD)",
     "赠送额度抵扣": "Списание подарочного кредита",
-    "注册赠送用量额度": "Приветственный кредит использования"
+    "注册赠送用量额度": "Приветственный кредит использования",
+    "域名数量已达上限，请联系客服升级": "Достигнут лимит доменов. Обратитесь в поддержку для его увеличения.",
+    "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "К каждой учётной записи можно привязать {0} доменов. Если нужно больше, обратитесь в поддержку.",
+    "安装包上限 {0} · PWA 上限 {1}": "Лимит пакетов {0} · Лимит PWA {1}"
   }
 }

@@ -21,6 +21,8 @@ export function DownloadDomainRules({ form, setForm, footer }: { form: SettingsR
           <button type="button" className="btn secondary" aria-label={t("删除域名 {0}", { 0: i + 1 })} onClick={() => update(rules.filter((_, j) => j !== i))}><Trash2 size={15} /></button>
         </div></Field>
       </div>
+      <Field label={t("域名使用范围")}><select value={rule.usage || 'all'} onChange={e => update(rules.map((x,j) => j === i ? {...x, usage:e.target.value as 'all'|'traffic'} : x))}><option value="all">{t("全部功能可用")}</option><option value="traffic">{t("仅应用分流")}</option></select></Field>
+      <p className="small muted">{t("仅应用分流的域名只在分流复制列表展示，不影响已有链接访问。")}</p>
       <label className="switch-field"><input type="checkbox" checked={!!rule.legacy_only} onChange={e => update(rules.map((x, j) => j === i ? { ...x, legacy_only: e.target.checked } : x))} /><span>{t("仅保留旧链接")}<small>{rule.url || t("域名 {0}", { 0: i + 1 })} {t(" · 不再分配，不在复制列表展示")}</small></span></label>
     </div>)}
     <div style={{ display: 'flex', gap: 10 }}><button type="button" className="btn secondary" onClick={() => update([...rules, { url: '', audience: 'all' }])}><Plus size={15} />{t("添加域名")}</button></div>
