@@ -182,4 +182,22 @@
 
 .cloak-ip-lists{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.cloak-ip-lists textarea{font-family:monospace;resize:vertical}.cloak-ip-lists .field{margin-bottom:8px}@media(max-width:850px){.cloak-ip-lists{grid-template-columns:1fr}}
 
-.cloak-status-control{display:flex;flex-direction:column;gap:9px;padding-top:17px;margin-top:10px;border-top:1px solid #edf1f7;font-size:11px;color:#67819f}.cloak-status-control select{width:100%;padding:9px;border:1px solid #dfe7f2;border-radius:6px;font:inherit;background:white;color:#536c8c}.cloak-status-control small{font-size:10px;color:#65758d;line-height:1.8}.cloak-list-status{max-width:105px;padding:5px 8px;font-size:11px;border:1px solid #dfe7f2;border-radius:5px;background:white;color:#536c8c}.cloak-route-branches.single-path{grid-template-columns:1fr}.cloak-route-branches.single-path:before{display:none}
+.cloak-status-control{display:flex;flex-direction:column;gap:9px;padding-top:17px;margin-top:10px;border-top:1px solid #edf1f7;font-size:11px;color:#67819f}.cloak-status-control small{font-size:10px;color:#65758d;line-height:1.8}.cloak-route-branches.single-path{grid-template-columns:1fr}.cloak-route-branches.single-path:before{display:none}
+
+.cloak-status-segments{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border:1px solid #e5eaf2;border-radius:10px;background:#f3f6fa}
+.cloak-status-segments.compact{width:224px}
+.cloak-status-option{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:34px;padding:7px 6px;border:1px solid transparent;border-radius:7px;background:transparent;color:#8290a5;font:inherit;font-size:11px;line-height:1.5;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.cloak-status-option>span:last-child{white-space:normal;overflow-wrap:anywhere}
+.cloak-status-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;opacity:.55}
+.cloak-status-option:hover:not(:disabled){background:#e9eef5;color:#526781}
+.cloak-status-option[aria-pressed=true]{background:#fff;box-shadow:0 1px 3px #2338590d}
+.cloak-status-option.status-rules[aria-pressed=true]{border-color:#cddbf4;color:#4b6eb8}
+.cloak-status-option.status-off[aria-pressed=true]{border-color:#c9e5d8;color:#3d8769}
+.cloak-status-option.status-blocked[aria-pressed=true]{border-color:#efd1d5;color:#bc626e}
+.cloak-status-option[aria-pressed=true] .cloak-status-dot{opacity:1}
+.cloak-status-option:focus-visible{outline:2px solid #8ba6d5;outline-offset:2px}
+.cloak-status-option:disabled{cursor:wait;opacity:.55}
+@media(max-width:650px){.cloak-status-segments.compact{width:240px;max-width:100%}.cloak-status-option{min-height:38px}}
+
+.cloak-status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:6px;font-size:11px;background:#f1f5fb;color:#597bb5;white-space:nowrap}.cloak-status-badge i{width:5px;height:5px;border-radius:50%;background:currentColor}.cloak-status-badge.status-off{background:#edf7f2;color:#47866d}.cloak-status-badge.status-blocked{background:#fcf0f1;color:#ba6270}
+.cloak-status-dialog{text-align:left;white-space:normal}.cloak-status-dialog-name{font-size:12px;color:#7789a3;margin-bottom:18px;overflow-wrap:anywhere}.cloak-status-cards{display:flex;flex-direction:column;gap:11px}.cloak-status-card{display:flex;align-items:flex-start;gap:12px;padding:16px;border:1px solid #e4eaf3;border-radius:10px;background:#fafbfd;cursor:pointer;transition:border-color .15s,background .15s}.cloak-status-card.selected{background:#f4f7ff;border-color:#aebfe2}.cloak-status-card.status-off.selected{background:#f2f9f5;border-color:#aacebb}.cloak-status-card.status-blocked.selected{background:#fff5f6;border-color:#e6b4bd}.cloak-status-card>input{width:15px;height:15px;padding:0;margin:4px 0 0;accent-color:#6485bc;flex:0 0 15px;box-shadow:none}.cloak-status-card>span{min-width:0;flex:1}.cloak-status-card strong{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:550;color:#536d91;line-height:1.7}.cloak-status-card.status-off strong{color:#47866d}.cloak-status-card.status-blocked strong{color:#ba6270}.cloak-status-card small{display:block;font-size:11px;color:#76879e;line-height:1.9;margin-top:5px}.cloak-status-card:has(input:focus-visible){outline:2px solid #8ba6d5;outline-offset:2px}.cloak-status-dialog .form-error{margin-top:14px}.cloak-status-dialog .modal-footer{margin-top:22px}

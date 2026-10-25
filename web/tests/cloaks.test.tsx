@@ -57,6 +57,9 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); client.clear(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
+const statusName = (status: string) => status === 'rules' ? '斗篷状态' : status === 'off' ? '关闭状态' : '屏蔽状态';
+const statusButton = (group: string, status: string) => within(screen.getByRole('group', { name: group, exact: true })).getByRole('button', { name: statusName(status), exact: true });
+
 async function showPage() {
   render(<MemoryRouter initialEntries={['/cloaks']}><AdminContext queryClient={client}><CloaksPage /></AdminContext></MemoryRouter>);
   await screen.findByRole('heading', { name: '斗篷管理' });
@@ -207,7 +210,7 @@ describe('cloak editor API integration', () => {
     expect(allowed.value).toBe('  192.0.2.1  \n\n2001:db8::1\n');
     await user.type(blocked, '198.51.100.7\n2001:db8::2');
     expect(screen.getByText(/同一 IP 同时在两份名单中时/)).toBeTruthy();
-    await user.selectOptions(screen.getByRole('combobox', { name: '斗篷状态', exact: true }), 'off');
+    await user.click(statusButton('斗篷状态', 'off'));
     expect(within(screen.getByRole('complementary')).getAllByText('跳过全部斗篷规则，包括 IP 黑名单，访问目标链接。').length).toBeGreaterThan(0);
     await saveNew(user);
     expect(mutations[0].body).toEqual({ ...appDraft, status: 'off', enabled: false, allowed_ips: ['192.0.2.1', '2001:db8::1'], blocked_ips: ['198.51.100.7', '2001:db8::2'] });
@@ -351,9 +354,16 @@ describe('cloak editor API integration', () => {
     rows = [fixture(rules)];
     const user = await showPage();
     for (const status of ['off', 'blocked', 'rules']) {
-      await user.selectOptions(screen.getByRole('combobox', { name: '斗篷状态：海外应用推广' }), status);
+      await user.click(screen.getByRole('button', { name: '斗篷状态：海外应用推广' }));
+      const dialog = within(screen.getByRole('dialog'));
+      expect(dialog.getByText('按 IP 黑名单、白名单和其他规则判断访问。')).toBeTruthy();
+      expect(dialog.getByText('跳过全部斗篷规则，包括 IP 黑名单，访问目标链接。')).toBeTruthy();
+      expect(dialog.getByText('全部访问进入安全页，包括 IP 白名单。')).toBeTruthy();
+      await user.click(dialog.getByRole('radio', { name: new RegExp(`^${statusName(status)}`) }));
+      expect(mutations).toHaveLength(['off', 'blocked', 'rules'].indexOf(status));
+      await user.click(dialog.getByRole('button', { name: '确认', exact: true }));
       await waitFor(() => expect(rows[0].status).toBe(status));
-      expect((screen.getByRole('combobox', { name: '斗篷状态：海外应用推广' }) as HTMLSelectElement).value).toBe(status);
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     }
     expect(mutations.map(item => ({ status: item.body?.status, enabled: item.body?.enabled }))).toEqual([{ status: 'off', enabled: false }, { status: 'blocked', enabled: false }, { status: 'rules', enabled: true }]);
     for (const { body } of mutations) {
@@ -362,13 +372,36 @@ describe('cloak editor API integration', () => {
     }
   });
 
+  it('cancels status selection and retains a failed selection for retry', async () => {
+    rows = [fixture()];
+    const user = await showPage();
+    await user.click(screen.getByRole('button', { name: '斗篷状态：海外应用推广' }));
+    let dialog = within(screen.getByRole('dialog'));
+    await user.click(dialog.getByRole('radio', { name: /^屏蔽状态/ }));
+    await user.click(dialog.getByRole('button', { name: '取消', exact: true }));
+    expect(mutations).toHaveLength(0);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await user.click(screen.getByRole('button', { name: '斗篷状态：海外应用推广' }));
+    dialog = within(screen.getByRole('dialog'));
+    expect((dialog.getByRole('radio', { name: /^斗篷状态/ }) as HTMLInputElement).checked).toBe(true);
+    nextSaveError = '操作失败，请重试';
+    await user.click(dialog.getByRole('radio', { name: /^屏蔽状态/ }));
+    await user.click(dialog.getByRole('button', { name: '确认', exact: true }));
+    await dialog.findByRole('alert');
+    expect(rows[0].status).toBe('rules');
+    expect((dialog.getByRole('radio', { name: /^屏蔽状态/ }) as HTMLInputElement).checked).toBe(true);
+    await user.click(dialog.getByRole('button', { name: '确认', exact: true }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(rows[0].status).toBe('blocked');
+  });
+
   it('saves all three editor statuses, previews their routing, and preserves IP lists', async () => {
     const ips = { allowed_ips: ['192.0.2.1'], blocked_ips: ['2001:db8::1'] };
     rows = [fixture(ips)];
     const user = await showPage();
     for (const status of ['off', 'blocked', 'rules']) {
       await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
-      await user.selectOptions(screen.getByRole('combobox', { name: '斗篷状态', exact: true }), status);
+      await user.click(statusButton('斗篷状态', status));
       const summary = within(screen.getByRole('complementary'));
       if (status === 'off') expect(summary.getAllByText('跳过全部斗篷规则，包括 IP 黑名单，访问目标链接。').length).toBeGreaterThan(0);
       if (status === 'blocked') {
@@ -386,9 +419,9 @@ describe('cloak editor API integration', () => {
   it('uses explicit status over the legacy enabled flag', async () => {
     rows = [fixture({ status: 'blocked', enabled: true })];
     const user = await showPage();
-    expect((screen.getByRole('combobox', { name: '斗篷状态：海外应用推广' }) as HTMLSelectElement).value).toBe('blocked');
+    expect(screen.getByText('屏蔽状态', { exact: true })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
-    expect((screen.getByRole('combobox', { name: '斗篷状态', exact: true }) as HTMLSelectElement).value).toBe('blocked');
+    expect(statusButton('斗篷状态', 'blocked').getAttribute('aria-pressed')).toBe('true');
     await user.click(screen.getByRole('button', { name: '保存修改' }));
     await screen.findByText('斗篷已保存，入口可以使用了');
     expect(mutations[0].body).toMatchObject({ status: 'blocked', enabled: false });
@@ -399,9 +432,9 @@ describe('cloak editor API integration', () => {
     Reflect.deleteProperty(legacy, 'status');
     rows = [legacy];
     const user = await showPage();
-    expect((screen.getByRole('combobox', { name: '斗篷状态：海外应用推广' }) as HTMLSelectElement).value).toBe('off');
+    expect(screen.getByText('关闭状态', { exact: true })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
-    expect((screen.getByRole('combobox', { name: '斗篷状态', exact: true }) as HTMLSelectElement).value).toBe('off');
+    expect(statusButton('斗篷状态', 'off').getAttribute('aria-pressed')).toBe('true');
     await user.click(screen.getByRole('button', { name: '保存修改' }));
     await screen.findByText('斗篷已保存，入口可以使用了');
     expect(mutations[0].body).toMatchObject({ status: 'off', enabled: false });
@@ -427,14 +460,14 @@ describe('cloak editor API integration', () => {
     const user = await showPage();
     await newEditor(user); await chooseURL(user);
     await user.click(screen.getByRole('checkbox', { name: /^日语/ }));
-    await user.selectOptions(screen.getByRole('combobox', { name: '斗篷状态', exact: true }), 'off');
+    await user.click(statusButton('斗篷状态', 'off'));
     await user.click(screen.getByRole('button', { name: '保存并生成入口' }));
     expect((await screen.findByRole('alert')).textContent).toContain('目标页和安全页不能填写本站斗篷入口');
     expect((screen.getByRole('textbox', { name: '斗篷名称', exact: true }) as HTMLInputElement).value).toBe('  海外应用推广  ');
     expect((screen.getByRole('combobox', { name: '应用链接', exact: true }) as HTMLSelectElement).value).toBe(appDraft.target_id);
     expect((screen.getByRole('textbox', { name: /安全页 URL/ }) as HTMLInputElement).value).toBe(baseDraft.safe_url);
     expect((screen.getByRole('checkbox', { name: /^日语/ }) as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByRole('combobox', { name: '斗篷状态', exact: true }) as HTMLSelectElement).value).toBe('off');
+    expect(statusButton('斗篷状态', 'off').getAttribute('aria-pressed')).toBe('true');
     await user.selectOptions(screen.getByRole('combobox', { name: '应用链接', exact: true }), 'b'.repeat(32));
     await saveNew(user);
     await waitFor(() => expect(mutations).toHaveLength(2));
