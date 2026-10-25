@@ -180,7 +180,7 @@ func TestCloakNewFiltersRouteToSafeDestination(t *testing.T) {
 						t.Fatal("filter response is cacheable or HEAD returned a body")
 					}
 				}
-				if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Update("enabled", false).Error; err != nil {
+				if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Updates(map[string]any{"enabled": false, "status": "off"}).Error; err != nil {
 					t.Fatal(err)
 				}
 				r := httptest.NewRequest("GET", c.EntryURL, nil)

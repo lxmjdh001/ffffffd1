@@ -232,7 +232,7 @@ func TestCloakDefault404Routing(t *testing.T) {
 			}
 		})
 	}
-	if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Update("enabled", false).Error; err != nil {
+	if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Updates(map[string]any{"enabled": false, "status": "off"}).Error; err != nil {
 		t.Fatal(err)
 	}
 	r := httptest.NewRequest("GET", c.EntryURL, nil)
@@ -243,7 +243,7 @@ func TestCloakDefault404Routing(t *testing.T) {
 	if !strings.HasPrefix(w.Header().Get("Location"), "https://target.example/path?") {
 		t.Fatal("disabled filtering did not bypass the default 404")
 	}
-	if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Updates(map[string]any{"enabled": true, "safe_url": "https://safe.example/help?fixed=yes"}).Error; err != nil {
+	if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Updates(map[string]any{"enabled": true, "status": "rules", "safe_url": "https://safe.example/help?fixed=yes"}).Error; err != nil {
 		t.Fatal(err)
 	}
 	w = call(t, s, "GET", "/c/"+c.Slug+"?private=never-forward", nil, nil, "")
@@ -427,7 +427,7 @@ func TestCloakDirectRedirectQueryBypassAndNoFetch(t *testing.T) {
 	if fetched.Load() != 0 {
 		t.Fatal("redirect handler fetched destination on the server")
 	}
-	if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Update("enabled", false).Error; err != nil {
+	if err := s.DB.Model(&Cloak{}).Where("id = ?", c.ID).Updates(map[string]any{"enabled": false, "status": "off"}).Error; err != nil {
 		t.Fatal(err)
 	}
 	r := httptest.NewRequest("GET", c.EntryURL, nil)

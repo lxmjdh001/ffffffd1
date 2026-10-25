@@ -6,10 +6,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloaksPage, type Cloak, type CloakDraft } from '../src/cloaks';
 
-const editableKeys = ['name', 'enabled', 'target_type', 'target_url', 'traffic_pool_slug', 'target_id', 'app_target_mode', 'safe_url', 'blocked_languages', 'block_empty_language', 'blocked_browsers', 'blocked_uas', 'blocked_countries', 'allowed_platforms', 'blocked_devices'].sort();
+const editableKeys = ['name', 'status', 'enabled', 'target_type', 'target_url', 'traffic_pool_slug', 'target_id', 'app_target_mode', 'safe_url', 'allowed_ips', 'blocked_ips', 'blocked_languages', 'block_empty_language', 'blocked_browsers', 'blocked_uas', 'blocked_countries', 'allowed_platforms', 'blocked_devices'].sort();
 const baseDraft: CloakDraft = {
-  name: '海外应用推广', enabled: true, target_type: 'url', target_url: 'https://download.example/app.apk', traffic_pool_slug: '', target_id: '', app_target_mode: '', safe_url: 'https://brand.example/help',
-  blocked_languages: [], block_empty_language: false, blocked_browsers: [], blocked_uas: [], blocked_countries: [], allowed_platforms: [], blocked_devices: [],
+  name: '海外应用推广', status: 'rules', enabled: true, target_type: 'url', target_url: 'https://download.example/app.apk', traffic_pool_slug: '', target_id: '', app_target_mode: '', safe_url: 'https://brand.example/help',
+  allowed_ips: [], blocked_ips: [], blocked_languages: [], block_empty_language: false, blocked_browsers: [], blocked_uas: [], blocked_countries: [], allowed_platforms: [], blocked_devices: [],
 };
 const appDraft: CloakDraft = { ...baseDraft, target_type: 'app', target_url: '', target_id: 'a'.repeat(32), app_target_mode: 'direct' };
 const fixture = (overrides: Partial<Cloak> = {}): Cloak => ({
@@ -197,10 +197,68 @@ describe('cloak editor API integration', () => {
     expect(screen.queryByText('客户端 4')).toBeNull();
   });
 
+  it('creates multiline IP lists, restores them, and clears each list independently', async () => {
+    const user = await showPage();
+    await newEditor(user); await chooseURL(user);
+    await openTab(user, 'IP 名单');
+    const allowed = screen.getByRole('textbox', { name: 'IP 白名单', exact: true }) as HTMLTextAreaElement;
+    const blocked = screen.getByRole('textbox', { name: 'IP 黑名单', exact: true }) as HTMLTextAreaElement;
+    await user.type(allowed, '  192.0.2.1  \n\n2001:db8::1\n');
+    expect(allowed.value).toBe('  192.0.2.1  \n\n2001:db8::1\n');
+    await user.type(blocked, '198.51.100.7\n2001:db8::2');
+    expect(screen.getByText(/同一 IP 同时在两份名单中时/)).toBeTruthy();
+    await user.selectOptions(screen.getByRole('combobox', { name: '斗篷状态', exact: true }), 'off');
+    expect(within(screen.getByRole('complementary')).getAllByText('跳过全部斗篷规则，包括 IP 黑名单，访问目标链接。').length).toBeGreaterThan(0);
+    await saveNew(user);
+    expect(mutations[0].body).toEqual({ ...appDraft, status: 'off', enabled: false, allowed_ips: ['192.0.2.1', '2001:db8::1'], blocked_ips: ['198.51.100.7', '2001:db8::2'] });
+    expect(screen.getByText('白名单 2')).toBeTruthy();
+    expect(screen.getByText('黑名单 2')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    await openTab(user, 'IP 名单');
+    expect((screen.getByRole('textbox', { name: 'IP 白名单', exact: true }) as HTMLTextAreaElement).value).toBe('192.0.2.1\n2001:db8::1');
+    expect((screen.getByRole('textbox', { name: 'IP 黑名单', exact: true }) as HTMLTextAreaElement).value).toBe('198.51.100.7\n2001:db8::2');
+    await user.click(screen.getByRole('button', { name: '清空白名单' }));
+    expect((screen.getByRole('textbox', { name: 'IP 黑名单', exact: true }) as HTMLTextAreaElement).value).toBe('198.51.100.7\n2001:db8::2');
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[1].body).toMatchObject({ allowed_ips: [], blocked_ips: ['198.51.100.7', '2001:db8::2'] });
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    await openTab(user, 'IP 名单');
+    await user.click(screen.getByRole('button', { name: '清空黑名单' }));
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[2].body).toEqual({ ...appDraft, status: 'off', enabled: false });
+    expect(screen.queryByText('白名单 2')).toBeNull();
+    expect(screen.queryByText('黑名单 2')).toBeNull();
+  });
+
+  it('retains raw multiline IP input after validation fails so it can be corrected', async () => {
+    const error = 'IP 黑名单无效：每行填写一个 IPv4 或 IPv6 地址，最多 1000 项';
+    nextSaveError = error;
+    const user = await showPage();
+    await newEditor(user); await chooseURL(user);
+    await openTab(user, 'IP 名单');
+    const allowed = screen.getByRole('textbox', { name: 'IP 白名单', exact: true }) as HTMLTextAreaElement;
+    const blocked = screen.getByRole('textbox', { name: 'IP 黑名单', exact: true }) as HTMLTextAreaElement;
+    await user.type(allowed, '  192.0.2.1  \n\n');
+    await user.type(blocked, 'invalid-ip\n');
+    await user.click(screen.getByRole('button', { name: '保存并生成入口' }));
+    expect((await screen.findByRole('alert')).textContent).toContain(error);
+    expect(allowed.value).toBe('  192.0.2.1  \n\n');
+    expect(blocked.value).toBe('invalid-ip\n');
+    await user.clear(blocked);
+    await user.type(blocked, '2001:db8::1');
+    await saveNew(user);
+    expect(mutations[1].body).toMatchObject({ allowed_ips: ['192.0.2.1'], blocked_ips: ['2001:db8::1'] });
+  });
+
   it('treats absent rules from older cloak responses as disabled and persists their defaults', async () => {
     const legacy = fixture();
     Reflect.deleteProperty(legacy, 'block_empty_language');
     Reflect.deleteProperty(legacy, 'blocked_browsers');
+    Reflect.deleteProperty(legacy, 'allowed_ips');
+    Reflect.deleteProperty(legacy, 'blocked_ips');
+    Reflect.deleteProperty(legacy, 'status');
     rows = [legacy];
     const user = await showPage();
     expect(screen.getByText('未设置条件')).toBeTruthy();
@@ -208,6 +266,9 @@ describe('cloak editor API integration', () => {
     expect((screen.getByRole('switch', { name: '屏蔽空语言访问' }) as HTMLInputElement).checked).toBe(false);
     const browsers = within(await openTab(user, '客户端'));
     expect(browsers.getAllByRole('checkbox').every(input => !(input as HTMLInputElement).checked)).toBe(true);
+    await openTab(user, 'IP 名单');
+    expect((screen.getByRole('textbox', { name: 'IP 白名单', exact: true }) as HTMLTextAreaElement).value).toBe('');
+    expect((screen.getByRole('textbox', { name: 'IP 黑名单', exact: true }) as HTMLTextAreaElement).value).toBe('');
     await user.click(screen.getByRole('button', { name: '保存修改' }));
     await screen.findByText('斗篷已保存，入口可以使用了');
     expect(mutations[0].body).toEqual(baseDraft);
@@ -285,18 +346,65 @@ describe('cloak editor API integration', () => {
     expect(mutations[1].body?.blocked_devices).toEqual([{ device: 'mobile', systems: ['all'] }, { device: 'desktop', systems: ['all'] }]);
   });
 
-  it('turns interception off and back on using only editable fields while preserving all configured rules', async () => {
-    rows = [fixture({ blocked_languages: ['zh-cn'], block_empty_language: true, blocked_browsers: ['edge', 'firefox'], blocked_countries: ['US'], blocked_uas: ['curl'], allowed_platforms: ['google', 'bigo'], blocked_devices: [{ device: 'mobile', systems: ['android'] }] })];
+  it('switches all three statuses from the list while preserving configured rules', async () => {
+    const rules = { allowed_ips: ['192.0.2.1'], blocked_ips: ['2001:db8::1'], blocked_languages: ['zh-cn'], block_empty_language: true, blocked_browsers: ['edge', 'firefox'], blocked_countries: ['US'], blocked_uas: ['curl'], allowed_platforms: ['google', 'bigo'], blocked_devices: [{ device: 'mobile' as const, systems: ['android'] }] };
+    rows = [fixture(rules)];
     const user = await showPage();
-    await user.click(screen.getByRole('button', { name: '关闭拦截' }));
-    await screen.findByRole('button', { name: '开启拦截' });
-    await user.click(screen.getByRole('button', { name: '开启拦截' }));
-    await screen.findByRole('button', { name: '关闭拦截' });
-    expect(mutations.map(item => ({ path: item.path, method: item.method, enabled: item.body?.enabled }))).toEqual([{ path: '/api/cloaks/11111111111111111111111111111111', method: 'PUT', enabled: false }, { path: '/api/cloaks/11111111111111111111111111111111', method: 'PUT', enabled: true }]);
+    for (const status of ['off', 'blocked', 'rules']) {
+      await user.selectOptions(screen.getByRole('combobox', { name: '斗篷状态：海外应用推广' }), status);
+      await waitFor(() => expect(rows[0].status).toBe(status));
+      expect((screen.getByRole('combobox', { name: '斗篷状态：海外应用推广' }) as HTMLSelectElement).value).toBe(status);
+    }
+    expect(mutations.map(item => ({ status: item.body?.status, enabled: item.body?.enabled }))).toEqual([{ status: 'off', enabled: false }, { status: 'blocked', enabled: false }, { status: 'rules', enabled: true }]);
     for (const { body } of mutations) {
       expect(Object.keys(body!).sort()).toEqual(editableKeys);
-      expect(body).toMatchObject({ blocked_languages: ['zh-cn'], block_empty_language: true, blocked_browsers: ['edge', 'firefox'], blocked_countries: ['US'], blocked_uas: ['curl'], allowed_platforms: ['google', 'bigo'], blocked_devices: [{ device: 'mobile', systems: ['android'] }] });
+      expect(body).toMatchObject(rules);
     }
+  });
+
+  it('saves all three editor statuses, previews their routing, and preserves IP lists', async () => {
+    const ips = { allowed_ips: ['192.0.2.1'], blocked_ips: ['2001:db8::1'] };
+    rows = [fixture(ips)];
+    const user = await showPage();
+    for (const status of ['off', 'blocked', 'rules']) {
+      await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+      await user.selectOptions(screen.getByRole('combobox', { name: '斗篷状态', exact: true }), status);
+      const summary = within(screen.getByRole('complementary'));
+      if (status === 'off') expect(summary.getAllByText('跳过全部斗篷规则，包括 IP 黑名单，访问目标链接。').length).toBeGreaterThan(0);
+      if (status === 'blocked') {
+        expect(summary.getAllByText('全部访问进入安全页，包括 IP 白名单。').length).toBeGreaterThan(0);
+        expect(summary.queryByText('目标链接')).toBeNull();
+        expect(summary.getByText('全部访问')).toBeTruthy();
+      }
+      if (status === 'rules') expect(summary.getByText('已设置 1 类规则')).toBeTruthy();
+      await user.click(screen.getByRole('button', { name: '保存修改' }));
+      await screen.findByText('斗篷已保存，入口可以使用了');
+      expect(mutations.at(-1)?.body).toMatchObject({ ...ips, status, enabled: status === 'rules' });
+    }
+  });
+
+  it('uses explicit status over the legacy enabled flag', async () => {
+    rows = [fixture({ status: 'blocked', enabled: true })];
+    const user = await showPage();
+    expect((screen.getByRole('combobox', { name: '斗篷状态：海外应用推广' }) as HTMLSelectElement).value).toBe('blocked');
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    expect((screen.getByRole('combobox', { name: '斗篷状态', exact: true }) as HTMLSelectElement).value).toBe('blocked');
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[0].body).toMatchObject({ status: 'blocked', enabled: false });
+  });
+
+  it('maps old enabled responses to rules or off and persists an explicit status', async () => {
+    const legacy = fixture({ enabled: false });
+    Reflect.deleteProperty(legacy, 'status');
+    rows = [legacy];
+    const user = await showPage();
+    expect((screen.getByRole('combobox', { name: '斗篷状态：海外应用推广' }) as HTMLSelectElement).value).toBe('off');
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    expect((screen.getByRole('combobox', { name: '斗篷状态', exact: true }) as HTMLSelectElement).value).toBe('off');
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[0].body).toMatchObject({ status: 'off', enabled: false });
   });
 
   it('requires deletion confirmation and removes the entry after the API succeeds', async () => {
@@ -319,17 +427,17 @@ describe('cloak editor API integration', () => {
     const user = await showPage();
     await newEditor(user); await chooseURL(user);
     await user.click(screen.getByRole('checkbox', { name: /^日语/ }));
-    await user.click(screen.getByRole('checkbox', { name: /启用拦截规则/ }));
+    await user.selectOptions(screen.getByRole('combobox', { name: '斗篷状态', exact: true }), 'off');
     await user.click(screen.getByRole('button', { name: '保存并生成入口' }));
     expect((await screen.findByRole('alert')).textContent).toContain('目标页和安全页不能填写本站斗篷入口');
     expect((screen.getByRole('textbox', { name: '斗篷名称', exact: true }) as HTMLInputElement).value).toBe('  海外应用推广  ');
     expect((screen.getByRole('combobox', { name: '应用链接', exact: true }) as HTMLSelectElement).value).toBe(appDraft.target_id);
     expect((screen.getByRole('textbox', { name: /安全页 URL/ }) as HTMLInputElement).value).toBe(baseDraft.safe_url);
     expect((screen.getByRole('checkbox', { name: /^日语/ }) as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByRole('checkbox', { name: /启用拦截规则/ }) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByRole('combobox', { name: '斗篷状态', exact: true }) as HTMLSelectElement).value).toBe('off');
     await user.selectOptions(screen.getByRole('combobox', { name: '应用链接', exact: true }), 'b'.repeat(32));
     await saveNew(user);
     await waitFor(() => expect(mutations).toHaveLength(2));
-    expect(mutations[1].body).toEqual({ ...appDraft, enabled: false, target_id: 'b'.repeat(32), blocked_languages: ['ja'] });
+    expect(mutations[1].body).toEqual({ ...appDraft, status: 'off', enabled: false, target_id: 'b'.repeat(32), blocked_languages: ['ja'] });
   });
 });

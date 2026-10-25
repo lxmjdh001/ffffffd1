@@ -1,9 +1,13 @@
 # 斗篷访问规则
 
-控制台可以建立多组独立规则，选择当前账号的分流、应用（直接下载或详情页）或 PWA。任意外部 URL 输入暂时隐藏，既有 URL 配置继续保留。每组规则获得稳定的 `/c/<slug>` 入口，复制时从右侧抽屉选择可用域名。删除规则后入口返回 404；关闭“拦截规则”会保留入口并直接进入目标页。账号停用后其入口返回 404。
+控制台可以建立多组独立规则，选择当前账号的分流、应用（直接下载或详情页）或 PWA。任意外部 URL 输入暂时隐藏，既有 URL 配置继续保留。每组规则获得稳定的 `/c/<slug>` 入口，复制时从右侧抽屉选择可用域名。列表及编辑页可选择三种状态：**斗篷状态**按配置的规则筛选；**关闭状态**跳过全部斗篷条件（含 IP 黑名单），直接访问目标；**屏蔽状态**将所有访问送入安全页（含 IP 白名单）。切换状态保留全部规则，删除规则后入口返回 404。账号停用后其入口返回 404。
 
 ## 匹配与跳转
 
+- “IP 名单”中白名单、黑名单分别一行一个地址，支持完整 IPv4 或 IPv6，每份最多 1000 项。保存时去除首尾空白、统一地址格式并去重；不接受网段/CIDR、域名或带端口地址，空白行忽略，清空后该名单不生效。
+- 在“斗篷状态”下先判断 IP 黑名单，命中直接进入安全页；其次判断 IP 白名单，命中后跳过斗篷的语言（含空语言）、客户端、UA 关键词、国家、广告允许及设备系统条件；两份名单重叠时黑名单优先。未列入任何名单的访客沿用普通规则，白名单非空不会单独阻止其他访客。“关闭状态”和“屏蔽状态”优先于所有名单与普通条件。
+- IP 名单仅作用于当前斗篷。账号停用、域名归属、目标可用性和账号级 UA 黑名单等独立访问控制继续生效；白名单不会恢复已删除或停用的目标。
+- 访客 IP 沿用服务端 `clientIP`：默认使用 socket 对端，只有对端属于 `TRUSTED_PROXY_CIDRS` 时才逆向检查 `X-Forwarded-For` 的可信转发链。直连访客伪造的 `X-Forwarded-For`、`X-Real-IP` 或 `CF-Connecting-IP` 不改变名单判断。IPv6 的不同等价写法及 IPv4-mapped IPv6 与对应 IPv4 地址等价匹配。
 - 语言、客户端、UA、国家、设备中的任一拦截条件命中，进入安全页。未选择的条件不限制访问。
 - 安全页 URL 可选，保存时会去除首尾空白。不填写时，需进入安全页的访问返回真正的 HTTP 404，显示独立的英文 “Account not found” 页面及 “Please contact customer support for assistance.” 说明；正常通过规则的访问仍跳转目标页。后台配置了有效客服邮箱时显示 “Contact support” 邮件链接，未配置时不显示按钮。
 - 语言读取 `Accept-Language` 中 `q > 0` 的语言，`zh` 同时匹配 `zh-CN` 等子标签；`zh-CN` 不匹配 `zh-TW`。
@@ -50,10 +54,13 @@ TRUSTED_PROXY_CIDRS=127.0.0.1/32,::1/128
 {
   "name": "访问规则",
   "enabled": true,
+  "status": "rules",
   "target_type": "url",
   "target_url": "https://example.com/landing",
   "traffic_pool_slug": "",
   "safe_url": "https://example.com/help",
+  "allowed_ips": ["203.0.113.8", "2001:db8::8"],
+  "blocked_ips": ["198.51.100.9"],
   "block_empty_language": false,
   "blocked_languages": ["zh"],
   "blocked_browsers": ["edge"],
@@ -66,10 +73,14 @@ TRUSTED_PROXY_CIDRS=127.0.0.1/32,::1/128
 
 `safe_url` 可省略或传空字符串，空白会被归一化为空；非空值仍须为完整 HTTP/HTTPS URL，并通过循环检测。既有非空但无效的安全页配置在需要回退时仍返回 503。
 
-`block_empty_language` 是布尔值；`blocked_browsers` 最多四项，只接受 `chrome`、`safari`、`firefox`、`edge`，保存时去除首尾空白、转为小写并去重。新字段省略时为 `false` / 空列表，不影响旧客户端和旧规则。更新时传 `false` / `[]` 可清除这两项拦截；关闭总“拦截规则”开关会旁路它们。
+`status` 支持 `rules`（斗篷状态）、`off`（关闭状态）、`blocked`（屏蔽状态），非法值返回 400。显式 `status` 优先于兼容字段 `enabled`；省略 `status` 的旧请求按 `enabled: true/false` 映射为 `rules/off`。返回值总是包含有效的 `status`，兼容字段 `enabled` 仅在 `rules` 状态下为 `true`；新客户端应以 `status` 为准区分三种状态。
+
+`allowed_ips`、`blocked_ips` 是 IP 字符串数组，各最多 1000 项；省略时为空名单，传 `[]` 可清空。非法地址会返回 400，整个保存失败且不改变原规则；名单按账号和斗篷隔离。
+
+`block_empty_language` 是布尔值；`blocked_browsers` 最多四项，只接受 `chrome`、`safari`、`firefox`、`edge`，保存时去除首尾空白、转为小写并去重。新字段省略时为 `false` / 空列表，不影响旧客户端和旧规则。更新时传 `false` / `[]` 可清除这两项拦截；“关闭状态”会旁路它们。
 
 `target_type` 支持 `traffic_pool`、`app`、`pwa` 与兼容保留的 `url`。分流填写当前账号的 `traffic_pool_slug`；应用/PWA 填写 `target_id`，应用额外填写 `app_target_mode: direct|info`。保存与访问均校验所有权及可用状态。`GET /api/cloak-targets` 返回当前账号可用应用/PWA 的最小列表。设备为 `desktop`、`tablet`、`mobile`。电脑系统可选 `windows`、`macos`、`linux`、`chromeos`、`other`；平板和手机可选 `ios`、`android`、`harmonyos`、`windows`、`other`；各设备均支持 `all`。
 
 公开入口支持 `GET` 和 `HEAD`：应用详情/PWA 直接返回页面；分流目标、兼容 URL 目标与已配置安全页仍重定向。未配置安全页的回退返回 `text/html; charset=utf-8` 的 404，同时设置 `Cache-Control: no-store` 和 `X-Robots-Tag: noindex, nofollow`。HEAD 使用相同状态与响应头、不返回正文。默认 404 页面不包含账号信息、入口参数、目标地址或规则内容。绑定域名也可使用 `/c/<slug>`，仅能访问该域名所属账号的规则。
 
-现有迁移启动流程会自动创建 `cloaks` 表，并为已有表增加 `block_empty_language` 和 `blocked_browsers` 字段；已有规则的空语言开关默认为关闭，浏览器黑名单为空，不影响旧规则的访问结果。不改写既有账号、分流配置、订单或余额。
+现有迁移启动流程会自动创建 `cloaks` 表，并为已有表增加 `block_empty_language`、`blocked_browsers`、`allowed_ips`、`blocked_ips` 和 `status` 字段；已有规则的空语言开关默认为关闭，浏览器黑名单和 IP 名单为空。旧记录的 `status` 为空时按原 `enabled` 值映射为斗篷状态或关闭状态，保留旧访问行为；重复迁移保留已保存的三态和名单。不改写既有账号、分流配置、订单或余额。

@@ -32,12 +32,15 @@ type Cloak struct {
 	Slug               string            `json:"slug" gorm:"uniqueIndex;size:16;not null"`
 	Name               string            `json:"name" gorm:"size:60"`
 	Enabled            bool              `json:"enabled"`
+	Status             string            `json:"status" gorm:"size:16"`
 	TargetType         string            `json:"target_type" gorm:"size:20;not null"`
 	TargetURL          string            `json:"target_url"`
 	TargetID           string            `json:"target_id" gorm:"size:32"`
 	AppTargetMode      string            `json:"app_target_mode" gorm:"size:10"`
 	TrafficPoolSlug    string            `json:"traffic_pool_slug" gorm:"size:32"`
 	SafeURL            string            `json:"safe_url"`
+	AllowedIPs         []string          `json:"allowed_ips" gorm:"serializer:json;type:text"`
+	BlockedIPs         []string          `json:"blocked_ips" gorm:"serializer:json;type:text"`
 	BlockEmptyLanguage bool              `json:"block_empty_language" gorm:"not null;default:false"`
 	BlockedLanguages   []string          `json:"blocked_languages" gorm:"serializer:json;type:text"`
 	BlockedBrowsers    []string          `json:"blocked_browsers" gorm:"serializer:json;type:text"`
@@ -52,12 +55,15 @@ type Cloak struct {
 type cloakInput struct {
 	Name               string            `json:"name"`
 	Enabled            bool              `json:"enabled"`
+	Status             string            `json:"status"`
 	TargetType         string            `json:"target_type"`
 	TargetURL          string            `json:"target_url"`
 	TargetID           string            `json:"target_id"`
 	AppTargetMode      string            `json:"app_target_mode"`
 	TrafficPoolSlug    string            `json:"traffic_pool_slug"`
 	SafeURL            string            `json:"safe_url"`
+	AllowedIPs         []string          `json:"allowed_ips"`
+	BlockedIPs         []string          `json:"blocked_ips"`
 	BlockEmptyLanguage bool              `json:"block_empty_language"`
 	BlockedLanguages   []string          `json:"blocked_languages"`
 	BlockedBrowsers    []string          `json:"blocked_browsers"`
@@ -73,7 +79,20 @@ type cloakView struct {
 }
 
 func (s *Server) cloakView(c Cloak) cloakView {
+	c.Status = effectiveCloakStatus(c)
+	c.Enabled = c.Status == "rules"
 	return cloakView{Cloak: c, EntryURL: s.Config.PublicURL + "/c/" + c.Slug}
+}
+
+// Rows and clients predating the three-state control only have Enabled.
+func effectiveCloakStatus(c Cloak) string {
+	if c.Status == "rules" || c.Status == "off" || c.Status == "blocked" {
+		return c.Status
+	}
+	if c.Enabled {
+		return "rules"
+	}
+	return "off"
 }
 
 func (s *Server) listCloaks(w http.ResponseWriter, r *http.Request) {
@@ -200,6 +219,14 @@ var cloakSystems = map[string]map[string]bool{
 
 func normalizeCloak(in cloakInput) (Cloak, error) {
 	c := Cloak{Name: strings.TrimSpace(in.Name), Enabled: in.Enabled, TargetType: in.TargetType, TargetURL: strings.TrimSpace(in.TargetURL), TrafficPoolSlug: strings.TrimSpace(in.TrafficPoolSlug), SafeURL: strings.TrimSpace(in.SafeURL), BlockEmptyLanguage: in.BlockEmptyLanguage}
+	c.Status = in.Status
+	if c.Status == "" {
+		c.Status = effectiveCloakStatus(c)
+	}
+	if c.Status != "rules" && c.Status != "off" && c.Status != "blocked" {
+		return c, problem(400, "请选择有效的斗篷状态")
+	}
+	c.Enabled = c.Status == "rules"
 	if len([]rune(c.Name)) > 60 {
 		return c, problem(400, "斗篷名称最多 60 字")
 	}
@@ -241,6 +268,21 @@ func normalizeCloak(in cloakInput) (Cloak, error) {
 		c.TargetURL, c.TrafficPoolSlug = "", ""
 	}
 	var err error
+	normalizeIP := func(v string) (string, bool) {
+		ip := net.ParseIP(v)
+		if ip == nil {
+			return "", false
+		}
+		return ip.String(), true
+	}
+	c.AllowedIPs, err = normalizeCloakStrings(in.AllowedIPs, 1000, normalizeIP)
+	if err != nil {
+		return c, problem(400, "IP 白名单无效：每行填写一个 IPv4 或 IPv6 地址，最多 1000 项")
+	}
+	c.BlockedIPs, err = normalizeCloakStrings(in.BlockedIPs, 1000, normalizeIP)
+	if err != nil {
+		return c, problem(400, "IP 黑名单无效：每行填写一个 IPv4 或 IPv6 地址，最多 1000 项")
+	}
 	c.BlockedLanguages, err = normalizeCloakStrings(in.BlockedLanguages, 100, func(v string) (string, bool) {
 		v = strings.ToLower(v)
 		return v, len(v) <= 35 && cloakLanguage.MatchString(v)
@@ -418,7 +460,8 @@ func (s *Server) cloakLoop(db *gorm.DB, raw, requestHostname string) (bool, erro
 	return count > 0, nil
 }
 
-// A disabled rule bypasses filtering; deleting it removes the entry entirely.
+// Off bypasses cloak filters; blocked sends everyone to the safe destination.
+// Rules evaluates IP lists before ordinary filters. Deletion removes the entry.
 func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	var c Cloak
@@ -441,7 +484,11 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 	}
 	outcome := "blocked"
 	defer func() { s.recordAccess(r, c.UserID, "cloaks", c.ID, outcome) }()
-	if s.rejectBlockedUA(w, r, c.UserID, r.UserAgent()) {
+	ip := s.clientIP(r)
+	status := effectiveCloakStatus(c)
+	blocked := status == "blocked" || (status == "rules" && cloakIPMatches(c.BlockedIPs, ip))
+	ipAllowed := status == "rules" && !blocked && cloakIPMatches(c.AllowedIPs, ip)
+	if !blocked && s.rejectBlockedUA(w, r, c.UserID, r.UserAgent()) {
 		return
 	}
 	if err := s.chargeUsageUV(r, c.UserID, "cloak_uv", c.ID); err != nil {
@@ -449,7 +496,7 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	target := c.SafeURL
-	if !c.Enabled || !cloakBlocked(c, r, s.cloakRequestCountry(r)) {
+	if !blocked && (status == "off" || ipAllowed || !cloakBlocked(c, r, s.cloakRequestCountry(r))) {
 		outcome = "allowed"
 		candidate := c.TargetURL
 		if c.TargetType == "traffic_pool" {
@@ -506,6 +553,19 @@ func mergeCloakQuery(raw, incoming string) (string, error) {
 	}
 	u.RawQuery = query.Encode()
 	return u.String(), nil
+}
+
+func cloakIPMatches(values []string, raw string) bool {
+	ip := net.ParseIP(raw)
+	if ip == nil {
+		return false
+	}
+	for _, value := range values {
+		if listed := net.ParseIP(value); listed != nil && listed.Equal(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 func cloakBlocked(c Cloak, r *http.Request, country string) bool {
