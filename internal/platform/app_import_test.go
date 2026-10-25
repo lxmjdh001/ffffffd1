@@ -41,6 +41,7 @@ func TestImportAPKConfigurationAndIndependentPictures(t *testing.T) {
 	cookie, csrf := sessionFor(t, s, owner)
 	url := uploadedPageImage(t, s, source, cookie, csrf)
 	design := defaultPageDesign(source)
+	design.ExternalBrowser = &ExternalBrowserConfig{Enabled: true, URL: "https://imported.example/#/apk"}
 	design.Icon = url
 	design.Screenshots = []string{url}
 	local := design
@@ -61,6 +62,9 @@ func TestImportAPKConfigurationAndIndependentPictures(t *testing.T) {
 	copied, err := s.pageDesign(target)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if copied.ExternalBrowser == nil || copied.ExternalBrowser.URL != design.ExternalBrowser.URL {
+		t.Fatal("external browser config not imported")
 	}
 	if copied.Icon == url || copied.Icon != copied.Screenshots[0] || copied.Icon != copied.Localizations[0].Icon || copied.Localizations[0].Title != "English title" {
 		t.Fatalf("configuration or pictures not cloned: %+v", copied)
@@ -124,15 +128,21 @@ func TestImportPWAIconOwnershipAndFreshIdentity(t *testing.T) {
 	other := seedUser(t, s, 0)
 	source := createPWAFixture(t, s, owner, "Source")
 	s.DB.Model(&Plan{}).Where("id = ?", "free").Update("app_limit", 10)
-	s.DB.Model(&source).Update("icon_png", []byte("copied icon bytes"))
+	landing := landingFixture()
+	landing.Settings.ExternalBrowser = &ExternalBrowserConfig{Enabled: true, URL: "https://imported.example/#/pwa"}
+	rawLanding, _ := json.Marshal(landing)
+	s.DB.Model(&source).Updates(map[string]any{"icon_png": []byte("copied icon bytes"), "landing_json": string(rawLanding)})
 	cookie, csrf := sessionFor(t, s, owner)
-	body := map[string]any{"name": "Imported", "target_url": "https://new.example/app", "import_from": source.ID}
+	body := map[string]any{"name": "Imported", "target_url": "https://new.example/app", "import_from": source.ID, "landing_config": landing}
 	w := pwaKeyCall(t, s, body, cookie, csrf, "import-request-001")
 	requireCode(t, w, 201)
 	var view pwaAppView
 	_ = json.Unmarshal(w.Body.Bytes(), &view)
 	var target PWAApp
 	s.DB.First(&target, "id = ?", view.ID)
+	if external := storedPWALanding(target.LandingJSON).Settings.ExternalBrowser; external == nil || external.URL != landing.Settings.ExternalBrowser.URL {
+		t.Fatal("PWA external browser config not imported")
+	}
 	if target.Slug == source.Slug || target.VAPIDPublicKey == source.VAPIDPublicKey || string(target.IconPNG) != "copied icon bytes" || view.SubscriptionCount != 0 {
 		t.Fatal("source identity was reused or icon not copied")
 	}

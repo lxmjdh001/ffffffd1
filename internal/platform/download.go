@@ -72,9 +72,11 @@ func (s *Server) appDownload(w http.ResponseWriter, r *http.Request, forceDirect
 		s.recordAccess(r, a.UserID, "apps", a.ID, "blocked")
 		return
 	}
-	if e = s.chargeUsageUV(r, a.UserID, "apk_uv", a.ID); e != nil {
-		fail(w, e)
-		return
+	if a.DownloadMode != "info" || forceDirect {
+		if e = s.chargeAPKAccess(r, a); e != nil {
+			fail(w, e)
+			return
+		}
 	}
 	if a.DownloadMode == "info" && !forceDirect {
 		target := "/a/" + a.Slug + "/info"
@@ -119,9 +121,16 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
-	if e = s.chargeUsageUV(r, a.UserID, "apk_uv", a.ID); e != nil {
-		fail(w, e)
+	design, err := s.pageDesign(a)
+	if err != nil {
+		fail(w, err)
 		return
+	}
+	if design.ExternalBrowser == nil || !design.ExternalBrowser.Enabled {
+		if e = s.chargeAPKAccess(r, a); e != nil {
+			fail(w, e)
+			return
+		}
 	}
 	s.recordAccess(r, a.UserID, "apps", a.ID, "allowed")
 	visitor := s.visitor(w, r)
@@ -133,24 +142,20 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 	var ads AdConfig
 	_ = s.DB.First(&ads, "app_id = ?", a.ID).Error
 	viewToken := s.returnFlowViewToken("apk", a.ID, r)
-	design, err := s.pageDesign(a)
-	if err != nil {
-		fail(w, err)
-		return
-	}
+	external := s.externalBrowserJSON(r, "apk", a.ID, a.Slug, a.UserID, design.ExternalBrowser)
 	design = design.localized(r.Header.Get("Accept-Language"))
 	w.Header().Add("Vary", "Accept-Language")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if design.Layout == "google_play" || design.Layout == "custom" {
 		var out bytes.Buffer
-		if e := s.renderAPKLanding(a, design, randomHex(16), token, viewToken, deepLinkWithToken(ads, token), ads.FacebookEnabled || ads.TikTokEnabled, &out); e != nil {
+		if e := s.renderAPKLanding(a, design, randomHex(16), token, viewToken, deepLinkWithToken(ads, token), ads.FacebookEnabled || ads.TikTokEnabled, &out, external); e != nil {
 			fail(w, e)
 			return
 		}
 		w.Write(out.Bytes())
 		return
 	}
-	_ = downloadPageTemplate(design.Layout).Execute(w, map[string]any{"App": a, "Design": design, "ClientJS": s.landingScriptURL("apk-client.js", "/a/"+a.Slug+"/client.js"), "Nonce": randomHex(16), "Size": pageDesignSize(a.Size), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled, "ReturnFlowToken": viewToken, "Decoration": s.newLandingDecoration("apk", a.UserID)})
+	_ = downloadPageTemplate(design.Layout).Execute(w, map[string]any{"ExternalBrowser": external, "App": a, "Design": design, "ClientJS": s.landingScriptURL("apk-client.js", "/a/"+a.Slug+"/client.js"), "Nonce": randomHex(16), "Size": pageDesignSize(a.Size), "Attribution": token, "Source": attr.Source, "DeepLink": deepLinkWithToken(ads, token), "AdsEnabled": ads.FacebookEnabled || ads.TikTokEnabled, "ReturnFlowToken": viewToken, "Decoration": s.newLandingDecoration("apk", a.UserID)})
 }
 
 var pageTemplateFunctions = template.FuncMap{"imageURL": func(raw string) template.URL {
@@ -160,8 +165,8 @@ var pageTemplateFunctions = template.FuncMap{"imageURL": func(raw string) templa
 	return ""
 }}
 
-var downloadTemplate = template.Must(template.New("download").Funcs(pageTemplateFunctions).Parse(strings.Replace(downloadPageHTML, "/*BUTTON_STYLE*/", downloadButtonCSS+"\n"+ratingStarsCSS+"\n"+returnFlowCSS, 1) + ratingStarsHTML))
-var googlePlayTemplate = template.Must(template.New("google-play").Funcs(pageTemplateFunctions).Parse(strings.Replace(googlePlayHTML, "/*SOURCE_STYLE*/", googlePlayCSS+"\n"+downloadButtonCSS+"\n"+ratingStarsCSS+"\n"+returnFlowCSS, 1) + ratingStarsHTML))
+var downloadTemplate = template.Must(template.New("download").Funcs(pageTemplateFunctions).Parse(strings.Replace(downloadPageHTML, "/*BUTTON_STYLE*/", downloadButtonCSS+"\n"+ratingStarsCSS+"\n"+returnFlowCSS+"\n"+externalBrowserCSS, 1) + ratingStarsHTML))
+var googlePlayTemplate = template.Must(template.New("google-play").Funcs(pageTemplateFunctions).Parse(strings.Replace(googlePlayHTML, "/*SOURCE_STYLE*/", googlePlayCSS+"\n"+downloadButtonCSS+"\n"+ratingStarsCSS+"\n"+returnFlowCSS+"\n"+externalBrowserCSS, 1) + ratingStarsHTML))
 
 func downloadPageTemplate(layout string) *template.Template {
 	if layout == "google_play" {
@@ -221,7 +226,7 @@ func (s *Server) startDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createDownloadTicket(r *http.Request, a Application, visitor, key string, attr Attribution) (string, error) {
-	if err := s.chargeUsageUV(r, a.UserID, "apk_uv", a.ID); err != nil {
+	if err := s.chargeAPKAccess(r, a); err != nil {
 		return "", err
 	}
 	token := s.mac("download:" + a.ID + ":" + a.FileKey + ":" + visitor + ":" + key)
@@ -240,7 +245,7 @@ func (s *Server) downloadClient(w http.ResponseWriter, r *http.Request) {
 }
 
 func apkClientScript() string {
-	return `"use strict";
+	return externalBrowserJS + "\n" + `"use strict";
 const languages=` + string(pageLocaleJSON) + `;
 const copy=languages[document.documentElement.lang]||languages['zh-CN'];
 const form=document.querySelector('form');
@@ -249,9 +254,10 @@ const status=document.getElementById('download-status');
 let returnFlowSource=false;
 window.D1ReturnFlowInstall=(options)=>{returnFlowSource=options?.source==='return_flow';try{form.requestSubmit();}finally{returnFlowSource=false;}};
 form.addEventListener('submit',async function(event){
- event.preventDefault();if(button.disabled)return;const fromReturnFlow=returnFlowSource;button.disabled=true;status.textContent=copy.preparing;
+ event.preventDefault();if(button.disabled)return;if(window.D1ExternalBrowser?.open())return;const fromReturnFlow=returnFlowSource;button.disabled=true;status.textContent=copy.preparing;
  try {
-  const response=await fetch(form.action,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json'},body:new URLSearchParams(new FormData(form))});
+  const body=new URLSearchParams(new FormData(form));if(window.D1ExternalBrowser?.returnToken)body.set('external_return',window.D1ExternalBrowser.returnToken);
+  const response=await fetch(form.action,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json'},body});
   const data=await response.json();
   if(!response.ok)throw new Error(data.error||copy.download_failed);
   if(!/^\/d\/[a-f0-9]{64}$/.test(data.download_url))throw new Error(copy.invalid_url);

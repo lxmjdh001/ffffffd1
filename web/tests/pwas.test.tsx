@@ -42,9 +42,20 @@ function setup() { render(<QueryClientProvider client={client}><MemoryRouter><Ro
 async function openCreate(user: ReturnType<typeof userEvent.setup>) { await user.click(await screen.findByRole('button', { name: '新建 PWA 应用' })); const form = within(await screen.findByRole('form')); await user.type(form.getByLabelText('应用名称'), '新应用'); await user.type(form.getByLabelText('网页 URL'), 'https://new.example'); return form; }
 
 describe('PWA applications', () => {
+ it('validates and saves the external browser destination with the PWA',async()=>{
+  const user=setup(),form=await openCreate(user);
+  await user.click(form.getByLabelText('跳转外部浏览器'));
+  const target=form.getByLabelText('外部浏览器目标网址');
+  await user.type(target,'https://name:password@example.com');
+  await user.click(form.getByRole('button',{name:'创建应用',exact:true}));expect(document.activeElement).toBe(target);expect(writes).toHaveLength(0);
+  await user.clear(target);await user.type(target,'https://shop.example/?campaign=1#/checkout');
+  await user.click(form.getByRole('button',{name:'创建应用',exact:true}));await waitFor(()=>expect(screen.queryByRole('form')).toBeNull());
+  expect(writes[0]).toMatchObject({body:{landing_config:{settings:{externalBrowser:{enabled:true,url:'https://shop.example/?campaign=1#/checkout'}}}}});
+ });
   it('imports an owned app into a new editable draft without changing the source', async () => {
     rows[0].landing_config = defaultPWALanding();
     rows[0].landing_config.storeInfos[0].appSummary = 'Imported store content';
+    rows[0].landing_config.settings.externalBrowser={enabled:true,url:'https://imported.example/#/home'};
     rows[0].icon_url = '/source-icon.png';
     const user = setup(); await user.click(await screen.findByRole('button',{name:'新建 PWA 应用'}));
     await user.click(screen.getByRole('button',{name:'导入已有应用配置'}));
@@ -59,6 +70,7 @@ describe('PWA applications', () => {
     await user.click(form.getByRole('button',{name:'创建应用',exact:true}));
     await waitFor(()=>expect(screen.queryByRole('form')).toBeNull());
     expect(writes).toHaveLength(1);
+    expect(writes[0]).toMatchObject({body:{landing_config:{settings:{externalBrowser:{enabled:true,url:'https://imported.example/#/home'}}}}});
     expect(writes[0]).toMatchObject({path:'/api/pwas',method:'POST',body:{import_from:app.id,name:'Copied app'}});
     expect(rows[0].name).toBe(app.name);
     expect(writes[0].body).not.toHaveProperty('slug');

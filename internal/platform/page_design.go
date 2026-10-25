@@ -37,29 +37,30 @@ var ratingStarsHTML string
 var ratingStarsCSS string
 
 type PageDesign struct {
-	Localizations        []PageDesign       `json:"localizations,omitempty"`
-	LanguagePriority     []string           `json:"language_priority,omitempty"`
-	Landing              *APKLandingOptions `json:"landing,omitempty"`
-	ReturnFlowConfig     *ReturnFlowConfig  `json:"return_flow_config,omitempty"`
-	Layout               string             `json:"layout"`
-	Language             string             `json:"language"`
-	Title                string             `json:"title"`
-	Developer            string             `json:"developer"`
-	Summary              string             `json:"summary"`
-	Description          string             `json:"description"`
-	Icon                 string             `json:"icon"`
-	Screenshots          []string           `json:"screenshots"`
-	Tags                 []string           `json:"tags"`
-	ButtonText           string             `json:"button_text"`
-	ThemeColor           string             `json:"theme_color"`
-	BackgroundColor      string             `json:"background_color"`
-	ShowDescription      bool               `json:"show_description"`
-	ShowScreenshots      bool               `json:"show_screenshots"`
-	ShowFileInfo         bool               `json:"show_file_info"`
-	ShowDownloads        bool               `json:"show_downloads"`
-	DisplayRating        string             `json:"display_rating"`
-	DisplayReviewCount   string             `json:"display_review_count"`
-	DisplayDownloadCount string             `json:"display_download_count"`
+	ExternalBrowser      *ExternalBrowserConfig `json:"external_browser,omitempty"`
+	Localizations        []PageDesign           `json:"localizations,omitempty"`
+	LanguagePriority     []string               `json:"language_priority,omitempty"`
+	Landing              *APKLandingOptions     `json:"landing,omitempty"`
+	ReturnFlowConfig     *ReturnFlowConfig      `json:"return_flow_config,omitempty"`
+	Layout               string                 `json:"layout"`
+	Language             string                 `json:"language"`
+	Title                string                 `json:"title"`
+	Developer            string                 `json:"developer"`
+	Summary              string                 `json:"summary"`
+	Description          string                 `json:"description"`
+	Icon                 string                 `json:"icon"`
+	Screenshots          []string               `json:"screenshots"`
+	Tags                 []string               `json:"tags"`
+	ButtonText           string                 `json:"button_text"`
+	ThemeColor           string                 `json:"theme_color"`
+	BackgroundColor      string                 `json:"background_color"`
+	ShowDescription      bool                   `json:"show_description"`
+	ShowScreenshots      bool                   `json:"show_screenshots"`
+	ShowFileInfo         bool                   `json:"show_file_info"`
+	ShowDownloads        bool                   `json:"show_downloads"`
+	DisplayRating        string                 `json:"display_rating"`
+	DisplayReviewCount   string                 `json:"display_review_count"`
+	DisplayDownloadCount string                 `json:"display_download_count"`
 }
 type AppPageDesign struct {
 	AppID     string     `json:"-" gorm:"primaryKey;size:32"`
@@ -121,6 +122,9 @@ func validPageImage(raw string) bool {
 	return err == nil && u.Scheme == "https" && u.Hostname() != "" && u.User == nil && len(raw) <= 2048
 }
 func validatePageDesign(d PageDesign, publicURL ...string) error {
+	if err := normalizeExternalBrowser(d.ExternalBrowser); err != nil {
+		return err
+	}
 	origin := ""
 	if len(publicURL) > 0 {
 		origin = publicURL[0]

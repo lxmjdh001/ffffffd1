@@ -32,6 +32,10 @@ func TestAPKMultipleLanguagesMatchPWAAndPreserveContent(t *testing.T) {
 	flow := defaultReturnFlowConfig()
 	flow.Enabled = true
 	d.ReturnFlowConfig = &flow
+	d.ExternalBrowser = &ExternalBrowserConfig{Enabled: true, URL: "https://example.com/#/app"}
+	if localized := d.localized("en-GB"); localized.ExternalBrowser == nil || localized.ExternalBrowser.URL != d.ExternalBrowser.URL {
+		t.Fatal("language selection changed external browser config")
+	}
 	if localized := d.localized("en-GB"); localized.ReturnFlowConfig == nil || !localized.ReturnFlowConfig.Enabled {
 		t.Fatal("language selection changed the shared return-flow switch")
 	}

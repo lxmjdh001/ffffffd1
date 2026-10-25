@@ -42,6 +42,7 @@ func validateAPKLocales(d PageDesign, origin string) error {
 			return problem(400, "请选择支持的详情页语言")
 		}
 		seen[code] = true
+		locale.ExternalBrowser = d.ExternalBrowser
 		if err := validatePageDesign(locale, origin); err != nil {
 			return err
 		}
@@ -75,8 +76,12 @@ func (d PageDesign) localized(requested string) PageDesign {
 			// Like PWA, return-flow behavior is app-wide, not per language.
 			// Keep the rendered switch consistent with its existing billing gate.
 			v.ReturnFlowConfig = d.ReturnFlowConfig
+			v.ExternalBrowser = d.ExternalBrowser
 			return v
 		}
 	}
-	return d.Localizations[0]
+	fallback := d.Localizations[0]
+	fallback.ReturnFlowConfig = d.ReturnFlowConfig
+	fallback.ExternalBrowser = d.ExternalBrowser
+	return fallback
 }

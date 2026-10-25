@@ -1,0 +1,10 @@
+#d1-external-guide{position:fixed;inset:0;z-index:100010;display:flex;align-items:center;justify-content:center;padding:20px;background:#13211b99;font-family:system-ui,-apple-system,sans-serif}
+#d1-external-guide section{box-sizing:border-box;width:100%;max-width:420px;max-height:90vh;overflow:auto;padding:26px;border-radius:22px;background:#fff;color:#24342c;box-shadow:0 20px 70px #0003}
+#d1-external-guide h2{font-size:20px;line-height:1.4;margin:0 0 12px}
+#d1-external-guide p{font-size:14px;line-height:1.7;color:#67756b;margin:0 0 18px}
+#d1-external-guide input{box-sizing:border-box;width:100%;padding:12px;border:1px solid #dce4dd;border-radius:10px;background:#f6f8f5;color:#415343;font-size:13px}
+#d1-external-guide .d1-external-tools{display:flex;gap:10px;margin:16px 0 10px}
+#d1-external-guide button,#d1-external-guide a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:0;border-radius:10px;padding:10px 14px;background:#e9efe6;color:#344d39;font-size:14px;font-weight:550;cursor:pointer;text-decoration:none}
+#d1-external-guide small{display:block;color:#8b978e;font-size:12px;line-height:1.6}
+#d1-external-guide button.d1-external-close{margin-top:18px;width:100%;background:#3f6548;color:white}
+#d1-external-guide :focus-visible{outline:2px solid #57785d;outline-offset:3px}

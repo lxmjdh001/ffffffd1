@@ -40,7 +40,7 @@
   if(guide&&guideText){guideText.textContent=message;guide.hidden=false;}
  }
  async function installUsageRequest(attempt, action) {
-  const response=await fetch(base+'install/'+action,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:attempt.key,token:attempt.token})});
+  const response=await fetch(base+'install/'+action,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:attempt.key,token:attempt.token,external_return:window.D1ExternalBrowser?.returnToken||undefined})});
   let result={};try{result=await response.json();}catch(_){}
   if(!response.ok){const error=new Error(result.error||text('Installation is temporarily unavailable.','暂时无法安装，请稍后重试。'));error.billing=true;throw error;}
   attempt.state=result.state;return result;
@@ -173,6 +173,7 @@
  }
  if(document.body.hasAttribute('data-d1-pwa-reference'))window.downloadInCurrentPage=downloadInCurrentPage;
  async function installApp(options = {}) {
+  if (window.D1ExternalBrowser?.open()) return {outcome:"external_requested"};
   const settings=pwaSettings();
   if (window.showBrowserGuide && window.showBrowserGuide()) return;
   if (installed && usesPWAInstall()) return openInstalledApp();

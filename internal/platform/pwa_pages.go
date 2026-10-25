@@ -43,6 +43,7 @@ func (s *Server) pwaRequestOrigin(r *http.Request) string {
 }
 
 type pwaPageData struct {
+	ExternalBrowser string
 	ClientJS        string
 	Decoration      landingDecoration
 	ReturnFlowToken string
@@ -74,6 +75,9 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 	data.ClientJS = s.landingScriptURL("pwa-client.js", data.Base+"client.js")
 	var buf bytes.Buffer
 	landing := storedPWALanding(a.LandingJSON)
+	if !launch {
+		data.ExternalBrowser = s.externalBrowserJSON(r, "pwa", a.ID, a.Slug, a.UserID, landing.Settings.ExternalBrowser)
+	}
 	if !launch && (landing.Template == "google_play" || landing.Template == "custom") {
 		err = s.renderPWALanding(a, r, &buf)
 	} else {
@@ -172,7 +176,7 @@ func (s *Server) pwaAsset(w http.ResponseWriter, r *http.Request, content, conte
 	}
 }
 func (s *Server) pwaClientScript(w http.ResponseWriter, r *http.Request) {
-	s.pwaAsset(w, r, pwaClientJS+"\n"+returnFlowJS+"\n"+pwaBrowserGuideJS, "application/javascript; charset=utf-8")
+	s.pwaAsset(w, r, externalBrowserJS+"\n"+pwaClientJS+"\n"+returnFlowJS+"\n"+pwaBrowserGuideJS, "application/javascript; charset=utf-8")
 }
 func (s *Server) pwaStyles(w http.ResponseWriter, r *http.Request) {
 	a, err := s.loadPublicPWA(r)
@@ -191,7 +195,7 @@ func (s *Server) pwaStyles(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("launch") != "1" {
 		css += "\n" + pwaInstallAnimationCSS
 	}
-	s.pwaAsset(w, r, css+"\n"+returnFlowCSS+"\n"+pwaBrowserGuideCSS, "text/css; charset=utf-8")
+	s.pwaAsset(w, r, css+"\n"+returnFlowCSS+"\n"+pwaBrowserGuideCSS+"\n"+externalBrowserCSS, "text/css; charset=utf-8")
 }
 func (s *Server) pwaServiceWorker(w http.ResponseWriter, r *http.Request) {
 	// The browser's default maximum scope is the worker's /p/{slug}/ directory.

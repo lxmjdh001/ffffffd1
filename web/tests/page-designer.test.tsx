@@ -210,3 +210,15 @@ it('uses the reference APK templates and publishes the new content settings only
  await user.click(screen.getByRole('button',{name:'保存并发布'}));await screen.findByRole('heading',{name:'应用列表'});
  expect(state.published).toMatchObject({layout:'custom',landing:{age_rating:'18',button_position:'top',enable_qrcode:true,text_obfuscation:true}});
 });
+
+it('saves external browser behavior globally and focuses an invalid destination',async()=>{
+ const state=renderDesigner(),user=userEvent.setup();await screen.findByLabelText('展示名称');
+ await user.click(screen.getByLabelText('跳转外部浏览器'));
+ await user.click(screen.getByRole('button',{name:'保存并发布'}));
+ const target=screen.getByLabelText('外部浏览器目标网址');expect(document.activeElement).toBe(target);expect(state.published).toBeUndefined();
+ await user.type(target,'https://shop.example/?campaign=1#/checkout');
+ await user.click(screen.getByRole('checkbox',{name:'English',exact:true}));
+ expect((screen.getByLabelText('外部浏览器目标网址') as HTMLInputElement).value).toBe('https://shop.example/?campaign=1#/checkout');
+ await user.click(screen.getByRole('button',{name:'保存并发布'}));await screen.findByRole('heading',{name:'应用列表'});
+ expect(state.published?.external_browser).toEqual({enabled:true,url:'https://shop.example/?campaign=1#/checkout'});
+});

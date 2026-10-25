@@ -59,5 +59,5 @@ func landingNoise() template.HTML {
 }
 
 func apkReferenceStyles(class string) template.CSS {
-	return template.CSS(strings.ReplaceAll(apkLandingCSS, ".d1-apk-reference", "."+class) + "\n" + apkTextObfuscationCSS + "\n" + returnFlowCSS)
+	return template.CSS(strings.ReplaceAll(apkLandingCSS, ".d1-apk-reference", "."+class) + "\n" + apkTextObfuscationCSS + "\n" + returnFlowCSS + "\n" + externalBrowserCSS)
 }

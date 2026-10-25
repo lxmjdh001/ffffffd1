@@ -33,7 +33,7 @@ var landingClassicFiles embed.FS
 func landingJavaScript() (map[string][]byte, error) {
 	files := map[string][]byte{
 		"apk-client.js":      []byte(apkClientScript()),
-		"pwa-client.js":      []byte(pwaClientJS + "\n" + returnFlowJS + "\n" + pwaBrowserGuideJS),
+		"pwa-client.js":      []byte(externalBrowserJS + "\n" + pwaClientJS + "\n" + returnFlowJS + "\n" + pwaBrowserGuideJS),
 		"preview-adapter.js": []byte(apkLandingBridgeJS),
 	}
 	err := fs.WalkDir(landingClassicFiles, "templates/landing-classic", func(file string, entry fs.DirEntry, err error) error {

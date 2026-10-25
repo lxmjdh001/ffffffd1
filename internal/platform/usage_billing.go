@@ -84,9 +84,9 @@ func migrateUsageBilling(tx *gorm.DB) error {
 func meteredEnabled(db *gorm.DB) bool { x, e := getSettings(db); return e == nil && x.MeteredBilling }
 func usagePrice(x Settings, kind string) int64 {
 	switch kind {
-	case "apk_uv":
+	case "apk_uv", "apk_external":
 		return x.DownloadPriceMicros
-	case "pwa_install":
+	case "pwa_install", "pwa_external":
 		return x.PWAInstallPriceMicros
 	case "cloak_uv", "return_flow", "pwa_push":
 		return 0
@@ -315,8 +315,9 @@ func (s *Server) pwaInstallUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Key   string `json:"key"`
-		Token string `json:"token"`
+		Key            string `json:"key"`
+		Token          string `json:"token"`
+		ExternalReturn string `json:"external_return"`
 	}
 	if e = decode(w, r, &in); e != nil {
 		fail(w, e)
@@ -334,6 +335,13 @@ func (s *Server) pwaInstallUsage(w http.ResponseWriter, r *http.Request) {
 	if action != "start" && action != "complete" && action != "cancel" {
 		http.NotFound(w, r)
 		return
+	}
+	if in.ExternalReturn != "" {
+		c := storedPWALanding(app.LandingJSON).Settings.ExternalBrowser
+		if c != nil && s.paidExternalReturn("pwa", app.ID, c.URL, in.ExternalReturn) {
+			jsonOut(w, 200, map[string]any{"allowed": true, "state": "charged"})
+			return
+		}
 	}
 	var out MeteredEvent
 	e = s.DB.Transaction(func(tx *gorm.DB) error {

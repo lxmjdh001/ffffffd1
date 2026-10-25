@@ -84,6 +84,15 @@ function start(options: Options = {}) {
 beforeEach(() => localStorage.clear());
 
 describe('PWA subscription renewal follows the reference PWA', () => {
+  it('handles an external request before browser guide, package download or install reservation',async()=>{
+    const showBrowserGuide=vi.fn(()=>true);
+    const c=start({showBrowserGuide,runtime:{app:{settings:{packagePriority:'w2a_only',apkUrl:'https://apk.example/app.apk'}}}});
+    const open=vi.fn(()=>true);c.runtimeWindow.D1ExternalBrowser={open};
+    expect(await c.runtimeWindow.D1ReturnFlowInstall()).toEqual({outcome:'external_requested'});
+    expect(open).toHaveBeenCalledOnce();expect(showBrowserGuide).not.toHaveBeenCalled();
+    expect(c.fetcher.mock.calls.some(([url])=>/prepare|install|download/.test(url))).toBe(false);
+    expect(document.querySelector('iframe')).toBeNull();
+  });
   it('keeps the reference download bridge with a tenant-specific root class', async () => {
     const c = start({ reference: true });
     expect(c.runtimeWindow.downloadInCurrentPage).toBeTypeOf('function');
