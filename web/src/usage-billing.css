@@ -1,1 +1,24 @@
-.usage-pricing{margin:24px 0}.usage-pricing-heading{display:flex;align-items:flex-start;gap:12px;margin-bottom:20px;color:#627d9b}.usage-pricing-heading h2{font-size:17px;margin:0 0 7px}.usage-pricing-heading p{font-size:12px;color:#8b9bb0;line-height:1.8}.usage-rate-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.usage-rate-grid article{padding:20px 15px;border-radius:12px;background:#f7f9fc;min-width:0}.usage-rate-grid article>svg{color:#8588b9;margin-bottom:13px}.usage-rate-grid h3{font-size:12px;font-weight:500;color:#7187a2;line-height:1.6;min-height:2em}.usage-rate-grid strong{display:inline-block;margin-top:8px;font-size:23px;font-weight:550;color:#526e90}.usage-rate-grid small{font-size:11px;color:#8b9eb4;margin-inline-start:5px}.usage-gift-note{font-size:12px;color:#7185a2;line-height:1.8;margin:20px 0 7px}.home-pricing .usage-pricing{margin:0;border:0;background:#eeeede}.home-pricing .usage-rate-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.home-pricing .usage-rate-grid article{background:#f7f6f0}.home-pricing .usage-pricing-heading{color:#42513d}.home-pricing .usage-rate-grid strong{color:#42513d}@media(max-width:900px){.usage-rate-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:550px){.usage-rate-grid,.home-pricing .usage-rate-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.usage-rate-grid article{padding:16px 12px}.usage-rate-grid strong{font-size:21px}.usage-pricing-heading h2{font-size:15px}}
+.usage-pricing{margin:24px 0}
+.usage-pricing-heading{display:flex;align-items:flex-start;gap:12px;margin-bottom:20px;color:#627d9b}
+.usage-pricing-heading h2{font-size:17px;margin:0 0 7px}
+.usage-pricing-heading p{font-size:12px;color:#8b9bb0;line-height:1.8}
+.usage-rate-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.usage-rate-grid article{grid-column:span 3;padding:20px 15px;border-radius:12px;background:#f7f9fc;min-width:0}
+.usage-rate-grid article.usage-rate-free{grid-column:span 2}
+.usage-rate-grid article.usage-rate-free:nth-last-child(-n+2){grid-column:span 3}
+.usage-rate-grid article>svg{color:#8588b9;margin-bottom:13px}
+.usage-rate-grid h3{font-size:12px;font-weight:500;color:#7187a2;line-height:1.6;min-height:2em;overflow-wrap:anywhere}
+.usage-rate-grid strong{display:inline-block;margin-top:8px;font-size:23px;font-weight:550;color:#526e90}
+.usage-rate-grid small{font-size:11px;color:#8b9eb4;margin-inline-start:5px}
+.usage-gift-note{font-size:12px;color:#7185a2;line-height:1.8;margin:20px 0 7px}
+.home-pricing .usage-pricing{margin:0;border:0;background:#eeeede}
+.home-pricing .usage-rate-grid article{background:#f7f6f0}
+.home-pricing .usage-pricing-heading{color:#42513d}
+.home-pricing .usage-rate-grid strong{color:#42513d}
+@media(max-width:550px){
+  .usage-rate-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .usage-rate-grid article,.usage-rate-grid article.usage-rate-free,.usage-rate-grid article.usage-rate-free:nth-last-child(-n+2){grid-column:auto;padding:16px 12px}
+  .usage-rate-grid article:last-child{grid-column:1/-1}
+  .usage-rate-grid strong{font-size:21px}
+  .usage-pricing-heading h2{font-size:15px}
+}

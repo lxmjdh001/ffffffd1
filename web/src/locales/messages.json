@@ -1,5 +1,8 @@
 {
   "en": {
+    "域名安全检测": "Domain safety checks",
+    "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "Traffic routing, domain safety checks, Smart Cloak, return pages and push notifications are free.",
+    "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "Domain safety checks are free and available with a positive spendable balance or promotional credit.",
     "导入已有应用配置": "Import existing app settings",
     "导入配置": "Import settings",
     "已导入配置：{0}": "Settings imported: {0}",
@@ -2077,6 +2080,9 @@
     "注册赠送用量额度": "Welcome usage credit"
   },
   "pt": {
+    "域名安全检测": "Segurança de domínios",
+    "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "O roteamento de tráfego, as verificações de segurança de domínios, o Smart Cloak, as páginas de retorno e as notificações push são gratuitos.",
+    "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "As verificações de segurança de domínios são gratuitas e podem ser ativadas com saldo disponível ou crédito promocional positivo.",
     "导入已有应用配置": "Importar configurações existentes",
     "导入配置": "Importar",
     "已导入配置：{0}": "Configurações importadas: {0}",
@@ -4154,6 +4160,9 @@
     "注册赠送用量额度": "Crédito inicial de uso"
   },
   "de": {
+    "域名安全检测": "Domain-Sicherheitsprüfung",
+    "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "Traffic-Routing, Domain-Sicherheitsprüfungen, Smart Cloak, Rückkehrseiten und Push-Nachrichten sind kostenlos.",
+    "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "Domain-Sicherheitsprüfungen sind kostenlos und bei positivem verfügbarem Guthaben oder Aktionsguthaben nutzbar.",
     "导入已有应用配置": "App-Konfiguration importieren",
     "导入配置": "Importieren",
     "已导入配置：{0}": "Konfiguration importiert: {0}",
@@ -6231,6 +6240,9 @@
     "注册赠送用量额度": "Nutzungsstartguthaben"
   },
   "fr": {
+    "域名安全检测": "Sécurité des domaines",
+    "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "Le routage du trafic, les contrôles de sécurité des domaines, Smart Cloak, les pages de retour et les notifications push sont gratuits.",
+    "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "Les contrôles de sécurité des domaines sont gratuits et peuvent être activés avec un solde disponible ou un crédit promotionnel positif.",
     "导入已有应用配置": "Importer une configuration",
     "导入配置": "Importer",
     "已导入配置：{0}": "Configuration importée : {0}",
@@ -8308,6 +8320,9 @@
     "注册赠送用量额度": "Crédit d’utilisation de bienvenue"
   },
   "ko": {
+    "域名安全检测": "도메인 안전 검사",
+    "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "트래픽 분배, 도메인 안전 검사, 스마트 클로킹, 복귀 페이지 및 푸시 알림은 무료입니다.",
+    "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "도메인 안전 검사는 무료이며 사용 가능한 잔액 또는 프로모션 크레딧이 있으면 활성화할 수 있습니다.",
     "导入已有应用配置": "기존 앱 설정 가져오기",
     "导入配置": "가져오기",
     "已导入配置：{0}": "설정 가져옴: {0}",
@@ -10385,6 +10400,9 @@
     "注册赠送用量额度": "가입 무료 사용 크레딧"
   },
   "ja": {
+    "域名安全检测": "ドメイン安全チェック",
+    "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "トラフィック振り分け、ドメイン安全チェック、スマートクローキング、復帰ページ、プッシュ通知は無料です。",
+    "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "ドメイン安全チェックは無料で、利用可能な残高または特典クレジットがあれば有効にできます。",
     "导入已有应用配置": "既存アプリ設定を取り込む",
     "导入配置": "取り込む",
     "已导入配置：{0}": "設定取込済み：{0}",
@@ -12462,6 +12480,9 @@
     "注册赠送用量额度": "登録無料利用クレジット"
   },
   "zh-TW": {
+    "域名安全检测": "網域安全檢測",
+    "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "應用分流、網域安全檢測、智慧斗篷、回流頁和訊息推播免費。",
+    "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "網域安全檢測免費，帳戶有可用餘額或贈送額度即可開啟。",
     "导入已有应用配置": "匯入現有應用設定",
     "导入配置": "匯入設定",
     "已导入配置：{0}": "已匯入設定：{0}",
@@ -14539,6 +14560,9 @@
     "注册赠送用量额度": "註冊贈送用量額度"
   },
   "ru": {
+    "域名安全检测": "Проверка безопасности доменов",
+    "应用分流、域名安全检测、智能斗篷、回流页和消息推送免费。": "Маршрутизация трафика, проверки безопасности доменов, Smart Cloak, страницы возврата и push-уведомления бесплатны.",
+    "域名安全检测免费，账户有可用余额或赠送额度即可开启。": "Проверки безопасности доменов бесплатны и доступны при положительном доступном балансе или подарочном кредите.",
     "导入已有应用配置": "Импорт настроек приложения",
     "导入配置": "Импорт",
     "已导入配置：{0}": "Настройки импортированы: {0}",

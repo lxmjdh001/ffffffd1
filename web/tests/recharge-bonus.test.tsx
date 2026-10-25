@@ -80,13 +80,13 @@ function openBilling() {
 }
 
 describe('recharge promotion', () => {
-  it('shows two paid rates, three free features, and promotional balance separate from cash', async () => {
+  it('shows two paid rates, five free features, and promotional balance separate from cash', async () => {
     Object.assign(config,{metered_billing:true,download_price_micros:50000,pwa_install_price_micros:50000,cloak_uv_price_micros:1000,return_flow_price_micros:1000,pwa_push_price_micros:1000,registration_gift_limit:0,registration_gift_micros:100e6});
     account.gift_balance_micros=100e6;account.gift_held_micros=50000;
     config.plans=[{...free,name:'按量计费'}];
     openBilling();await screen.findByRole('heading',{name:'用量与账单'});
     const rates=await screen.findByRole('region',{name:'按量计费'});
-    expect(within(rates).getAllByText('$0.05')).toHaveLength(2);expect(within(rates).getAllByText('免费',{exact:true})).toHaveLength(3);expect(within(rates).getByText('注册即赠 $100 用量额度。')).toBeTruthy();expect(screen.getByRole('heading',{name:'赠送用量额度'})).toBeTruthy();expect(screen.getByText('$ 99.95')).toBeTruthy();expect(screen.queryByText('注册共享赠送')).toBeNull();
+    expect(within(rates).getAllByText('$0.05')).toHaveLength(2);expect(within(rates).getAllByText('免费',{exact:true})).toHaveLength(5);expect(within(rates).getByRole('heading',{name:'应用分流',exact:true})).toBeTruthy();expect(within(rates).getByRole('heading',{name:'域名安全检测',exact:true})).toBeTruthy();expect(within(rates).getByText('注册即赠 $100 用量额度。')).toBeTruthy();expect(screen.getByRole('heading',{name:'赠送用量额度'})).toBeTruthy();expect(screen.getByText('$ 99.95')).toBeTruthy();expect(screen.queryByText('注册共享赠送')).toBeNull();
     expect(screen.queryByText('选择适合你的套餐')).toBeNull();expect(screen.queryByRole('button',{name:/开通|续费/})).toBeNull();expect(screen.getByRole('button',{name:'充值余额'})).toBeTruthy();
   });
   it('retains historical Alipay payment instructions without offering new Alipay orders', async () => {
