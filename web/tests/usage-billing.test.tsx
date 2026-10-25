@@ -23,7 +23,7 @@ it('lists routing and domain safety as free without changing the two paid rates'
  }
  expect(screen.getAllByText('免费',{exact:true})).toHaveLength(5);
  expect(screen.getAllByText('$0.05',{exact:true})).toHaveLength(2);
- expect(screen.getByText('域名安全检测免费，账户有可用余额或赠送额度即可开启。')).toBeTruthy();
+ expect(screen.queryByText('域名安全检测免费，账户有可用余额或赠送额度即可开启。')).toBeNull();
  expect(document.body.textContent).not.toContain('120');
 });
 it('formats configurable prices through six decimals and preserves zero',()=>{

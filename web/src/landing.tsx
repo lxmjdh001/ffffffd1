@@ -1,4 +1,5 @@
-import { UsageRates, usagePrice } from './usage-billing';
+import { RegistrationGift } from './registration-gift';
+import { UsageRates } from './usage-billing';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Bell, Check, Globe2, Layers3, Link2, ListFilter, Monitor, Package, Radio, RotateCcw, ShieldCheck, Smartphone } from 'lucide-react';
 import { Brand } from './auth';
@@ -24,6 +25,7 @@ export function LandingPage() {
   const startPath = `${config.registration_open ? '/register' : '/login'}${inviteQuery}`;
   const startLabel = config.registration_open ? t('免费开始') : t('登录控制台');
   return <div className="home home-editorial">
+    <RegistrationGift registerPath={`/register${inviteQuery}`} />
     <HomeNavigation inviteQuery={inviteQuery} startPath={startPath} />
     <main>
       <section className="home-width home-hero">
@@ -47,7 +49,7 @@ export function LandingPage() {
 
       <section className="home-width home-how" id="home-how" aria-labelledby="home-how-heading"><div className="home-section-top"><span className="home-eyebrow">04 / A SIMPLE START</span><div><h2 id="home-how-heading">{content.journey.heading}</h2></div></div><div className="home-steps">{content.journey.steps.map((step,index) => <article key={index}><span>0{index+1}</span><h3>{step.title}</h3><p>{step.description}</p></article>)}</div></section>
 
-      {config.metered_billing && <section className="home-width home-pricing" id="home-pricing" aria-labelledby="home-pricing-heading"><div className="home-section-top home-pricing-copy"><span className="home-eyebrow">05 / PAY AS YOU GO</span><div><h2 id="home-pricing-heading">{t('仅下载与安装计费')}<br/><em>{t('只为实际用量付费。')}</em></h2><p>{t('注册即赠 ${0} 用量额度。',{0:usagePrice(config.registration_gift_micros ?? 100e6)})}</p><Link className="home-button" to={startPath}>{startLabel}<ArrowUpRight size={17}/></Link></div></div><UsageRates config={config}/></section>}
+      {config.metered_billing && <section className="home-width home-pricing" id="home-pricing" aria-labelledby="home-pricing-heading"><div className="home-section-top home-pricing-copy"><span className="home-eyebrow">05 / PAY AS YOU GO</span><div><h2 id="home-pricing-heading">{t('仅下载与安装计费')}<br/><em>{t('只为实际用量付费。')}</em></h2><Link className="home-button" to={startPath}>{startLabel}<ArrowUpRight size={17}/></Link></div></div><UsageRates config={config}/></section>}
 {!config.metered_billing && <>      <section className="home-width home-pricing" id="home-pricing" aria-labelledby="home-pricing-heading"><div className="home-section-top home-pricing-copy"><span className="home-eyebrow">05 / FIND YOUR PACE</span><div><h2 id="home-pricing-heading">{t('从免费开始，')}<br /><em>{t('随成长升级。')}</em></h2><p>{t('选择适合你的发布节奏，额度与价格一目了然。')}</p></div></div><div className="home-pricing-grid">{config.plans.map(plan => { const paid = plan.id !== 'free'; return <article className={`home-plan ${paid ? 'home-plan-paid' : ''}`} key={plan.id}><div className="home-plan-top"><span>{paid ? t('为更进一步而准备') : t('让第一个想法出发')}</span><ArrowUpRight size={20} /></div><h3>{localizedPlanName(plan.name)}</h3><div className="home-plan-price"><span>$</span><strong>{money(plan.price_micros, plan.price_micros % 1e6 === 0 ? 0 : 2)}</strong><small>{paid ? t('/ 月') : t('/ 免费')}</small></div><Link className={`home-button ${paid ? '' : 'home-button-outline'}`} to={startPath}>{config.registration_open ? paid ? t('选择{0}',{0:localizedPlanName(plan.name)}) : t('免费创建账户') : t('登录查看套餐')}<ArrowUpRight size={17} /></Link><ul><li><Check size={15} /><span><strong>{number(plan.app_limit)}</strong> {t(' 个应用名额')}</span></li><li><Check size={15} /><span><strong>{bytes(plan.storage_bytes)}</strong> {t(' 存储空间')}</span></li><li><Check size={15} /><span>{paid ? t('每个付费月赠送') : t('注册赠送')} <strong>{number(plan.download_limit)}</strong> {t(' 次下载')}</span></li><li><Check size={15} /><span>{t('自定义下载域名与下载统计')}</span></li>{paid && <li><ShieldCheck size={15} /><span>{t('自动检查域名安全')}</span></li>}</ul><p className="home-plan-footnote">{paid ? t('每个付费月发放下载额度，续费后再次赠送。安全检测需在应用分流中开启。') : t('注册赠送一次，剩余下载次数保留至用完。')}</p></article>; })}</div><p className="home-pricing-note">{t('赠送次数用完后，按 $')}{money(config.download_price_micros,3)} {t(' / 次扣除账户余额。')}</p></section>
 
 </>}
