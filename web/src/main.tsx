@@ -4,4 +4,6 @@ import { Root } from './root';
 import './styles.css';
 
 if (!window.location.hash) window.history.replaceState(null, '', `/${window.location.search}#/welcome`);
-createRoot(document.getElementById('root')!).render(<StrictMode><Root /></StrictMode>);
+const rootElement = document.getElementById('root')!;
+const initialHomeHTML = rootElement.innerHTML;
+createRoot(rootElement).render(<StrictMode><Root initialHomeHTML={initialHomeHTML} /></StrictMode>);

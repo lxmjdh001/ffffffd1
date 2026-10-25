@@ -1,4 +1,5 @@
 import { RegistrationGift } from './registration-gift';
+import { useEffect } from 'react';
 import { UsageRates } from './usage-billing';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Bell, Check, Globe2, Layers3, Link2, ListFilter, Monitor, Package, Radio, RotateCcw, ShieldCheck, Smartphone } from 'lucide-react';
@@ -17,6 +18,7 @@ const featureIcons = { security: ShieldCheck, domains: Globe2, analytics: Monito
 
 export function LandingPage() {
   useLocale();
+  useEffect(() => { window.dispatchEvent(new Event('d1:home-ready')); }, []);
   const content = translateContent(originalHomeContent);
   const { config } = useConfig();
   const location = useLocation();

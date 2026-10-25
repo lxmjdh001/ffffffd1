@@ -6,9 +6,31 @@
     <meta name="theme-color" content="#eef5ff" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- HOME_SEO_HEAD -->
+    <style>
+      #home-loading[hidden]{display:none}
+      html[data-home-loading] #root{filter:blur(4px);pointer-events:none;user-select:none}
+      #home-loading{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:rgba(247,246,240,.56);color:#34483d;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .home-loading-card{position:relative;isolation:isolate;display:flex;align-items:center;flex-direction:column;width:230px;max-width:calc(100vw - 48px);box-sizing:border-box;gap:13px;padding:26px 28px 25px;border:1px solid #fff;border-radius:28px;background:linear-gradient(145deg,#fffef9f5,#f3f4e9f2);box-shadow:0 20px 70px #26352218,inset 0 1px 0 #fff;overflow:hidden}
+      .home-loading-brand{font-size:9px;font-weight:650;letter-spacing:.23em;color:#7a8874}
+      .home-loading-orbit{position:relative;display:grid;place-items:center;width:92px;height:92px;margin:2px 0}
+      .home-loading-orbit:before{content:"";position:absolute;inset:18px;border-radius:50%;background:#c8dcb2;filter:blur(19px);opacity:.65}
+      .home-loading-ring{position:absolute;inset:0;border:1px solid #dce3d5;border-radius:50%}
+      .home-loading-ring:before{content:"";position:absolute;inset:-1px;border:2px solid transparent;border-top-color:#526c49;border-right-color:#526c4966;border-radius:50%;animation:home-loading-spin 1.5s linear infinite}
+      .home-loading-ring:after{content:"";position:absolute;inset:9px;border:1px dashed #bac8aa;border-radius:50%;animation:home-loading-spin 8s linear infinite reverse}
+      .home-loading-core{position:relative;display:grid;place-items:center;width:40px;height:44px;border-radius:14px;background:linear-gradient(145deg,#536b4b,#344b3c);color:#f3f7e8;font-size:23px;line-height:1;font-weight:700;box-shadow:0 6px 15px #344b3c24,inset 0 1px 0 #ffffff30}
+      .home-loading-label{font-size:14px;font-weight:550;letter-spacing:.025em}
+      .home-loading-dots{display:flex;gap:5px;height:5px;margin-top:1px}
+      .home-loading-dots i{width:4px;height:4px;border-radius:50%;background:#82966d;animation:home-loading-pulse 1.2s ease-in-out infinite}
+      .home-loading-dots i:nth-child(2){animation-delay:.15s}.home-loading-dots i:nth-child(3){animation-delay:.3s}
+      @keyframes home-loading-spin{to{transform:rotate(360deg)}}
+      @keyframes home-loading-pulse{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:scale(1.15)}}
+      @media(prefers-reduced-motion:reduce){.home-loading-ring:before,.home-loading-ring:after,.home-loading-dots i{animation:none}}
+    </style>
   </head>
   <body>
     <div id="root"><!-- HOME_PRERENDER --></div>
+    <div id="home-loading" role="status" aria-live="polite" lang="en" hidden><div class="home-loading-card"><div class="home-loading-brand" aria-hidden="true">D1 APK</div><div class="home-loading-orbit" aria-hidden="true"><i class="home-loading-ring"></i><b class="home-loading-core">D</b></div><span class="home-loading-label" data-loading-label>Loading...</span><div class="home-loading-dots" aria-hidden="true"><i></i><i></i><i></i></div></div></div>
+    <script defer src="/assets/home-loading-v2.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
