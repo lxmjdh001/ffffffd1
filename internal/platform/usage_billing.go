@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 const meteredBillingVersion = 20
@@ -24,6 +23,7 @@ type MeteredEvent struct {
 	SourceID    string `gorm:"size:64;index"`
 	State       string `gorm:"size:16;not null;index"`
 	PriceMicros int64
+	GiftMicros  int64
 	GrantID     string    `gorm:"size:64"`
 	Period      string    `gorm:"size:7"`
 	ExpiresAt   time.Time `gorm:"index"`
@@ -88,38 +88,10 @@ func usagePrice(x Settings, kind string) int64 {
 		return x.DownloadPriceMicros
 	case "pwa_install":
 		return x.PWAInstallPriceMicros
-	case "cloak_uv":
-		return x.CloakUVPriceMicros
-	case "return_flow":
-		return x.ReturnFlowPriceMicros
-	case "pwa_push":
-		return x.PWAPushPriceMicros
+	case "cloak_uv", "return_flow", "pwa_push":
+		return 0
 	}
 	return -1
-}
-
-// Registration gifts form one shared pool for APK UVs and PWA installs. Honor
-// previously purchased/granted, still-valid gifts without minting monthly gifts.
-func activeMeteredGrant(db *gorm.DB, u User, x Settings, now time.Time) (*DownloadGrant, error) {
-	grant := DownloadGrant{ID: "free:" + u.ID, UserID: u.ID, PlanID: "free", Limit: x.RegistrationGiftLimit, StartsAt: u.CreatedAt}
-	if e := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&grant).Error; e != nil {
-		return nil, e
-	}
-	var found DownloadGrant
-	e := db.Where("user_id = ? AND starts_at <= ? AND (expires_at = ? OR expires_at > ?) AND used + reserved < \"limit\"", u.ID, now, time.Time{}, now).Clauses(clause.OrderBy{Expression: clause.Expr{SQL: "CASE WHEN expires_at = ? THEN 1 ELSE 0 END, expires_at ASC, starts_at ASC", Vars: []any{time.Time{}}}}).First(&found).Error
-	if errors.Is(e, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	return &found, e
-}
-
-func meteredGiftTotals(db *gorm.DB, u User, x Settings, now time.Time) (limit, used, reserved int64, err error) {
-	if _, err = activeMeteredGrant(db, u, x, now); err != nil {
-		return
-	}
-	var totals struct{ Limit, Used, Reserved int64 }
-	err = db.Model(&DownloadGrant{}).Where("user_id = ? AND starts_at <= ? AND (expires_at = ? OR expires_at > ?)", u.ID, now, time.Time{}, now).Select("COALESCE(SUM(\"limit\"),0) AS \"limit\", COALESCE(SUM(used),0) AS used, COALESCE(SUM(reserved),0) AS reserved").Scan(&totals).Error
-	return totals.Limit, totals.Used, totals.Reserved, err
 }
 
 func reserveMetered(tx *gorm.DB, u *User, x Settings, now time.Time, id, kind, resource, source string, expires time.Time) (MeteredEvent, error) {
@@ -142,25 +114,16 @@ func reserveMetered(tx *gorm.DB, u *User, x Settings, now time.Time, id, kind, r
 		return event, problem(400, "计费类型无效")
 	}
 	event = MeteredEvent{ID: id, UserID: u.ID, Kind: kind, ResourceID: resource, SourceID: source, State: "pending", PriceMicros: price, Period: period(now), ExpiresAt: expires, CreatedAt: now}
-	if (kind == "apk_uv" || kind == "pwa_install") && price > 0 {
-		grant, e := activeMeteredGrant(tx, *u, x, now)
-		if e != nil {
-			return event, e
-		}
-		if grant != nil {
-			event.GrantID = grant.ID
-			event.PriceMicros = 0
-			if e = tx.Model(grant).UpdateColumn("reserved", gorm.Expr("reserved + 1")).Error; e != nil {
-				return event, e
-			}
-		}
-	}
+
 	if event.GrantID == "" && event.PriceMicros > 0 {
-		if u.BalanceMicros-u.HeldMicros < event.PriceMicros {
+		event.GiftMicros = min(u.GiftBalanceMicros-u.GiftHeldMicros, event.PriceMicros)
+		cash := event.PriceMicros - event.GiftMicros
+		if u.BalanceMicros-u.HeldMicros < cash {
 			return event, problem(402, "可用余额不足，请先充值")
 		}
-		u.HeldMicros += event.PriceMicros
-		if e = tx.Model(u).Update("held_micros", u.HeldMicros).Error; e != nil {
+		u.HeldMicros += cash
+		u.GiftHeldMicros += event.GiftMicros
+		if e = tx.Model(u).Updates(map[string]any{"held_micros": u.HeldMicros, "gift_held_micros": u.GiftHeldMicros}).Error; e != nil {
 			return event, e
 		}
 	}
@@ -174,22 +137,40 @@ func settleMetered(tx *gorm.DB, u *User, event *MeteredEvent, now time.Time, com
 	if event.State != "pending" {
 		return nil
 	}
+	if freeUsageKind(event.Kind) {
+		complete = false
+	}
 	if event.GrantID != "" {
 		if e := settleGiftGrant(tx, Ticket{GrantID: event.GrantID, UserID: u.ID}, complete); e != nil {
 			return e
 		}
 	} else if event.PriceMicros > 0 {
-		if u.HeldMicros < event.PriceMicros {
+		cash := event.PriceMicros - event.GiftMicros
+		if event.GiftMicros < 0 || cash < 0 || u.HeldMicros < cash || u.GiftHeldMicros < event.GiftMicros {
 			return errors.New("usage hold invariant failed")
 		}
-		u.HeldMicros -= event.PriceMicros
-		if e := tx.Model(u).Update("held_micros", u.HeldMicros).Error; e != nil {
+		u.HeldMicros -= cash
+		u.GiftHeldMicros -= event.GiftMicros
+		if e := tx.Model(u).Updates(map[string]any{"held_micros": u.HeldMicros, "gift_held_micros": u.GiftHeldMicros}).Error; e != nil {
 			return e
 		}
 	}
 	if complete {
-		if event.PriceMicros > 0 {
-			if e := changeBalance(tx, u, -event.PriceMicros, "usage:"+event.ID, event.Kind, "按量计费 · "+event.Kind); e != nil {
+		cash := event.PriceMicros - event.GiftMicros
+		if cash > 0 {
+			if e := changeBalance(tx, u, -cash, "usage:"+event.ID, event.Kind, "按量计费 · "+event.Kind); e != nil {
+				return e
+			}
+		}
+		if event.GiftMicros > 0 {
+			if u.GiftBalanceMicros < event.GiftMicros {
+				return errors.New("usage gift invariant failed")
+			}
+			u.GiftBalanceMicros -= event.GiftMicros
+			if e := tx.Model(u).Update("gift_balance_micros", u.GiftBalanceMicros).Error; e != nil {
+				return e
+			}
+			if e := tx.Create(&Ledger{ID: randomHex(16), UserID: u.ID, Reference: "usage-gift:" + event.ID, Kind: event.Kind, BalanceType: "gift", AmountMicros: -event.GiftMicros, BalanceMicros: u.GiftBalanceMicros, Note: "赠送额度抵扣", CreatedAt: now}).Error; e != nil {
 				return e
 			}
 		}
@@ -197,11 +178,11 @@ func settleMetered(tx *gorm.DB, u *User, event *MeteredEvent, now time.Time, com
 		if e := tx.Where("user_id = ? AND period = ?", u.ID, event.Period).FirstOrCreate(&usage).Error; e != nil {
 			return e
 		}
-		if event.GrantID != "" {
+		if event.GrantID != "" || (event.GiftMicros > 0 && cash == 0) {
 			usage.FreeUsed++
 		} else {
 			usage.PaidUsed++
-			usage.SpentMicros += event.PriceMicros
+			usage.SpentMicros += cash
 		}
 		if e := tx.Save(&usage).Error; e != nil {
 			return e
@@ -215,6 +196,9 @@ func settleMetered(tx *gorm.DB, u *User, event *MeteredEvent, now time.Time, com
 }
 
 func (s *Server) chargeUsageUV(r *http.Request, owner, kind, resource string) error {
+	if freeUsageKind(kind) {
+		return nil
+	}
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		return nil
 	}
@@ -276,11 +260,10 @@ func (s *Server) riskEligible(db *gorm.DB, u User) (bool, error) {
 	if !x.MeteredBilling {
 		return u.PlanID(s.Now()) == "pro", nil
 	}
-	if u.BalanceMicros-u.HeldMicros > 0 {
+	if u.BalanceMicros-u.HeldMicros > 0 || u.GiftBalanceMicros-u.GiftHeldMicros > 0 {
 		return true, nil
 	}
-	limit, used, reserved, e := meteredGiftTotals(db, u, x, s.Now())
-	return limit-used-reserved > 0, e
+	return false, nil
 }
 
 func (s *Server) cleanupMeteredUsage(ctx context.Context) error {
@@ -396,21 +379,7 @@ func (s *Server) pwaInstallUsage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) reservePushUsage(ctx context.Context, d PWAPushDelivery) error {
-	return s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		u, e := lockUser(tx, d.UserID)
-		if e != nil {
-			return e
-		}
-		x, e := getSettings(tx)
-		if e != nil || !x.MeteredBilling {
-			return e
-		}
-		event, e := reserveMetered(tx, &u, x, s.Now(), hashString("pwa-push:"+d.ID), "pwa_push", d.PWAID, d.ID, d.ExpiresAt)
-		if e == nil && event.State == "released" {
-			return problem(409, "推送计费预留已释放")
-		}
-		return e
-	})
+	return nil // Push is free, including accounts without balance or gift credit.
 }
 
 func (s *Server) settlePushUsage(tx *gorm.DB, d PWAPushDelivery, accepted, terminal bool) error {
@@ -433,5 +402,5 @@ func (s *Server) settlePushUsage(tx *gorm.DB, d PWAPushDelivery, accepted, termi
 }
 
 func publicMeteredPlans(x Settings) []Plan {
-	return []Plan{{ID: "free", Name: "按量计费", AppLimit: x.AppLimit, DownloadLimit: x.RegistrationGiftLimit, StorageBytes: x.StorageLimitBytes}}
+	return []Plan{{ID: "free", Name: "按量计费", AppLimit: x.AppLimit, StorageBytes: x.StorageLimitBytes}}
 }

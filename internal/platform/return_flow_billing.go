@@ -11,9 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const returnFlowViewPrice int64 = Dollar / 100
-const returnFlowDedupWindow = 24 * time.Hour
-
 // One rolling window per owner, application kind, application and normalized IP.
 // Raw visitor addresses are not retained in the billing guard.
 type ReturnFlowViewCharge struct {
@@ -119,7 +116,6 @@ func (s *Server) returnFlowView(w http.ResponseWriter, r *http.Request, kind str
 		if u.Disabled {
 			return problem(404, "应用不可用")
 		}
-		name := ""
 		if kind == "apk" {
 			var a Application
 			if e := tx.First(&a, "id = ? AND user_id = ? AND enabled = ? AND blocked = ?", id, owner, true, false).Error; e != nil {
@@ -129,7 +125,6 @@ func (s *Server) returnFlowView(w http.ResponseWriter, r *http.Request, kind str
 			if e := tx.First(&d, "app_id = ?", id).Error; e != nil || d.Design.ReturnFlowConfig == nil || !d.Design.ReturnFlowConfig.Enabled {
 				return problem(409, "回流页未开启")
 			}
-			name = a.Name
 		} else {
 			var a PWAApp
 			if e := tx.First(&a, "id = ? AND user_id = ? AND enabled = ?", id, owner, true).Error; e != nil {
@@ -138,51 +133,8 @@ func (s *Server) returnFlowView(w http.ResponseWriter, r *http.Request, kind str
 			if !storedReturnFlow(a.ReturnFlowJSON).Enabled {
 				return problem(409, "回流页未开启")
 			}
-			name = a.Name
 		}
-		x, e := getSettings(tx)
-		if e != nil {
-			return e
-		}
-		if x.MeteredBilling {
-			if !hexKey.MatchString(in.EventID) {
-				return problem(400, "缺少展示事件编号")
-			}
-			if in.Action != "" && in.Action != "reserve" && in.Action != "complete" && in.Action != "cancel" {
-				return problem(400, "展示动作无效")
-			}
-			event, e := reserveMetered(tx, &u, x, s.Now(), s.mac("return-flow-event:"+owner+":"+kind+":"+id+":"+in.Token+":"+in.EventID), "return_flow", id, kind, s.Now().Add(5*time.Minute))
-			if e != nil {
-				return e
-			}
-			if in.Action == "reserve" {
-				confirmationRequired = true
-				return nil
-			}
-			if in.Action != "cancel" && event.State == "released" {
-				return problem(410, "展示凭证已释放")
-			}
-			if in.Action == "complete" && event.State == "pending" && !event.ExpiresAt.After(s.Now()) {
-				return problem(410, "展示凭证已过期")
-			}
-			return settleMetered(tx, &u, &event, s.Now(), in.Action != "cancel")
-		}
-		key := s.mac("return-flow-charge:" + owner + ":" + kind + ":" + id + ":" + ip)
-		var guard ReturnFlowViewCharge
-		e = tx.First(&guard, "key = ?", key).Error
-		if e != nil && e != gorm.ErrRecordNotFound {
-			return e
-		}
-		now := s.Now().UTC()
-		if e == nil && guard.ChargedAt.After(now.Add(-returnFlowDedupWindow)) {
-			return nil
-		}
-		reference := "return-flow:" + key + ":" + randomHex(16)
-		if e := changeBalance(tx, &u, -returnFlowViewPrice, reference, "return_flow", "回流页展示 · "+name); e != nil {
-			return e
-		}
-		guard = ReturnFlowViewCharge{Key: key, UserID: owner, AppID: id, AppKind: kind, ChargedAt: now, LedgerReference: reference}
-		return tx.Save(&guard).Error
+		return nil // Free feature: authorization only, never reserve or charge.
 	})
 	if e != nil {
 		fail(w, e)

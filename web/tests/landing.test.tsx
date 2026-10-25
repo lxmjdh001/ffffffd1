@@ -23,10 +23,10 @@ function openLanding(registration_open = true) {
 }
 
 describe('public landing page', () => {
-  it('replaces subscription cards with five usage prices and shared welcome credit', () => {
-    render(<MemoryRouter><ConfigContext.Provider value={{config:{...config,metered_billing:true,plans:[{...config.plans[0],name:'按量计费'}],registration_gift_limit:1000},reload:vi.fn()}}><LandingPage/></ConfigContext.Provider></MemoryRouter>);
+  it('shows two 0.05 prices, three free features, and a 100-dollar welcome credit', () => {
+    render(<MemoryRouter><ConfigContext.Provider value={{config:{...config,metered_billing:true,download_price_micros:50000,pwa_install_price_micros:50000,plans:[{...config.plans[0],name:'按量计费'}],registration_gift_micros:100e6},reload:vi.fn()}}><LandingPage/></ConfigContext.Provider></MemoryRouter>);
     const pricing=document.getElementById('home-pricing')!;
-    expect(pricing.textContent).toContain('全部功能免费开放');expect(pricing.textContent).toContain('只为实际用量付费');expect(pricing.textContent).toContain('共用 1,000 次');
+    expect(pricing.textContent).toContain('仅下载与安装计费');expect(pricing.textContent).toContain('只为实际用量付费');expect(pricing.textContent).toContain('注册即赠 $100 用量额度。');expect(within(pricing).getAllByText('$0.05')).toHaveLength(2);expect(within(pricing).getAllByText('免费',{exact:true})).toHaveLength(3);expect(pricing.textContent).not.toContain('1,000');
     expect(pricing.querySelectorAll('.usage-rate-grid article')).toHaveLength(5);expect(pricing.querySelector('.home-plan')).toBeNull();expect(pricing.textContent).not.toContain('/ 月');expect(document.getElementById('home-security')!.textContent).not.toContain('付费会员');
   });
   it('shows configured plan data and keeps the security benefit on the paid plan', () => {

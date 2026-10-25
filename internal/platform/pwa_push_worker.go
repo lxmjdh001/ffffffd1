@@ -238,9 +238,6 @@ func (s *Server) sendPWAPush(ctx context.Context, d PWAPushDelivery) pwaPushOutc
 		return pwaPushOutcome{message: "通知内容无效"}
 	}
 	subscription := &webpush.Subscription{Endpoint: stored.Endpoint, Keys: webpush.Keys{P256dh: stored.Keys.P256DH, Auth: stored.Keys.Auth}}
-	if e = s.reservePushUsage(ctx, d); e != nil {
-		return pwaPushOutcome{retryable: true, message: "可用余额不足或计费暂时不可用，等待重试", retryAfter: 5 * time.Minute}
-	}
 	client := s.pwaPushHTTP
 	if client == nil {
 		client = s.securePWAPushClient()

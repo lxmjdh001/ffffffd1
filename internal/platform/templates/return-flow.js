@@ -39,29 +39,6 @@
     window.installPWA = options => Promise.resolve(window.D1ReturnFlowInstall(options));
   }
 
-  let pendingReturnFlowView;
-  const unconfirmedReturnFlowViews=new Map();
-  const finishReturnFlowView=async(action)=>{
-    const view=pendingReturnFlowView;if(!view)return;pendingReturnFlowView=undefined;
-    if(action==='complete')unconfirmedReturnFlowViews.set(view.event_id,view);
-    try{const response=await fetch(view.endpoint,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:view.token,event_id:view.event_id,action})});if(response.ok)unconfirmedReturnFlowViews.delete(view.event_id);}catch(_){}
-  };
-  window.addEventListener('online',()=>{for(const view of unconfirmedReturnFlowViews.values()){pendingReturnFlowView=view;void finishReturnFlowView('complete');}});
-  const authorizeReturnFlowView = async () => {
-    const endpoint = body.dataset.returnFlowEndpoint;
-    const token = body.dataset.returnFlowToken;
-    if (!endpoint || !token || document.hidden || !/^\/(?:a|p)\/[A-Za-z0-9_-]+\/return-flow\/view$/.test(endpoint)) return false;
-    try {
-      const bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);
-      const event_id=Array.from(bytes,v=>v.toString(16).padStart(2,'0')).join('');
-      const response = await fetch(endpoint, {method:'POST', credentials:'same-origin', cache:'no-store', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token,event_id,action:'reserve'})});
-      if (!response.ok) return false;
-      const result = await response.json();
-      if(result.allowed===true&&result.confirmation_required===true)pendingReturnFlowView={endpoint,token,event_id};
-      return result.allowed === true;
-    } catch (_) { return false; }
-  };
-
   let returnFlowInitialized = false;
   window.scheduleReturnFlowRiskCancelPrompt = () => false;
 
@@ -344,10 +321,6 @@
     const returnFlowConfig = normalizeReturnFlowConfig(getReturnFlowConfig());
     if (!returnFlowConfig.enabled) return;
 
-    /* D1_BILLING_START */
-    let billingPending = false;
-    let billingApproved = false;
-    /* D1_BILLING_END */
     let actionRunning = false;
     let backGuardActive = false;
     let hiddenAt = 0;
@@ -468,22 +441,7 @@
     function showReturnFlowModal(reason) {
       if (actionRunning || hasShownOnce()) return false;
       /* D1_BILLING_START */
-      if (!billingApproved) {
-        if (billingPending) return true;
-        if (document.hidden) return false;
-        billingPending = true;
-        void authorizeReturnFlowView().then(allowed => {
-          billingPending = false;
-          if (!allowed) {
-            if (reason === 'back') { try { history.back(); } catch (_) {} }
-            return;
-          }
-          if(document.hidden){void finishReturnFlowView('cancel');return;}
-          billingApproved = true;
-          try { if(!showReturnFlowModal(reason))void finishReturnFlowView('cancel'); } catch(_){void finishReturnFlowView('cancel');} finally { billingApproved = false; }
-        });
-        return true;
-      }
+      if (document.hidden) return false;
       /* D1_BILLING_END */
 
       markShown();
@@ -579,9 +537,6 @@
       shell.appendChild(actionButton);
       overlay.appendChild(shell);
       document.body.appendChild(overlay);
-      /* D1_BILLING_START */
-      void finishReturnFlowView('complete');
-      /* D1_BILLING_END */
       document.documentElement.classList.add('pwa-return-flow-lock');
       returnFlowOverlay = overlay;
 

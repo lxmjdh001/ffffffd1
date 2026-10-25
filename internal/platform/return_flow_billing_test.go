@@ -58,193 +58,80 @@ func returnBillingCall(s *Server, path, token, ip, origin string) *httptest.Resp
 	s.Handler().ServeHTTP(w, r)
 	return w
 }
-func TestReturnFlowBillingPerApplicationRollingWindowAndConcurrency(t *testing.T) {
+func TestReturnFlowFreeConcurrencyAndNoBalanceRequirement(t *testing.T) {
 	for _, kind := range []string{"apk", "pwa"} {
 		t.Run(kind, func(t *testing.T) {
 			s := testServer(t)
-			now := time.Date(2026, 10, 24, 23, 59, 0, 0, time.UTC)
-			s.Now = func() time.Time { return now }
-			u := seedUser(t, s, Dollar)
+			u := seedUser(t, s, 0)
 			_, page := billedReturnApp(t, s, u, kind)
-			endpoint := strings.TrimSuffix(page, "/info")
-			endpoint = strings.TrimSuffix(endpoint, "/") + "/return-flow/view"
-			ip := "203.0.113.77"
+			endpoint := strings.TrimRight(strings.TrimSuffix(page, "/info"), "/") + "/return-flow/view"
+			ip := "203.0.113.90"
 			token := returnBillingPage(t, s, page, ip)
-			if countRows(t, s, &Ledger{}) != 0 {
-				t.Fatal("opening page charged before display")
-			}
 			var wg sync.WaitGroup
-			for i := 0; i < 32; i++ {
+			for range 24 {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
 					w := returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL)
 					if w.Code != 200 {
-						t.Errorf("parallel display %d: %s", w.Code, w.Body.String())
+						t.Errorf("free return %d", w.Code)
 					}
 				}()
 			}
 			wg.Wait()
-			assert := func(count, spent int64) {
-				t.Helper()
-				var owner User
-				s.DB.First(&owner, "id = ?", u.ID)
-				if countRows(t, s, &Ledger{}) != count || owner.BalanceMicros != Dollar-spent || owner.HeldMicros != 0 {
-					t.Fatalf("count=%d balance=%d held=%d", countRows(t, s, &Ledger{}), owner.BalanceMicros, owner.HeldMicros)
-				}
-			}
-			assert(1, 10000)
-			// A new date, cookie or page token must not reset the rolling window.
-			now = now.Add(2 * time.Minute)
-			token = returnBillingPage(t, s, page, ip)
-			requireCode(t, returnBillingCall(s, endpoint, token, "::ffff:203.0.113.77", s.Config.PublicURL), 200)
-			assert(1, 10000)
-			now = now.Add(23*time.Hour + 57*time.Minute)
+			now := s.Now()
+			s.Now = func() time.Time { return now.Add(25 * time.Hour) }
 			token = returnBillingPage(t, s, page, ip)
 			requireCode(t, returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL), 200)
-			assert(1, 10000)
-			now = now.Add(time.Minute)
-			token = returnBillingPage(t, s, page, ip)
-			requireCode(t, returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL), 200)
-			assert(2, 20000)
-			_, otherPage := billedReturnApp(t, s, u, kind)
-			otherEndpoint := strings.TrimSuffix(strings.TrimSuffix(otherPage, "/info"), "/") + "/return-flow/view"
-			otherToken := returnBillingPage(t, s, otherPage, ip)
-			requireCode(t, returnBillingCall(s, otherEndpoint, otherToken, ip, s.Config.PublicURL), 200)
-			assert(3, 30000)
-			newIP := "203.0.113.78"
-			newToken := returnBillingPage(t, s, page, newIP)
-			requireCode(t, returnBillingCall(s, endpoint, newToken, newIP, s.Config.PublicURL), 200)
-			assert(4, 40000)
-			if countRows(t, s, &Download{}) != 0 || countRows(t, s, &Ticket{}) != 0 || countRows(t, s, &Usage{}) != 0 {
-				t.Fatal("return impression changed download counts/quota")
+			got := usageOwner(t, s, u.ID)
+			if got.BalanceMicros != 0 || got.HeldMicros != 0 || countRows(t, s, &Ledger{}) != 0 || countRows(t, s, &ReturnFlowViewCharge{}) != 0 {
+				t.Fatal("free return billed or created billing guards")
 			}
-			var guards []ReturnFlowViewCharge
-			s.DB.Find(&guards)
-			if len(guards) != 3 {
-				t.Fatal("dedup guards do not match application/IP boundaries")
-			}
-			for _, g := range guards {
-				if strings.Contains(g.Key, ip) || g.UserID != u.ID || g.AppKind != kind {
-					t.Fatal("guard isolation or IP hashing incorrect")
-				}
-			}
-			otherOwner := seedUser(t, s, Dollar)
-			_, isolatedPage := billedReturnApp(t, s, otherOwner, kind)
-			isolatedToken := returnBillingPage(t, s, isolatedPage, ip)
-			isolatedEndpoint := strings.TrimSuffix(strings.TrimSuffix(isolatedPage, "/info"), "/") + "/return-flow/view"
-			requireCode(t, returnBillingCall(s, isolatedEndpoint, isolatedToken, ip, s.Config.PublicURL), 200)
-			var isolated User
-			s.DB.First(&isolated, "id = ?", otherOwner.ID)
-			var original User
-			s.DB.First(&original, "id = ?", u.ID)
-			if isolated.BalanceMicros != Dollar-10000 || original.BalanceMicros != Dollar-40000 {
-				t.Fatal("tenant charging was not isolated")
-			}
-			t.Log(fmt.Sprintf("%s: 32 concurrent displays charge $0.01 once; rolling expiry, per-app separation and normalized IP verified", kind))
 		})
 	}
 }
-func TestReturnFlowBillingProofAvailabilityAndBalance(t *testing.T) {
+
+func TestReturnFlowFreeStillValidatesProofOriginAndFeature(t *testing.T) {
 	for _, kind := range []string{"apk", "pwa"} {
 		t.Run(kind, func(t *testing.T) {
 			s := testServer(t)
-			u := seedUser(t, s, 10000)
+			u := seedUser(t, s, 0)
 			id, page := billedReturnApp(t, s, u, kind)
-			endpoint := strings.TrimSuffix(strings.TrimSuffix(page, "/info"), "/") + "/return-flow/view"
+			endpoint := strings.TrimRight(strings.TrimSuffix(page, "/info"), "/") + "/return-flow/view"
 			ip := "203.0.113.90"
 			token := returnBillingPage(t, s, page, ip)
 			for _, test := range []struct{ token, ip, origin string }{{token + "x", ip, s.Config.PublicURL}, {token, "203.0.113.91", s.Config.PublicURL}, {token, ip, ""}, {token, ip, "https://hostile.example"}} {
 				requireCode(t, returnBillingCall(s, endpoint, test.token, test.ip, test.origin), 403)
 			}
-			if e := s.DB.Model(&u).Update("held_micros", 1).Error; e != nil {
-				t.Fatal(e)
-			}
-			requireCode(t, returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL), 402)
-			var owner User
-			s.DB.First(&owner, "id = ?", u.ID)
-			if owner.BalanceMicros != 10000 || countRows(t, s, &Ledger{}) != 0 || countRows(t, s, &ReturnFlowViewCharge{}) != 0 {
-				t.Fatal("failed impression changed money or dedup guard")
-			}
-			s.DB.Model(&u).Update("held_micros", 0)
 			requireCode(t, returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL), 200)
-			requireCode(t, returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL), 200)
-			s.DB.First(&owner, "id = ?", u.ID)
-			if owner.BalanceMicros != 0 || countRows(t, s, &Ledger{}) != 1 {
-				t.Fatal("repeat view should work at zero balance without a second charge")
-			}
-			if kind == "apk" {
-				s.DB.Model(&Application{}).Where("id = ?", id).Update("enabled", false)
+			if kind == "pwa" {
+				s.DB.Model(&PWAApp{}).Where("id = ?", id).Update("return_flow_json", "{}")
 			} else {
-				s.DB.Model(&PWAApp{}).Where("id = ?", id).Update("enabled", false)
+				var page AppPageDesign
+				s.DB.First(&page, "app_id = ?", id)
+				page.Design.ReturnFlowConfig = nil
+				s.DB.Save(&page)
 			}
-			requireCode(t, returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL), 404)
+			requireCode(t, returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL), 409)
+			if countRows(t, s, &Ledger{}) != 0 {
+				t.Fatal("invalid or disabled free return changed ledger")
+			}
 		})
 	}
 }
-func TestReturnFlowBillingConcurrentIPsNeverOverdraw(t *testing.T) {
-	s := testServer(t)
-	u := seedUser(t, s, 10000)
-	id, page := billedReturnApp(t, s, u, "apk")
-	endpoint := strings.TrimSuffix(page, "/info") + "/return-flow/view"
-	var wg sync.WaitGroup
-	codes := make(chan int, 24)
-	for i := 0; i < 24; i++ {
-		ip := fmt.Sprintf("203.0.113.%d", i+1)
-		r := httptest.NewRequest("GET", "http://localhost:8088"+page, nil)
-		r.RemoteAddr = net.JoinHostPort(ip, "1234")
-		token := s.returnFlowViewToken("apk", id, r)
-		wg.Add(1)
-		go func() { defer wg.Done(); codes <- returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL).Code }()
-	}
-	wg.Wait()
-	close(codes)
-	ok := 0
-	for code := range codes {
-		if code == 200 {
-			ok++
-		} else if code != 402 {
-			t.Fatal("unexpected status", code)
-		}
-	}
-	var owner User
-	s.DB.First(&owner, "id = ?", u.ID)
-	if ok != 1 || owner.BalanceMicros != 0 || owner.HeldMicros != 0 || countRows(t, s, &Ledger{}) != 1 || countRows(t, s, &ReturnFlowViewCharge{}) != 1 {
-		t.Fatalf("concurrent charging overdrew or duplicated: successes=%d balance=%d", ok, owner.BalanceMicros)
-	}
-}
-func TestReturnFlowBillingTransactionRollbackAndMigration(t *testing.T) {
+
+func TestReturnFlowDoesNotDependOnBillingLedger(t *testing.T) {
 	s := testServer(t)
 	u := seedUser(t, s, Dollar)
-	_, page := billedReturnApp(t, s, u, "apk")
-	endpoint := strings.TrimSuffix(page, "/info") + "/return-flow/view"
-	ip := "203.0.113.10"
+	_, page := billedReturnApp(t, s, u, "pwa")
+	ip := "203.0.113.92"
 	token := returnBillingPage(t, s, page, ip)
-	if e := s.DB.Migrator().DropTable(&ReturnFlowViewCharge{}); e != nil {
-		t.Fatal(e)
-	}
-	s.DB.Where("version = ?", 17).Delete(&Migration{})
-	var persisted User
-	s.DB.First(&persisted, "id = ?", u.ID)
-	before, _ := json.Marshal(persisted)
-	if e := Migrate(s.DB); e != nil {
-		t.Fatal(e)
-	}
-	if e := Migrate(s.DB); e != nil {
-		t.Fatal(e)
-	}
-	var after User
-	s.DB.First(&after, "id = ?", u.ID)
-	afterJSON, _ := json.Marshal(after)
-	if string(before) != string(afterJSON) || countRows(t, s, &ReturnFlowViewCharge{}) != 0 {
-		t.Fatal("migration changed existing customer or seeded charges")
-	}
 	if e := s.DB.Migrator().DropTable(&Ledger{}); e != nil {
 		t.Fatal(e)
 	}
-	requireCode(t, returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL), 500)
-	s.DB.First(&after, "id = ?", u.ID)
-	if after.BalanceMicros != Dollar || countRows(t, s, &ReturnFlowViewCharge{}) != 0 {
-		t.Fatal("ledger failure did not roll back charge")
+	endpoint := strings.TrimRight(page, "/") + "/return-flow/view"
+	requireCode(t, returnBillingCall(s, endpoint, token, ip, s.Config.PublicURL), 200)
+	if got := usageOwner(t, s, u.ID); got.BalanceMicros != Dollar {
+		t.Fatal(fmt.Sprint("free return touched money ", got.BalanceMicros))
 	}
 }

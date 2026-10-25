@@ -115,10 +115,13 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
-	grant, e := activeDownloadGrant(s.DB, u, p, s.Now())
-	if e != nil {
-		fail(w, e)
-		return
+	var grant *DownloadGrant
+	if !meteredEnabled(s.DB) {
+		grant, e = activeDownloadGrant(s.DB, u, p, s.Now())
+		if e != nil {
+			fail(w, e)
+			return
+		}
 	}
 	var quotaLimit, quotaUsed, quotaReserved int64
 	var quotaExpiry *time.Time
@@ -142,11 +145,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if x.MeteredBilling {
-		quotaLimit, quotaUsed, quotaReserved, err = meteredGiftTotals(s.DB, u, x, s.Now())
-		if err != nil {
-			fail(w, err)
-			return
-		}
+		quotaLimit, quotaUsed, quotaReserved = 0, 0, 0
 		quotaExpiry, renewsAt = nil, nil
 	}
 	var appCount, storage, downloads, domains int64

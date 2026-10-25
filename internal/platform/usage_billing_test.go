@@ -18,7 +18,7 @@ import (
 func meteredServer(t *testing.T, gifts int64) *Server {
 	t.Helper()
 	s := testServer(t)
-	if e := s.DB.Model(&Settings{}).Where("id = 1").Updates(map[string]any{"metered_billing": true, "registration_gift_limit": gifts}).Error; e != nil {
+	if e := s.DB.Model(&Settings{}).Where("id = 1").Updates(map[string]any{"metered_billing": true, "registration_gift_limit": 0, "registration_gift_micros": 100 * Dollar, "download_price_micros": 50000, "pwa_install_price_micros": 50000, "cloak_uv_price_micros": 0, "return_flow_price_micros": 0, "pwa_push_price_micros": 0}).Error; e != nil {
 		t.Fatal(e)
 	}
 	return s
@@ -52,9 +52,10 @@ func usageOwner(t *testing.T, s *Server, id string) User {
 	return u
 }
 
-func TestMeteredSharedGiftAndAllFivePrices(t *testing.T) {
+func TestMeteredGiftMoneyAndTwoPaidPrices(t *testing.T) {
 	s := meteredServer(t, 2)
 	u := seedUser(t, s, Dollar)
+	s.DB.Model(&u).Update("gift_balance_micros", 100000)
 	r := usageRequest(s, "/", "203.0.113.10")
 	if e := s.chargeUsageUV(r, u.ID, "apk_uv", "apk-one"); e != nil {
 		t.Fatal(e)
@@ -101,85 +102,12 @@ func TestMeteredSharedGiftAndAllFivePrices(t *testing.T) {
 		t.Fatal(e)
 	}
 	got := usageOwner(t, s, u.ID)
-	if got.BalanceMicros != Dollar-30000-1000-2000-1000-3000 || got.HeldMicros != 0 {
+	if got.BalanceMicros != Dollar-50000-50000 || got.HeldMicros != 0 {
 		t.Fatalf("five-price settlement: %+v", got)
 	}
-	x, _ := getSettings(s.DB)
-	limit, used, reserved, e := meteredGiftTotals(s.DB, got, x, s.Now())
-	if e != nil || limit != 2 || used != 2 || reserved != 0 {
-		t.Fatalf("shared gift totals %d/%d/%d %v", limit, used, reserved, e)
+	if countRows(t, s, &DownloadGrant{}) != 0 || got.GiftBalanceMicros != 0 {
+		t.Fatal("dollar credit minted count gifts")
 	}
-}
-
-func TestMeteredRegistrationCreatesOneSharedGift(t *testing.T) {
-	s := meteredServer(t, 1000)
-	in := authInput{Email: "metered@example.com", Name: "Metered", Password: "test123456", CaptchaCode: "12345", CaptchaID: randomHex(16)}
-	if e := s.DB.Create(&Challenge{ID: in.CaptchaID, Hash: s.mac(in.CaptchaID + ":" + in.CaptchaCode), ExpiresAt: s.Now().Add(time.Minute)}).Error; e != nil {
-		t.Fatal(e)
-	}
-	w := call(t, s, "POST", "/api/auth/register", in, nil, "")
-	requireCode(t, w, 200)
-	var result struct {
-		User User `json:"user"`
-	}
-	if e := json.Unmarshal(w.Body.Bytes(), &result); e != nil {
-		t.Fatal(e)
-	}
-	u := result.User
-	for range 3 {
-		x, _ := getSettings(s.DB)
-		limit, used, reserved, e := meteredGiftTotals(s.DB, u, x, s.Now())
-		if e != nil || limit != 1000 || used != 0 || reserved != 0 {
-			t.Fatalf("registration gift %d/%d/%d: %v", limit, used, reserved, e)
-		}
-	}
-	var count int64
-	s.DB.Model(&DownloadGrant{}).Where("user_id = ?", u.ID).Count(&count)
-	if count != 1 {
-		t.Fatal("more than one registration gift")
-	}
-	// Editing the default never retroactively changes existing grants.
-	s.DB.Model(&Settings{}).Where("id = 1").Update("registration_gift_limit", 17)
-	x, _ := getSettings(s.DB)
-	limit, _, _, _ := meteredGiftTotals(s.DB, u, x, s.Now())
-	if limit != 1000 {
-		t.Fatal("existing gift reset by configuration change")
-	}
-}
-
-func TestMeteredReturnFlowChargesOnlyConfirmedDisplay(t *testing.T) {
-	s := meteredServer(t, 1000)
-	u := seedUser(t, s, 1000)
-	_, page := billedReturnApp(t, s, u, "pwa")
-	var app PWAApp
-	s.DB.First(&app, "slug = ?", strings.Split(page, "/")[2])
-	r := usageRequest(s, page, "203.0.113.80")
-	body := map[string]string{"token": s.returnFlowViewToken("pwa", app.ID, r), "event_id": randomHex(16), "action": "reserve"}
-	endpoint := "/p/" + app.Slug + "/return-flow/view"
-	requireCode(t, usagePost(s, endpoint, body, r), 200)
-	if got := usageOwner(t, s, u.ID); got.BalanceMicros != 1000 || got.HeldMicros != 1000 {
-		t.Fatal("display authorization debited funds")
-	}
-	body["action"] = "cancel"
-	requireCode(t, usagePost(s, endpoint, body, r), 200)
-	if got := usageOwner(t, s, u.ID); got.BalanceMicros != 1000 || got.HeldMicros != 0 {
-		t.Fatal("invisible display did not release hold")
-	}
-	body["action"] = "complete"
-	requireCode(t, usagePost(s, endpoint, body, r), 410)
-	body["event_id"] = randomHex(16)
-	body["action"] = "reserve"
-	requireCode(t, usagePost(s, endpoint, body, r), 200)
-	body["action"] = "complete"
-	for range 3 {
-		requireCode(t, usagePost(s, endpoint, body, r), 200)
-	}
-	if got := usageOwner(t, s, u.ID); got.BalanceMicros != 0 || got.HeldMicros != 0 {
-		t.Fatal("display was not charged exactly once")
-	}
-	body["event_id"] = randomHex(16)
-	body["action"] = "reserve"
-	requireCode(t, usagePost(s, endpoint, body, r), 402)
 }
 
 func TestMeteredPushWorkerResultSettlement(t *testing.T) {
@@ -208,30 +136,15 @@ func TestMeteredPushWorkerResultSettlement(t *testing.T) {
 				}
 			}
 			got := usageOwner(t, s, u.ID)
-			if outcome == "accepted" {
-				if got.BalanceMicros != 0 || got.HeldMicros != 0 {
-					t.Fatal("accepted delivery charge")
-				}
-			} else if outcome == "retry" {
-				if got.BalanceMicros != 1000 || got.HeldMicros != 1000 {
-					t.Fatal("retry lost reservation")
-				}
-				s.DB.Model(&d).Update("status", "failed")
-				if e := s.cleanupMeteredUsage(context.Background()); e != nil {
-					t.Fatal(e)
-				}
-				if got = usageOwner(t, s, u.ID); got.BalanceMicros != 1000 || got.HeldMicros != 0 {
-					t.Fatal("retry exhaustion did not release")
-				}
-			} else if got.BalanceMicros != 1000 || got.HeldMicros != 0 {
-				t.Fatal("failed/cancelled delivery was charged")
+			if got.BalanceMicros != 1000 || got.HeldMicros != 0 || countRows(t, s, &MeteredEvent{}) != 0 || countRows(t, s, &Ledger{}) != 0 {
+				t.Fatal("free push reserved or charged funds")
 			}
 		})
 	}
 }
 
 func TestMeteredUVRollingWindowConcurrencyAndIsolation(t *testing.T) {
-	for _, kind := range []string{"apk_uv", "cloak_uv"} {
+	for _, kind := range []string{"apk_uv"} {
 		t.Run(kind, func(t *testing.T) {
 			s := meteredServer(t, 0)
 			now := time.Now().UTC()
@@ -288,25 +201,25 @@ func TestMeteredUVRollingWindowConcurrencyAndIsolation(t *testing.T) {
 
 func TestMeteredPWAReserveCancelPriceSnapshotAndProof(t *testing.T) {
 	s := meteredServer(t, 0)
-	u := seedUser(t, s, 30000)
+	u := seedUser(t, s, 50000)
 	app := createPWAFixture(t, s, u, "Install proof")
 	r := usageRequest(s, "/", "203.0.113.30")
 	base := "/p/" + app.Slug + "/install/"
 	body := installBody(s, app, r, randomHex(16))
 	requireCode(t, usagePost(s, base+"start", body, r), 200)
-	if got := usageOwner(t, s, u.ID); got.BalanceMicros != 30000 || got.HeldMicros != 30000 {
+	if got := usageOwner(t, s, u.ID); got.BalanceMicros != 50000 || got.HeldMicros != 50000 {
 		t.Fatal("install must reserve, not charge, before confirmation")
 	}
 	requireCode(t, usagePost(s, base+"start", body, r), 200)
 	requireCode(t, usagePost(s, base+"cancel", body, r), 200)
 	requireCode(t, usagePost(s, base+"cancel", body, r), 200)
 	requireCode(t, usagePost(s, base+"complete", body, r), 410)
-	if got := usageOwner(t, s, u.ID); got.BalanceMicros != 30000 || got.HeldMicros != 0 {
+	if got := usageOwner(t, s, u.ID); got.BalanceMicros != 50000 || got.HeldMicros != 0 {
 		t.Fatal("cancel did not release funds")
 	}
 	body = installBody(s, app, r, randomHex(16))
 	requireCode(t, usagePost(s, base+"start", body, r), 200)
-	s.DB.Model(&Settings{}).Where("id = 1").Update("pwa_install_price_micros", 50000)
+	s.DB.Model(&Settings{}).Where("id = 1").Update("pwa_install_price_micros", 80000)
 	requireCode(t, usagePost(s, base+"complete", body, r), 200)
 	requireCode(t, usagePost(s, base+"complete", body, r), 200)
 	if got := usageOwner(t, s, u.ID); got.BalanceMicros != 0 || got.HeldMicros != 0 {
@@ -322,7 +235,7 @@ func TestMeteredPWAReserveCancelPriceSnapshotAndProof(t *testing.T) {
 
 func TestMeteredPWAConcurrentReservationsNeverOverdraw(t *testing.T) {
 	s := meteredServer(t, 0)
-	u := seedUser(t, s, 30000)
+	u := seedUser(t, s, 50000)
 	app := createPWAFixture(t, s, u, "Concurrent install")
 	r := usageRequest(s, "/", "203.0.113.40")
 	base := "/p/" + app.Slug + "/install/"
@@ -392,38 +305,11 @@ func TestMeteredAPKVisitAndDownloadAreChargedOnlyOnce(t *testing.T) {
 	if e = s.finishRange(ticket, 0, 127); e != nil {
 		t.Fatal(e)
 	}
-	if got := usageOwner(t, s, u.ID); got.BalanceMicros != Dollar-3000 || got.HeldMicros != 0 {
+	if got := usageOwner(t, s, u.ID); got.BalanceMicros != Dollar-50000 || got.HeldMicros != 0 {
 		t.Fatal("file transfer charged the already-billed UV again")
 	}
 	if countRows(t, s, &Download{}) != 1 || countRows(t, s, &MeteredEvent{}) != 1 {
 		t.Fatal("download completion/visit event mismatch")
-	}
-}
-
-func TestMeteredBalanceOnlyFunctionsAndCleanup(t *testing.T) {
-	s := meteredServer(t, 1000)
-	u := seedUser(t, s, 0)
-	r := usageRequest(s, "/", "203.0.113.60")
-	if e := s.chargeUsageUV(r, u.ID, "cloak_uv", "one"); e == nil {
-		t.Fatal("cloak consumed registration gifts instead of requiring balance")
-	}
-	d := PWAPushDelivery{ID: randomHex(16), UserID: u.ID, PWAID: randomHex(16), ExpiresAt: s.Now().Add(time.Hour)}
-	if e := s.reservePushUsage(context.Background(), d); e == nil {
-		t.Fatal("push consumed gifts")
-	}
-	s.DB.Model(&User{}).Where("id = ?", u.ID).Update("balance_micros", 1000)
-	if e := s.reservePushUsage(context.Background(), d); e != nil {
-		t.Fatal(e)
-	}
-	s.DB.Model(&MeteredEvent{}).Where("source_id = ?", d.ID).Update("expires_at", s.Now().Add(-time.Second))
-	if e := s.cleanupMeteredUsage(context.Background()); e != nil {
-		t.Fatal(e)
-	}
-	if e := s.cleanupMeteredUsage(context.Background()); e != nil {
-		t.Fatal(e)
-	}
-	if got := usageOwner(t, s, u.ID); got.BalanceMicros != 1000 || got.HeldMicros != 0 {
-		t.Fatal("expired reservation did not release exactly once")
 	}
 }
 
@@ -437,11 +323,12 @@ func TestMeteredFreeMembershipRiskAndSettings(t *testing.T) {
 		t.Fatal("free member with credit cannot use risk detection")
 	}
 	noMoney := seedUser(t, s, 0)
+	s.DB.Model(&noMoney).Update("gift_balance_micros", 1)
 	eligible, e = s.riskEligible(s.DB, noMoney)
 	if e != nil || !eligible {
 		t.Fatal("registration gift is not considered available credit")
 	}
-	s.DB.Model(&DownloadGrant{}).Where("user_id = ?", noMoney.ID).Update("used", 1)
+	s.DB.Model(&noMoney).Update("gift_balance_micros", 0)
 	eligible, e = s.riskEligible(s.DB, noMoney)
 	if e != nil || eligible {
 		t.Fatal("empty account can still run risk checks")
@@ -458,12 +345,25 @@ func TestMeteredFreeMembershipRiskAndSettings(t *testing.T) {
 	x.ReturnFlowPriceMicros = 3000
 	x.PWAPushPriceMicros = 4000
 	x.DownloadPriceMicros = 5000
+	x.RegistrationGiftMicros = 75*Dollar + Dollar/2
 	requireCode(t, call(t, s, "PUT", "/api/admin/settings", map[string]any{"section": "billing", "settings": x, "plans": plans}, ac, at), 200)
 	after, _ := getSettings(s.DB)
-	if after.PWAInstallPriceMicros != 45000 || after.CloakUVPriceMicros != 2000 || after.ReturnFlowPriceMicros != 3000 || after.PWAPushPriceMicros != 4000 || after.DownloadPriceMicros != 5000 {
-		t.Fatal("five admin prices did not save")
+	if after.PWAInstallPriceMicros != 45000 || after.CloakUVPriceMicros != 0 || after.ReturnFlowPriceMicros != 0 || after.PWAPushPriceMicros != 0 || after.DownloadPriceMicros != 5000 || after.RegistrationGiftMicros != 75*Dollar+Dollar/2 || after.RegistrationGiftLimit != 0 {
+		t.Fatal("paid rates and welcome credit did not save, or a free rate was restored")
 	}
-	x.PWAPushPriceMicros = -1
+	newUser := seedUser(t, s, 0)
+	if e := s.DB.Transaction(func(tx *gorm.DB) error {
+		return registrationUsageGift(tx, &newUser, after, s.Now())
+	}); e != nil {
+		t.Fatal(e)
+	}
+	if got := usageOwner(t, s, newUser.ID); got.GiftBalanceMicros != 75*Dollar+Dollar/2 || got.BalanceMicros != 0 {
+		t.Fatal("new registration did not use configured welcome credit")
+	}
+	x.PWAInstallPriceMicros = -1
+	requireCode(t, call(t, s, "PUT", "/api/admin/settings", map[string]any{"section": "billing", "settings": x, "plans": plans}, ac, at), 400)
+	x.PWAInstallPriceMicros = 50000
+	x.RegistrationGiftMicros = -1
 	requireCode(t, call(t, s, "PUT", "/api/admin/settings", map[string]any{"section": "billing", "settings": x, "plans": plans}, ac, at), 400)
 	if got := usageOwner(t, s, u.ID); got.BalanceMicros != Dollar {
 		t.Fatal("retired subscription charged money")
@@ -485,12 +385,12 @@ func TestMeteredMigrationPreservesMoneyGrantsOrdersAndAdminPrices(t *testing.T) 
 	if e := s.DB.Model(&xBefore).Select("DownloadDomainRules").Updates(&xBefore).Error; e != nil {
 		t.Fatal(e)
 	}
-	s.DB.Where("version = ?", meteredBillingVersion).Delete(&Migration{})
+	s.DB.Where("version IN ?", []int{meteredBillingVersion, usagePricingVersion}).Delete(&Migration{})
 	if e := Migrate(s.DB); e != nil {
 		t.Fatal(e)
 	}
 	x, _ := getSettings(s.DB)
-	if !x.MeteredBilling || x.DownloadPriceMicros != 7000 || x.PWAInstallPriceMicros != 30000 || x.RegistrationGiftLimit != 1000 {
+	if !x.MeteredBilling || x.DownloadPriceMicros != 50000 || x.PWAInstallPriceMicros != 50000 || x.RegistrationGiftLimit != 0 || x.RegistrationGiftMicros != 100*Dollar {
 		t.Fatal("migration defaults or existing APK price lost")
 	}
 	if len(x.DownloadDomainRules) != 1 || x.DownloadDomainRules[0].Audience != "all" || !x.DownloadDomainRules[0].LegacyOnly {
@@ -502,7 +402,7 @@ func TestMeteredMigrationPreservesMoneyGrantsOrdersAndAdminPrices(t *testing.T) 
 	}
 	var grant DownloadGrant
 	s.DB.First(&grant, "id = ?", "free:"+u.ID)
-	if grant.Used != 23 || grant.Reserved != 2 || grant.Limit != 1000 {
+	if grant.Used != 23 || grant.Reserved != 2 || grant.Limit != 25 {
 		t.Fatal("migration reset gifts")
 	}
 	var unchanged Order

@@ -48,7 +48,7 @@ export function AdminSettingsPage() {
   const fields: Record<Section, (keyof typeof settings)[]> = {
     basic: ['site_name', 'support_email', 'registration_open'],
     domains: ['download_domain_rules'],
-    billing: ['download_price_micros', 'pwa_install_price_micros', 'cloak_uv_price_micros', 'return_flow_price_micros', 'pwa_push_price_micros', 'registration_gift_limit', 'app_limit', 'storage_limit_bytes', 'max_upload_bytes', 'domain_limit', 'usdt_rate_micros'],
+    billing: ['download_price_micros', 'pwa_install_price_micros', 'registration_gift_micros', 'app_limit', 'storage_limit_bytes', 'max_upload_bytes', 'domain_limit', 'usdt_rate_micros'],
     recharge: ['recharge_bonus_enabled', 'recharge_bonus_tiers'], plan_free: [], plan_pro: []
   };
   const save = async (section: Section, panel: Element | null) => {

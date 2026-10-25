@@ -61,6 +61,11 @@ func Migrate(db *gorm.DB) error {
 		if err := tx.AutoMigrate(&Application{}); err != nil {
 			return err
 		}
+		// Cash-provenance audits must distinguish promotional-credit entries
+		// before older referral migrations can replay the ledger.
+		if err := tx.AutoMigrate(&Ledger{}); err != nil {
+			return err
+		}
 		if err := tx.AutoMigrate(&UABlock{}); err != nil {
 			return err
 		}

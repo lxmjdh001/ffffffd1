@@ -113,7 +113,7 @@ func referralLedgerDigest(entry Ledger) [32]byte {
 }
 
 func referralLedgerProof(tx *gorm.DB, userID string) (int64, string, error) {
-	rows, err := tx.Model(&Ledger{}).Select("id, user_id, reference, kind, amount_micros").Where("user_id = ?", userID).Rows()
+	rows, err := tx.Model(&Ledger{}).Select("id, user_id, reference, kind, amount_micros").Where("user_id = ? AND balance_type <> ?", userID, "gift").Rows()
 	if err != nil {
 		return 0, "", err
 	}
@@ -139,7 +139,7 @@ func referralLedgerProof(tx *gorm.DB, userID string) (int64, string, error) {
 
 func replayReferralWallet(tx *gorm.DB, user User) (int64, error) {
 	var ledger []Ledger
-	if err := tx.Select("kind, amount_micros").Where("user_id = ? AND (amount_micros < 0 OR kind IN ?)", user.ID, []string{"referral_reward", "withdrawal_refund"}).Order("created_at ASC").Order("CASE WHEN amount_micros > 0 THEN 0 ELSE 1 END ASC").Order("id ASC").Find(&ledger).Error; err != nil {
+	if err := tx.Select("kind, amount_micros").Where("user_id = ? AND (amount_micros < 0 OR kind IN ?)", user.ID, []string{"referral_reward", "withdrawal_refund"}).Where("balance_type <> ?", "gift").Order("created_at ASC").Order("CASE WHEN amount_micros > 0 THEN 0 ELSE 1 END ASC").Order("id ASC").Find(&ledger).Error; err != nil {
 		return 0, err
 	}
 	var available int64

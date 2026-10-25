@@ -62,7 +62,7 @@ func testServer(t *testing.T) *Server {
 	}
 	// Historical fixtures retain legacy behavior to verify old reservations and
 	// migrations. Metered tests explicitly enable the current production mode.
-	if err = db.Model(&Settings{}).Where("id = 1").Update("metered_billing", false).Error; err != nil {
+	if err = db.Model(&Settings{}).Where("id = 1").Updates(map[string]any{"metered_billing": false, "download_price_micros": 3000, "pwa_install_price_micros": 30000, "cloak_uv_price_micros": 1000, "return_flow_price_micros": 1000, "pwa_push_price_micros": 1000}).Error; err != nil {
 		t.Fatal(err)
 	}
 	sql, _ := db.DB()

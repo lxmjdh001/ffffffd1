@@ -86,14 +86,13 @@ func TestAPKLandingPaidFunnelDeduplicatesHTTPAndRecovery(t *testing.T) {
 					t.Fatal("public config lost", text)
 				}
 			}
-			returnSpent := int64(0)
 			assertBilling := func(downloads, spent, held int64) {
 				t.Helper()
 				var owner User
 				var app Application
 				s.DB.First(&owner, "id = ?", u.ID)
 				s.DB.First(&app, "id = ?", a.ID)
-				if countRows(t, s, &Download{}) != downloads || countRows(t, s, &Ledger{}) != downloads+returnSpent/10000 || owner.BalanceMicros != Dollar-spent-returnSpent || owner.HeldMicros != held || app.Downloads != downloads {
+				if countRows(t, s, &Download{}) != downloads || countRows(t, s, &Ledger{}) != downloads || owner.BalanceMicros != Dollar-spent || owner.HeldMicros != held || app.Downloads != downloads {
 					t.Fatalf("accounting mismatch: downloads=%d ledgers=%d balance=%d held=%d app_downloads=%d", countRows(t, s, &Download{}), countRows(t, s, &Ledger{}), owner.BalanceMicros, owner.HeldMicros, app.Downloads)
 				}
 			}
@@ -105,7 +104,6 @@ func TestAPKLandingPaidFunnelDeduplicatesHTTPAndRecovery(t *testing.T) {
 			for i := 0; i < 8; i++ {
 				requireCode(t, returnBillingCall(s, base+"/return-flow/view", proof[1], "203.0.113.25", s.Config.PublicURL), 200)
 			}
-			returnSpent = 10000
 			assertBilling(0, 0, 0)
 			handler := s.Handler()
 			post := func() *httptest.ResponseRecorder {

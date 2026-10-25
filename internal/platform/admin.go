@@ -241,7 +241,7 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 	sectionFields := map[string][]string{
 		"basic":     {"site_name", "support_email", "registration_open"},
 		"domains":   {"download_domain_rules"},
-		"billing":   {"download_price_micros", "pwa_install_price_micros", "cloak_uv_price_micros", "return_flow_price_micros", "pwa_push_price_micros", "registration_gift_limit", "app_limit", "storage_limit_bytes", "max_upload_bytes", "domain_limit", "usdt_rate_micros"},
+		"billing":   {"download_price_micros", "pwa_install_price_micros", "cloak_uv_price_micros", "return_flow_price_micros", "pwa_push_price_micros", "registration_gift_micros", "app_limit", "storage_limit_bytes", "max_upload_bytes", "domain_limit", "usdt_rate_micros"},
 		"recharge":  {"recharge_bonus_enabled", "recharge_bonus_tiers"},
 		"alipay":    {"alipay_cny_rate_micros"},
 		"plan_free": {}, "plan_pro": {},
@@ -290,13 +290,17 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 			fail(w, problem(410, "会员套餐已取消，请使用计费设置"))
 			return
 		}
-		for _, price := range []int64{x.DownloadPriceMicros, x.PWAInstallPriceMicros, x.CloakUVPriceMicros, x.ReturnFlowPriceMicros, x.PWAPushPriceMicros} {
+		x.CloakUVPriceMicros = 0
+		x.ReturnFlowPriceMicros = 0
+		x.PWAPushPriceMicros = 0
+		x.RegistrationGiftLimit = 0
+		for _, price := range []int64{x.DownloadPriceMicros, x.PWAInstallPriceMicros} {
 			if price < 0 || price > Dollar {
 				fail(w, problem(400, "用量单价须在 0–1 美元之间"))
 				return
 			}
 		}
-		if x.RegistrationGiftLimit < 0 || x.RegistrationGiftLimit > 100000000 || x.AppLimit < 1 || x.AppLimit > 100000 || x.StorageLimitBytes < 1<<20 || x.StorageLimitBytes > 102400<<30 {
+		if x.RegistrationGiftMicros < 0 || x.RegistrationGiftMicros > 1000000*Dollar || x.AppLimit < 1 || x.AppLimit > 100000 || x.StorageLimitBytes < 1<<20 || x.StorageLimitBytes > 102400<<30 {
 			fail(w, problem(400, "统一资源额度无效"))
 			return
 		}

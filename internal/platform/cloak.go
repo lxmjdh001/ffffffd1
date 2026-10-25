@@ -491,10 +491,6 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 	if !blocked && s.rejectBlockedUA(w, r, c.UserID, r.UserAgent()) {
 		return
 	}
-	if err := s.chargeUsageUV(r, c.UserID, "cloak_uv", c.ID); err != nil {
-		fail(w, err)
-		return
-	}
 	target := c.SafeURL
 	if !blocked && (status == "off" || ipAllowed || !cloakBlocked(c, r, s.cloakRequestCountry(r))) {
 		outcome = "allowed"

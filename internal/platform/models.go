@@ -9,17 +9,19 @@ import (
 const Dollar int64 = 1_000_000
 
 type User struct {
-	ID            string     `json:"id" gorm:"primaryKey;size:32"`
-	Email         string     `json:"email" gorm:"uniqueIndex;size:254;not null"`
-	Name          string     `json:"name" gorm:"size:80"`
-	PasswordHash  string     `json:"-"`
-	Role          string     `json:"role" gorm:"size:16;not null"`
-	Disabled      bool       `json:"disabled"`
-	BalanceMicros int64      `json:"balance_micros" gorm:"not null;check:balance_micros >= 0"`
-	HeldMicros    int64      `json:"held_micros" gorm:"not null;check:held_micros >= 0 AND held_micros <= balance_micros"`
-	ProUntil      *time.Time `json:"pro_until"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID                string     `json:"id" gorm:"primaryKey;size:32"`
+	Email             string     `json:"email" gorm:"uniqueIndex;size:254;not null"`
+	Name              string     `json:"name" gorm:"size:80"`
+	PasswordHash      string     `json:"-"`
+	Role              string     `json:"role" gorm:"size:16;not null"`
+	Disabled          bool       `json:"disabled"`
+	BalanceMicros     int64      `json:"balance_micros" gorm:"not null;check:balance_micros >= 0"`
+	HeldMicros        int64      `json:"held_micros" gorm:"not null;check:held_micros >= 0 AND held_micros <= balance_micros"`
+	GiftBalanceMicros int64      `json:"gift_balance_micros" gorm:"not null;default:0;check:gift_balance_micros >= 0"`
+	GiftHeldMicros    int64      `json:"gift_held_micros" gorm:"not null;default:0;check:gift_held_micros >= 0 AND gift_held_micros <= gift_balance_micros"`
+	ProUntil          *time.Time `json:"pro_until"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
 func (u User) PlanID(now time.Time) string {
@@ -53,32 +55,33 @@ func defaultRechargeTiers() []RechargeTier {
 }
 
 type Settings struct {
-	ID                    uint                 `json:"id" gorm:"primaryKey"`
-	SiteName              string               `json:"site_name"`
-	DownloadBaseURL       string               `json:"download_base_url"`
-	DownloadDomainMode    string               `json:"download_domain_mode" gorm:"not null;default:unified"`
-	FreeDownloadBaseURL   string               `json:"free_download_base_url"`
-	PaidDownloadBaseURL   string               `json:"paid_download_base_url"`
-	DownloadDomainRules   []DownloadDomainRule `json:"download_domain_rules" gorm:"serializer:json;type:text"`
-	RegistrationOpen      bool                 `json:"registration_open"`
-	DownloadPriceMicros   int64                `json:"download_price_micros"`
-	MeteredBilling        bool                 `json:"metered_billing"`
-	PWAInstallPriceMicros int64                `json:"pwa_install_price_micros"`
-	CloakUVPriceMicros    int64                `json:"cloak_uv_price_micros"`
-	ReturnFlowPriceMicros int64                `json:"return_flow_price_micros"`
-	PWAPushPriceMicros    int64                `json:"pwa_push_price_micros"`
-	RegistrationGiftLimit int64                `json:"registration_gift_limit"`
-	AppLimit              int64                `json:"app_limit"`
-	StorageLimitBytes     int64                `json:"storage_limit_bytes"`
-	MaxUploadBytes        int64                `json:"max_upload_bytes"`
-	DomainLimit           int64                `json:"domain_limit"`
-	USDTRateMicros        int64                `json:"usdt_rate_micros"`
-	AlipayCNYRateMicros   int64                `json:"alipay_cny_rate_micros" gorm:"not null;default:6650000"`
-	USDTWallet            *string              `json:"usdt_wallet"`
-	SupportEmail          string               `json:"support_email"`
-	RechargeBonusEnabled  bool                 `json:"recharge_bonus_enabled" gorm:"not null;default:true"`
-	RechargeBonusTiers    []RechargeTier       `json:"recharge_bonus_tiers" gorm:"serializer:json;type:text"`
-	UpdatedAt             time.Time            `json:"updated_at"`
+	ID                     uint                 `json:"id" gorm:"primaryKey"`
+	SiteName               string               `json:"site_name"`
+	DownloadBaseURL        string               `json:"download_base_url"`
+	DownloadDomainMode     string               `json:"download_domain_mode" gorm:"not null;default:unified"`
+	FreeDownloadBaseURL    string               `json:"free_download_base_url"`
+	PaidDownloadBaseURL    string               `json:"paid_download_base_url"`
+	DownloadDomainRules    []DownloadDomainRule `json:"download_domain_rules" gorm:"serializer:json;type:text"`
+	RegistrationOpen       bool                 `json:"registration_open"`
+	DownloadPriceMicros    int64                `json:"download_price_micros"`
+	MeteredBilling         bool                 `json:"metered_billing"`
+	PWAInstallPriceMicros  int64                `json:"pwa_install_price_micros"`
+	CloakUVPriceMicros     int64                `json:"cloak_uv_price_micros"`
+	ReturnFlowPriceMicros  int64                `json:"return_flow_price_micros"`
+	PWAPushPriceMicros     int64                `json:"pwa_push_price_micros"`
+	RegistrationGiftLimit  int64                `json:"registration_gift_limit"`
+	RegistrationGiftMicros int64                `json:"registration_gift_micros"`
+	AppLimit               int64                `json:"app_limit"`
+	StorageLimitBytes      int64                `json:"storage_limit_bytes"`
+	MaxUploadBytes         int64                `json:"max_upload_bytes"`
+	DomainLimit            int64                `json:"domain_limit"`
+	USDTRateMicros         int64                `json:"usdt_rate_micros"`
+	AlipayCNYRateMicros    int64                `json:"alipay_cny_rate_micros" gorm:"not null;default:6650000"`
+	USDTWallet             *string              `json:"usdt_wallet"`
+	SupportEmail           string               `json:"support_email"`
+	RechargeBonusEnabled   bool                 `json:"recharge_bonus_enabled" gorm:"not null;default:true"`
+	RechargeBonusTiers     []RechargeTier       `json:"recharge_bonus_tiers" gorm:"serializer:json;type:text"`
+	UpdatedAt              time.Time            `json:"updated_at"`
 }
 type Session struct {
 	Hash      string `gorm:"primaryKey;size:64"`
@@ -202,6 +205,7 @@ type Download struct {
 	CreatedAt     time.Time `json:"created_at" gorm:"index:idx_download_owner_time,priority:2;index"`
 }
 type Ledger struct {
+	BalanceType   string    `json:"balance_type" gorm:"not null;default:balance;size:16"`
 	ID            string    `json:"id" gorm:"primaryKey;size:32"`
 	UserID        string    `json:"user_id" gorm:"index;size:32"`
 	Reference     string    `json:"reference" gorm:"uniqueIndex;size:128"`

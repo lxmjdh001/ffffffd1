@@ -152,6 +152,9 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 		if _, err := createReferralAccount(tx, u.ID, inviterID, u.CreatedAt); err != nil {
 			return err
 		}
+		if settings.MeteredBilling {
+			return registrationUsageGift(tx, &u, settings, s.Now())
+		}
 		plan, err := getPlan(tx, u, s.Now())
 		if err != nil {
 			return err
