@@ -29,3 +29,17 @@ it('lists routing and domain safety as free without changing the two paid rates'
 it('formats configurable prices through six decimals and preserves zero',()=>{
  expect([0,1,1000,3000,30000,1e6].map(usagePrice)).toEqual(['0','0.000001','0.001','0.003','0.03','1']);
 });
+it('starts billing rules collapsed and supports click and keyboard toggling',async()=>{
+ render(<UsageRates config={{download_price_micros:50000,pwa_install_price_micros:50000} as Config} compact collapsible/>);
+ const user=userEvent.setup(),toggle=screen.getByRole('button',{name:/计费规则/});
+ expect(toggle.getAttribute('aria-expanded')).toBe('false');
+ expect(document.getElementById(toggle.getAttribute('aria-controls')!)?.hidden).toBe(true);
+ expect(screen.queryByRole('heading',{name:'APK 下载',exact:true})).toBeNull();
+ await user.click(toggle);
+ expect(toggle.getAttribute('aria-expanded')).toBe('true');
+ expect(screen.getAllByText('$0.05',{exact:true})).toHaveLength(2);
+ expect(screen.getAllByText('免费',{exact:true})).toHaveLength(5);
+ await user.keyboard('{Enter}');
+ expect(toggle.getAttribute('aria-expanded')).toBe('false');
+ expect(screen.queryByRole('heading',{name:'APK 下载',exact:true})).toBeNull();
+});

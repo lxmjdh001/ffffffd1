@@ -80,15 +80,38 @@ function openBilling() {
 }
 
 describe('recharge promotion', () => {
-  it('shows two paid rates, five free features, and promotional balance separate from cash', async () => {
-    Object.assign(config,{metered_billing:true,download_price_micros:50000,pwa_install_price_micros:50000,cloak_uv_price_micros:1000,return_flow_price_micros:1000,pwa_push_price_micros:1000,registration_gift_limit:0,registration_gift_micros:100e6});
+  it('shows current pricing and recharge without the retired gift-credit card', async () => {
+    Object.assign(config,{metered_billing:true,download_price_micros:50000,pwa_install_price_micros:50000,cloak_uv_price_micros:1000,return_flow_price_micros:1000,pwa_push_price_micros:1000,registration_gift_limit:0,registration_gift_micros:0});
     account.gift_balance_micros=100e6;account.gift_held_micros=50000;
     config.plans=[{...free,name:'按量计费'}];
-    openBilling();await screen.findByRole('heading',{name:'用量与账单'});
+    const user = openBilling();await screen.findByRole('heading',{name:'用量与账单'});
+    const toggle=screen.getByRole('button',{name:/计费规则/});expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('heading',{name:'APK 下载',exact:true})).toBeNull();await user.click(toggle);
     const rates=await screen.findByRole('region',{name:'按量计费'});
-    expect(within(rates).getAllByText('$0.05')).toHaveLength(2);expect(within(rates).getAllByText('免费',{exact:true})).toHaveLength(5);expect(within(rates).getByRole('heading',{name:'应用分流',exact:true})).toBeTruthy();expect(within(rates).getByRole('heading',{name:'域名安全检测',exact:true})).toBeTruthy();expect(within(rates).queryByText('注册即赠 $100 用量额度。')).toBeNull();expect(screen.getByRole('heading',{name:'赠送用量额度'})).toBeTruthy();expect(screen.getByText('$ 99.95')).toBeTruthy();expect(screen.queryByText('注册共享赠送')).toBeNull();
+    expect(within(rates).getAllByText('$0.05')).toHaveLength(2);expect(within(rates).getAllByText('免费',{exact:true})).toHaveLength(5);expect(within(rates).getByRole('heading',{name:'应用分流',exact:true})).toBeTruthy();expect(within(rates).getByRole('heading',{name:'域名安全检测',exact:true})).toBeTruthy();expect(within(rates).queryByText('注册即赠 $100 用量额度。')).toBeNull();expect(screen.queryByRole('heading',{name:'赠送用量额度'})).toBeNull();expect(screen.queryByText('$ 99.95')).toBeNull();expect(screen.queryByText('注册共享赠送')).toBeNull();
     expect(screen.queryByText('选择适合你的套餐')).toBeNull();expect(screen.queryByRole('button',{name:/开通|续费/})).toBeNull();expect(screen.getByRole('button',{name:'充值余额'})).toBeTruthy();
     expect(screen.queryByText('赠送额度优先抵扣 APK/PWA 用量，不可提现。')).toBeNull();
+  });
+  it('summarizes available cash, monthly usage and spending without adding historical gift credit',async()=>{
+    Object.assign(config,{metered_billing:true,registration_gift_micros:0});
+    client.setQueryDefaults(['dashboard'],{staleTime:Infinity});
+    client.setQueryData(['dashboard'],{...dashboard,user:{...account,balance_micros:12000000,held_micros:2000000,gift_balance_micros:100000000},usage:{...dashboard.usage,free_used:3,paid_used:7,spent_micros:3500000}});
+    openBilling();await screen.findByRole('heading',{name:'用量与账单'});
+    const wallet=within(screen.getByRole('region',{name:'账户余额'}));
+    expect(wallet.getByText('$ 10.000')).toBeTruthy();
+    expect(wallet.getByText('预留金额 $ 2.000000')).toBeTruthy();
+    expect(within(screen.getByRole('region',{name:'本月用量'})).getByText('10',{exact:false})).toBeTruthy();
+    expect(within(screen.getByRole('region',{name:'本月消费'})).getByText('$ 3.500')).toBeTruthy();
+    expect(screen.queryByRole('heading',{name:'赠送用量额度'})).toBeNull();
+    expect(submissions).toEqual([]);
+  });
+  it('retains historical gift ledger entries when new registration gifts are disabled',async()=>{
+    Object.assign(config,{metered_billing:true,registration_gift_micros:0});
+    existingLedger=[{id:'old-registration',kind:'registration_gift',balance_type:'gift',amount_micros:100e6,balance_micros:100e6,note:'历史注册赠送',reference:'registration-gift:old-user',created_at:'2026-10-24T03:00:00Z'}];
+    const user=openBilling();await user.click(await screen.findByRole('button',{name:'余额流水'}));
+    expect(await screen.findByText('历史注册赠送')).toBeTruthy();
+    expect(screen.getByText('+ $100.00')).toBeTruthy();
+    expect(submissions).toEqual([]);
   });
   it('retains historical Alipay payment instructions without offering new Alipay orders', async () => {
     existingOrders = [{ ...order, method: 'alipay', amount_micros: 100000000, bonus_micros: 0,

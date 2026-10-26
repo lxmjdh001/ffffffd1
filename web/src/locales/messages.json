@@ -2098,7 +2098,11 @@
     "注册赠送用量额度": "Welcome usage credit",
     "域名数量已达上限，请联系客服升级": "Domain limit reached. Contact support to upgrade.",
     "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "Each account can bind {0} domains. Contact support if you need more.",
-    "安装包上限 {0} · PWA 上限 {1}": "Package limit {0} · PWA limit {1}"
+    "安装包上限 {0} · PWA 上限 {1}": "Package limit {0} · PWA limit {1}",
+    "本月消费": "Spent this month",
+    "计费规则": "Pricing rules",
+    "展开": "Expand",
+    "收起": "Collapse"
   },
   "pt": {
     "APK 外部跳转": "Abertura externa de APK",
@@ -4199,7 +4203,11 @@
     "注册赠送用量额度": "Crédito inicial de uso",
     "域名数量已达上限，请联系客服升级": "Limite de domínios atingido. Contacte o suporte para aumentar o limite.",
     "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "Cada conta pode associar {0} domínios. Contacte o suporte se precisar de mais.",
-    "安装包上限 {0} · PWA 上限 {1}": "Limite de pacotes {0} · Limite de PWA {1}"
+    "安装包上限 {0} · PWA 上限 {1}": "Limite de pacotes {0} · Limite de PWA {1}",
+    "本月消费": "Gastos neste mês",
+    "计费规则": "Regras de cobrança",
+    "展开": "Expandir",
+    "收起": "Recolher"
   },
   "de": {
     "APK 外部跳转": "APK extern öffnen",
@@ -6300,7 +6308,11 @@
     "注册赠送用量额度": "Nutzungsstartguthaben",
     "域名数量已达上限，请联系客服升级": "Domainlimit erreicht. Kontaktieren Sie den Support für ein Upgrade.",
     "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "Jedes Konto kann {0} Domains verknüpfen. Für weitere Domains kontaktieren Sie den Support.",
-    "安装包上限 {0} · PWA 上限 {1}": "Paketlimit {0} · PWA-Limit {1}"
+    "安装包上限 {0} · PWA 上限 {1}": "Paketlimit {0} · PWA-Limit {1}",
+    "本月消费": "Ausgaben diesen Monat",
+    "计费规则": "Abrechnungsregeln",
+    "展开": "Aufklappen",
+    "收起": "Zuklappen"
   },
   "fr": {
     "APK 外部跳转": "Ouverture externe APK",
@@ -8401,7 +8413,11 @@
     "注册赠送用量额度": "Crédit d’utilisation de bienvenue",
     "域名数量已达上限，请联系客服升级": "Limite de domaines atteinte. Contactez le support pour augmenter la limite.",
     "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "Chaque compte peut associer {0} domaines. Contactez le support pour en ajouter davantage.",
-    "安装包上限 {0} · PWA 上限 {1}": "Limite de paquets {0} · Limite de PWA {1}"
+    "安装包上限 {0} · PWA 上限 {1}": "Limite de paquets {0} · Limite de PWA {1}",
+    "本月消费": "Dépenses ce mois-ci",
+    "计费规则": "Règles de facturation",
+    "展开": "Développer",
+    "收起": "Réduire"
   },
   "ko": {
     "APK 外部跳转": "APK 외부 열기",
@@ -10502,7 +10518,11 @@
     "注册赠送用量额度": "가입 무료 사용 크레딧",
     "域名数量已达上限，请联系客服升级": "도메인 한도에 도달했습니다. 한도 상향은 고객센터에 문의하세요.",
     "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "계정당 도메인 {0}개를 연결할 수 있습니다. 추가 연결은 고객센터에 문의하세요.",
-    "安装包上限 {0} · PWA 上限 {1}": "설치 패키지 한도 {0} · PWA 한도 {1}"
+    "安装包上限 {0} · PWA 上限 {1}": "설치 패키지 한도 {0} · PWA 한도 {1}",
+    "本月消费": "이번 달 지출",
+    "计费规则": "요금 규칙",
+    "展开": "펼치기",
+    "收起": "접기"
   },
   "ja": {
     "APK 外部跳转": "APK外部表示",
@@ -12603,7 +12623,11 @@
     "注册赠送用量额度": "登録無料利用クレジット",
     "域名数量已达上限，请联系客服升级": "ドメイン数の上限に達しました。上限の引き上げはサポートにお問い合わせください。",
     "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "各アカウントに {0} 個のドメインを登録できます。追加をご希望の場合はサポートにお問い合わせください。",
-    "安装包上限 {0} · PWA 上限 {1}": "パッケージ上限 {0} · PWA 上限 {1}"
+    "安装包上限 {0} · PWA 上限 {1}": "パッケージ上限 {0} · PWA 上限 {1}",
+    "本月消费": "今月の利用額",
+    "计费规则": "料金ルール",
+    "展开": "開く",
+    "收起": "閉じる"
   },
   "zh-TW": {
     "APK 外部跳转": "APK 外部跳轉",
@@ -14704,7 +14728,11 @@
     "注册赠送用量额度": "註冊贈送用量額度",
     "域名数量已达上限，请联系客服升级": "網域數量已達上限，請聯絡客服升級",
     "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "每個帳號可綁定 {0} 個網域，如需更多請聯絡客服升級。",
-    "安装包上限 {0} · PWA 上限 {1}": "安裝包上限 {0} · PWA 上限 {1}"
+    "安装包上限 {0} · PWA 上限 {1}": "安裝包上限 {0} · PWA 上限 {1}",
+    "本月消费": "本月消費",
+    "计费规则": "計費規則",
+    "展开": "展開",
+    "收起": "收起"
   },
   "ru": {
     "APK 外部跳转": "Внешний переход APK",
@@ -16805,6 +16833,10 @@
     "注册赠送用量额度": "Приветственный кредит использования",
     "域名数量已达上限，请联系客服升级": "Достигнут лимит доменов. Обратитесь в поддержку для его увеличения.",
     "每个账号可绑定 {0} 个域名，如需更多请联系客服升级。": "К каждой учётной записи можно привязать {0} доменов. Если нужно больше, обратитесь в поддержку.",
-    "安装包上限 {0} · PWA 上限 {1}": "Лимит пакетов {0} · Лимит PWA {1}"
+    "安装包上限 {0} · PWA 上限 {1}": "Лимит пакетов {0} · Лимит PWA {1}",
+    "本月消费": "Расходы за месяц",
+    "计费规则": "Правила тарификации",
+    "展开": "Развернуть",
+    "收起": "Свернуть"
   }
 }

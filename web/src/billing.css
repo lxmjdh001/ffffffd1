@@ -1,0 +1,68 @@
+.billing-wallet-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.billing-wallet,
+.billing-monthly-metric {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #dce6ed;
+  border-radius: 14px;
+  background: #fff;
+}
+.billing-wallet { background: #edf6f8; border-color: #cce1e7; }
+.billing-wallet-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.billing-wallet-heading > span,
+.billing-monthly-metric > span { display: flex; align-items: center; gap: 8px; color: #516e81; font-size: 13px; line-height: 1.5; }
+.billing-wallet-heading svg,
+.billing-monthly-metric > span > svg { color: #23768b; flex-shrink: 0; }
+.billing-wallet-heading small,
+.billing-monthly-metric > span > small { color: #6c8494; font-size: 10px; letter-spacing: .04em; }
+.billing-wallet-heading .btn { padding: 9px 12px; font-size: 12px; min-height: 38px; white-space: nowrap; }
+.billing-wallet-heading .btn svg { color: inherit; }
+.billing-wallet-amount,
+.billing-monthly-metric > strong { display: block; margin-top: 17px; color: #203f52; font-size: 26px; line-height: 1.25; letter-spacing: -.5px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.billing-monthly-metric { display: flex; flex-direction: column; justify-content: center; }
+.billing-monthly-metric > strong { font-size: 24px; }
+.billing-monthly-metric > strong > small { margin-inline-start: 7px; color: #738797; font-size: 12px; font-weight: 400; }
+.billing-wallet-hold { color: #607e8e; font-size: 11px; line-height: 1.6; margin: 8px 0 0; }
+.billing-page .usage-pricing--compact { margin: 0 0 22px; }
+.billing-page .usage-pricing--compact .usage-pricing-heading { align-items: center; gap: 10px; margin-bottom: 16px; }
+.billing-page .usage-pricing--compact .usage-pricing-heading h2 { font-size: 15px; margin: 0 0 4px; }
+.billing-page .usage-pricing--compact .usage-pricing-heading p { margin: 0; font-size: 12px; }
+.billing-page .usage-pricing--compact .usage-rate-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 10px; }
+.billing-page .usage-pricing--compact .usage-rate-grid article { grid-column: span 5; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 14px; background: #f4f8fa; border-radius: 9px; }
+.billing-page .usage-pricing--compact .usage-rate-grid article.usage-rate-free { grid-column: span 2; padding: 12px; }
+.billing-page .usage-pricing--compact .usage-rate-grid article > svg { width: 17px; height: 17px; margin: 0; }
+.billing-page .usage-pricing--compact .usage-rate-grid h3 { font-size: 12px; min-height: 0; margin: 0; color: #4d687e; }
+.billing-page .usage-pricing--compact .usage-rate-grid strong { font-size: 20px; margin: 0; color: #315b73; }
+.billing-page .usage-pricing--compact .usage-rate-grid article.usage-rate-free > strong { color: #397b65; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.billing-page .usage-pricing--compact .usage-rate-price { margin: 0; gap: 4px; }
+.billing-page .usage-pricing--compact .usage-rate-grid small { font-size: 11px; margin: 0; }
+.billing-records { overflow: hidden; }
+@media (max-width: 1100px) {
+  .billing-wallet-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .billing-wallet { grid-column: 1 / -1; }
+  .billing-monthly-metric { padding: 20px 24px; }
+  .billing-page .usage-pricing--compact .usage-rate-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .billing-page .usage-pricing--compact .usage-rate-grid article { grid-column: span 3; }
+  .billing-page .usage-pricing--compact .usage-rate-grid article.usage-rate-free:nth-last-child(-n+2) { grid-column: span 3; }
+}
+@media (max-width: 650px) {
+  .billing-wallet-overview { gap: 10px; margin-bottom: 18px; }
+  .billing-wallet { padding: 20px; }
+  .billing-wallet-heading { flex-wrap: wrap; }
+  .billing-wallet-amount { font-size: 24px; }
+  .billing-monthly-metric { padding: 18px 16px; }
+  .billing-monthly-metric > span { gap: 6px; font-size: 12px; flex-wrap: wrap; }
+  .billing-monthly-metric > strong { font-size: 22px; }
+  .billing-page .usage-pricing--compact .usage-rate-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .billing-page .usage-pricing--compact .usage-rate-grid article,
+  .billing-page .usage-pricing--compact .usage-rate-grid article.usage-rate-free,
+  .billing-page .usage-pricing--compact .usage-rate-grid article.usage-rate-free:nth-last-child(-n+2) { grid-column: auto; padding: 12px 10px; gap: 6px; }
+  .billing-page .usage-pricing--compact .usage-rate-grid article:last-child { grid-column: 1 / -1; }
+  .billing-page .usage-pricing--compact .usage-rate-grid article:not(.usage-rate-free) { grid-column: 1 / -1; }
+  .billing-page .usage-pricing--compact .usage-rate-grid strong { font-size: 17px; }
+}

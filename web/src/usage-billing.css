@@ -1,4 +1,11 @@
 .usage-pricing{margin:24px 0}
+.usage-pricing-toggle-heading{margin:0;font:inherit}
+.usage-pricing-toggle{display:flex;align-items:center;gap:10px;width:100%;min-height:32px;padding:0;border:0;border-radius:4px;background:transparent;color:#315c73;font:inherit;font-size:14px;font-weight:600;text-align:start;cursor:pointer}
+.usage-pricing-toggle>svg{flex-shrink:0}
+.usage-pricing-toggle-action{display:inline-flex;align-items:center;gap:6px;margin-inline-start:auto;color:#5d7488;font-size:12px;font-weight:400}
+.usage-pricing-toggle[aria-expanded=true] .usage-pricing-toggle-chevron{transform:rotate(180deg)}
+.usage-pricing-toggle:focus-visible{outline:2px solid #167d9a;outline-offset:6px}
+.usage-pricing-description{margin:16px 0;color:#60778a;font-size:12px;line-height:1.7}
 .usage-pricing-heading{display:flex;align-items:flex-start;gap:12px;margin-bottom:20px;color:#627d9b}
 .usage-pricing-heading h2{font-size:17px;margin:0 0 7px}
 .usage-pricing-heading p{font-size:12px;color:#8b9bb0;line-height:1.8}
@@ -10,6 +17,9 @@
 .usage-rate-grid h3{font-size:12px;font-weight:500;color:#7187a2;line-height:1.6;min-height:2em;overflow-wrap:anywhere}
 .usage-rate-grid strong{display:inline-block;margin-top:8px;font-size:23px;font-weight:550;color:#526e90}
 .usage-rate-grid small{font-size:11px;color:#8b9eb4;margin-inline-start:5px}
+.usage-rate-price{display:flex;align-items:baseline;gap:6px;margin-top:8px;white-space:nowrap}
+.usage-rate-price strong{margin-top:0}
+.usage-rate-price small{margin-inline-start:0}
 .usage-gift-note{font-size:12px;color:#7185a2;line-height:1.8;margin:20px 0 7px}
 .home-pricing .usage-pricing{margin:0;border:0;background:#eeeede}
 .home-pricing .usage-rate-grid article{background:#f7f6f0}
@@ -25,6 +35,7 @@
 .home .home-pricing .usage-rate-grid h3{grid-column:2/-1;min-height:0;font-family:inherit;font-size:14px;line-height:1.4;letter-spacing:0;margin:0}
 .home .home-pricing .usage-rate-grid strong{grid-column:2;grid-row:2;justify-self:end;align-self:baseline;margin:0;font-size:20px;line-height:1.3}
 .home .home-pricing .usage-rate-grid small{grid-column:3;grid-row:2;align-self:baseline;margin:0;font-size:11px;white-space:nowrap}
+.home .home-pricing .usage-rate-price{grid-column:2/-1;grid-row:2;margin:0}
 .home .home-pricing .usage-rate-grid article.usage-rate-free strong{grid-column:2/-1;font-size:14px;font-weight:500;align-self:end}
 @media(max-width:550px){
  .home .home-pricing .usage-pricing{padding:16px}
