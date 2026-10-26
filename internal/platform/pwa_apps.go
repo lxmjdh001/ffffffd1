@@ -88,8 +88,20 @@ func (s *Server) registerPWARoutes(m *http.ServeMux) {
 }
 
 func (s *Server) pwaView(a PWAApp, count int64) pwaAppView {
+	return s.pwaViewWithLanding(a, count, s.pwaLandingWithReference(a))
+}
+
+func (s *Server) pwaListView(a PWAApp, count int64) pwaAppView {
+	landing := storedPWALanding(a.LandingJSON)
+	if landing.Template == "diy" {
+		landing.DIYLanding, _ = diyBindingRevisionReference(s.DB, "pwa", a.ID)
+	}
+	return s.pwaViewWithLanding(a, count, landing)
+}
+
+func (s *Server) pwaViewWithLanding(a PWAApp, count int64, landing PWALandingConfig) pwaAppView {
 	base := strings.TrimRight(s.Config.PublicURL, "/") + "/p/" + a.Slug + "/"
-	return pwaAppView{LandingConfig: storedPWALanding(a.LandingJSON), ReturnFlowConfig: storedReturnFlow(a.ReturnFlowJSON), ID: a.ID, Slug: a.Slug, Name: a.Name, TargetURL: a.TargetURL, Description: a.Description, Enabled: a.Enabled, PushEnabled: a.PushEnabled, ThemeColor: a.ThemeColor, IconURL: s.Config.PublicURL + "/api/pwas/" + a.ID + "/icon", EntryURL: base, LaunchURL: base + "launch", SubscriptionCount: count, CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt}
+	return pwaAppView{LandingConfig: landing, ReturnFlowConfig: storedReturnFlow(a.ReturnFlowJSON), ID: a.ID, Slug: a.Slug, Name: a.Name, TargetURL: a.TargetURL, Description: a.Description, Enabled: a.Enabled, PushEnabled: a.PushEnabled, ThemeColor: a.ThemeColor, IconURL: s.Config.PublicURL + "/api/pwas/" + a.ID + "/icon", EntryURL: base, LaunchURL: base + "launch", SubscriptionCount: count, CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt}
 }
 func (s *Server) ownedPWA(r *http.Request) (PWAApp, error) {
 	var a PWAApp
@@ -113,7 +125,7 @@ func (s *Server) listPWAs(w http.ResponseWriter, r *http.Request) {
 	}
 	views := make([]pwaAppView, 0, len(apps))
 	for _, a := range apps {
-		views = append(views, s.pwaView(a, counts[a.ID]))
+		views = append(views, s.pwaListView(a, counts[a.ID]))
 	}
 	jsonOut(w, 200, map[string]any{"data": views})
 }
@@ -215,7 +227,9 @@ func (s *Server) applyPWAInput(a *PWAApp, in pwaAppInput, _ bool) error {
 		if err := s.normalizePWALanding(in.LandingConfig); err != nil {
 			return err
 		}
-		raw, _ := json.Marshal(in.LandingConfig)
+		stored := *in.LandingConfig
+		stored.DIYLanding = nil
+		raw, _ := json.Marshal(stored)
 		a.LandingJSON = string(raw)
 	}
 	if in.ReturnFlowConfig != nil {
@@ -262,7 +276,7 @@ func (s *Server) applyPWAInput(a *PWAApp, in pwaAppInput, _ bool) error {
 }
 func (s *Server) createPWA(w http.ResponseWriter, r *http.Request) {
 	var in pwaAppInput
-	if err := decode(w, r, &in); err != nil {
+	if err := decodeDIYApplication(w, r, &in); err != nil {
 		fail(w, err)
 		return
 	}
@@ -328,6 +342,21 @@ func (s *Server) createPWA(w http.ResponseWriter, r *http.Request) {
 			}
 			a.IconPNG = append([]byte(nil), source.IconPNG...)
 			a.IconObjectKey = source.IconObjectKey
+			if in.LandingConfig == nil {
+				config := storedPWALanding(source.LandingJSON)
+				if config.Template == "diy" {
+					config.DIYLanding, e = diyBindingReference(tx, "pwa", source.ID)
+					if e != nil {
+						return e
+					}
+				}
+				if config.Template != "" {
+					in.LandingConfig = &config
+					if e = s.applyPWAInput(&a, pwaAppInput{LandingConfig: &config}, false); e != nil {
+						return e
+					}
+				}
+			}
 		}
 		plan, e := getPlan(tx, owner, s.Now())
 		if e != nil {
@@ -353,6 +382,9 @@ func (s *Server) createPWA(w http.ResponseWriter, r *http.Request) {
 		if e = tx.Create(&a).Error; e != nil {
 			return e
 		}
+		if e = s.savePWADIYBinding(tx, a, in.LandingConfig); e != nil {
+			return e
+		}
 		return recordAudit(tx, owner.ID, "pwa.create", a.ID, "")
 	})
 	if err != nil {
@@ -363,7 +395,7 @@ func (s *Server) createPWA(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) updatePWA(w http.ResponseWriter, r *http.Request) {
 	var in pwaAppInput
-	if err := decode(w, r, &in); err != nil {
+	if err := decodeDIYApplication(w, r, &in); err != nil {
 		fail(w, err)
 		return
 	}
@@ -392,6 +424,9 @@ func (s *Server) updatePWA(w http.ResponseWriter, r *http.Request) {
 		if e = tx.Save(&a).Error; e != nil {
 			return e
 		}
+		if e = s.savePWADIYBinding(tx, a, in.LandingConfig); e != nil {
+			return e
+		}
 		return recordAudit(tx, owner.ID, "pwa.update", a.ID, "")
 	})
 	if err != nil {
@@ -416,6 +451,9 @@ func (s *Server) deletePWA(w http.ResponseWriter, r *http.Request) {
 		}
 		var a PWAApp
 		if e = tx.First(&a, "id = ? AND user_id = ?", r.PathValue("id"), owner.ID).Error; e != nil {
+			return e
+		}
+		if e = setDIYBinding(tx, owner.ID, "pwa", a.ID, nil); e != nil {
 			return e
 		}
 		if e = tx.Delete(&a).Error; e != nil {

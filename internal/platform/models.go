@@ -101,24 +101,27 @@ type RateBucket struct {
 	ExpiresAt time.Time `gorm:"index"`
 }
 type Application struct {
-	ID           string         `json:"id" gorm:"primaryKey;size:32"`
-	UserID       string         `json:"user_id" gorm:"index;size:32;not null"`
-	Slug         string         `json:"slug" gorm:"uniqueIndex;size:32;not null"`
-	Name         string         `json:"name" gorm:"size:100"`
-	Description  string         `json:"description"`
-	Version      string         `json:"version" gorm:"size:40"`
-	Platform     string         `json:"platform" gorm:"size:16"`
-	FileKey      string         `json:"-" gorm:"size:32"`
-	FileName     string         `json:"file_name"`
-	Size         int64          `json:"size"`
-	SHA256       string         `json:"sha256"`
-	Enabled      bool           `json:"enabled"`
-	DownloadMode string         `json:"download_mode" gorm:"not null;default:direct"`
-	Blocked      bool           `json:"blocked"`
-	Downloads    int64          `json:"downloads"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
+	LandingSource   string               `json:"landing_source,omitempty" gorm:"-"`
+	LandingTemplate string               `json:"landing_template,omitempty" gorm:"-"`
+	DIYLanding      *DIYLandingReference `json:"diy_landing,omitempty" gorm:"-"`
+	ID              string               `json:"id" gorm:"primaryKey;size:32"`
+	UserID          string               `json:"user_id" gorm:"index;size:32;not null"`
+	Slug            string               `json:"slug" gorm:"uniqueIndex;size:32;not null"`
+	Name            string               `json:"name" gorm:"size:100"`
+	Description     string               `json:"description"`
+	Version         string               `json:"version" gorm:"size:40"`
+	Platform        string               `json:"platform" gorm:"size:16"`
+	FileKey         string               `json:"-" gorm:"size:32"`
+	FileName        string               `json:"file_name"`
+	Size            int64                `json:"size"`
+	SHA256          string               `json:"sha256"`
+	Enabled         bool                 `json:"enabled"`
+	DownloadMode    string               `json:"download_mode" gorm:"not null;default:direct"`
+	Blocked         bool                 `json:"blocked"`
+	Downloads       int64                `json:"downloads"`
+	CreatedAt       time.Time            `json:"created_at"`
+	UpdatedAt       time.Time            `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt       `json:"-" gorm:"index"`
 }
 type Domain struct {
 	VerificationMethod      string     `json:"verification_method"`

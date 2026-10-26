@@ -38,6 +38,8 @@ type Server struct {
 	// Push delivery uses a separate restricted client; tests may replace its
 	// transport without changing payment, DNS, or advertisement HTTP traffic.
 	pwaPushHTTP *http.Client
+	// Production captures with Chromium; tests can inject deterministic results.
+	landingCoverCapture func(context.Context, LandingCoverRenderInput) ([]byte, error)
 }
 
 func NewServer(db *gorm.DB, c Config) *Server {
@@ -154,6 +156,9 @@ func (s *Server) Handler() http.Handler {
 	m := http.NewServeMux()
 	m.Handle("GET /api/visit-statistics/{kind}/{id}", s.auth(s.visitStatistics))
 	s.registerPWARoutes(m)
+	s.registerDIYRuntimeRoutes(m)
+	s.registerDIYLandingRoutes(m)
+	s.registerLandingLibraryRoutes(m)
 	s.registerReturnFlowRoutes(m)
 	s.registerPWAPushRoutes(m)
 	m.HandleFunc("GET /robots.txt", s.robots)
@@ -379,7 +384,7 @@ func requestHost(r *http.Request) string {
 func (s *Server) frontend(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" || r.URL.Path == "/index.html" {
 		// The console may embed only the authenticated, same-origin template preview.
-		policy := strings.Replace(w.Header().Get("Content-Security-Policy"), "frame-src 'none'", "frame-src "+strings.TrimRight(s.Config.PublicURL, "/")+"/api/pwa-landing/preview/", 1)
+		policy := strings.Replace(w.Header().Get("Content-Security-Policy"), "frame-src 'none'", "frame-src "+strings.TrimRight(s.Config.PublicURL, "/")+"/api/pwa-landing/preview/ "+strings.TrimRight(s.Config.PublicURL, "/")+"/api/diy-landing-preview/", 1)
 		w.Header().Set("Content-Security-Policy", policy)
 	}
 

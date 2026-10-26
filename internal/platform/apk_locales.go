@@ -37,6 +37,9 @@ func validateAPKLocales(d PageDesign, origin string) error {
 	}
 	seen := map[string]bool{}
 	for _, locale := range d.Localizations {
+		if locale.Layout == "diy" {
+			return problem(400, "DIY 落地页须在应用层统一选择")
+		}
 		code := apkLocaleCode(locale.Language)
 		if seen[code] || apkLanguageButtons[code] == "" || len(locale.Localizations) > 0 || len(locale.LanguagePriority) > 0 {
 			return problem(400, "请选择支持的详情页语言")
@@ -60,7 +63,7 @@ func validateAPKLocales(d PageDesign, origin string) error {
 
 // Share the PWA browser-language matching and configured fallback order.
 func (d PageDesign) localized(requested string) PageDesign {
-	if len(d.Localizations) == 0 {
+	if d.Layout == "diy" || len(d.Localizations) == 0 {
 		return d
 	}
 	c := PWALandingConfig{LanguagePriority: append([]string(nil), d.LanguagePriority...)}

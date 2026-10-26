@@ -4,15 +4,16 @@ import { runInNewContext } from 'node:vm';
 import { JSDOM } from 'jsdom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 const billedCandidate=readFileSync(resolve(process.cwd(),'../internal/platform/templates/return-flow.js'),'utf8');
-// Compare the reference presentation/behavior after removing only D1's charge gate.
-const candidate=billedCandidate.replace(/^ *\/\* D1_BILLING_START \*\/[\s\S]*?^ *\/\* D1_BILLING_END \*\/\n/gm,'');
+// Compare the original behavior after removing D1's billing and isolated-DIY hooks.
+const withoutBilling=billedCandidate.replace(/^ *\/\* D1_BILLING_START \*\/[\s\S]*?^ *\/\* D1_BILLING_END \*\/\n/gm,'');
+const candidate=withoutBilling.replace(/^ *\/\* D1_DIY_START \*\/[\s\S]*?^ *\/\* D1_DIY_END \*\/\n/gm,'');
 const reference=readFileSync(resolve(process.cwd(),'tests/fixtures/pwa-return-flow.reference.js'),'utf8');
 const css=readFileSync(resolve(process.cwd(),'../internal/platform/templates/return-flow.css'),'utf8');
 const documents:JSDOM[]=[];
 type Options={path?:string;query?:string;zh?:boolean;blocked?:boolean;storage?:Map<string,string>};
-function start(kind:'reference'|'candidate',config:Record<string,unknown>={},options:Options={}){
+function start(kind:'reference'|'candidate'|'diy',config:Record<string,unknown>={},options:Options={}){
  const path=options.path||'/p/0123456789abcdef/';const query=options.query||'';const origin='https://d1.example';
- const dom=new JSDOM('<!doctype html><html><head><style id="pwa-return-flow-style"></style></head><body><main>Installation page</main></body></html>',{url:origin+path+query,pretendToBeVisual:true});documents.push(dom);const real=dom.window;const document=real.document;Object.defineProperty(document,'readyState',{value:'complete'});document.documentElement.lang=options.zh?'zh-CN':'en';const raw={enabled:true,triggerMode:'both',showOnce:true,...config};document.body.dataset.returnFlow=JSON.stringify(raw);document.body.dataset.returnFlowApp='app-one';
+ const dom=new JSDOM('<!doctype html><html><head><style id="pwa-return-flow-style"></style></head><body><main>Installation page</main></body></html>',{url:origin+path+query,pretendToBeVisual:true});documents.push(dom);const real=dom.window;const document=real.document;Object.defineProperty(document,'readyState',{value:'complete'});document.documentElement.lang=options.zh?'zh-CN':'en';const raw={enabled:true,triggerMode:'both',showOnce:true,...config};document.body.dataset.returnFlow=JSON.stringify(raw);document.body.dataset.returnFlowApp='app-one';if(kind==='diy')document.body.setAttribute('data-d1-diy','');
  const storage=options.storage||new Map<string,string>();const sessionStorage={getItem:(key:string)=>{if(options.blocked)throw Error('blocked');return storage.get(key)||null;},setItem:(key:string,value:string)=>{if(options.blocked)throw Error('blocked');storage.set(key,value);}};
  const history={pushState:vi.fn(),back:vi.fn()};const navigations:string[]=[];let href=origin+path+query;const location={origin,host:'d1.example',pathname:path,search:query,protocol:'https:',get href(){return href;},set href(value:string){href=value;navigations.push(value);}};
  const install=vi.fn().mockResolvedValue(undefined);const reports:unknown[]=[];const events:unknown[]=[];let timestamp=1000;
@@ -22,7 +23,7 @@ function start(kind:'reference'|'candidate',config:Record<string,unknown>={},opt
  for(const name of ['view','click'])real.addEventListener('pwa-return-flow-'+name,event=>events.push([name,(event as CustomEvent).detail]));
  const messages:Record<string,string[]>={returnFlowBadge:['Limited offer','限时福利'],returnFlowTitle:['Your exclusive benefit is ready','专属福利已准备好'],returnFlowDescription:['Come back to claim it. Tap the button to continue.','回来就能领取，点击按钮马上继续。'],returnFlowButton:['Claim now','立即领取'],returnFlowDismiss:['Maybe later','稍后再看']};
  const globals={window:facade,document,history,sessionStorage,localStorage:{getItem:()=>null},URL,URLSearchParams,CustomEvent:real.CustomEvent,Promise,Date:{now:()=>timestamp},console,t:(key:string)=>messages[key][options.zh?1:0],getLinkCode:()=>new URLSearchParams(query).get('linkCode')||new URLSearchParams(query).get('link_code')||null,resolveSafeDownloadAssetUrl:(value:string)=>!value?'':/^(https?:)?\/\//i.test(value)||value.startsWith('data:')||value.startsWith('/')?value:origin+'/'+value.replace(/^\/+/,''),trackEvent:async(type:string,details:unknown)=>{reports.push([type,details]);}};
- runInNewContext(kind==='candidate'?candidate:reference+'\ninitReturnFlow();',globals);
+ runInNewContext(kind==='diy'?withoutBilling:kind==='candidate'?candidate:reference+'\ninitReturnFlow();',globals);
  const event=(name:string,detail?:unknown)=>real.dispatchEvent(new real.CustomEvent(name,{detail}));
  const hidden=(value:boolean)=>{timestamp++;Object.defineProperty(document,'hidden',{value,configurable:true});document.dispatchEvent(new real.Event('visibilitychange'));};
  const click=(selector:string)=>(document.querySelector(selector) as HTMLButtonElement)?.click();
@@ -52,3 +53,7 @@ describe('Return page is restored from the original PWA',()=>{
  it('matches no-media layout and treats custom text as literal text',async()=>{const c=await compare({title:'<img onerror="alert(1)">',description:'<script>alert(1)</script>'},c=>c.event('popstate'));expect(c.document.querySelector('script')).toBeNull();});
  it('connects D1 APK download events without recursively scheduling return-flow downloads',()=>{const c=start('candidate',{triggerMode:'back',showOnce:false,showOnDownloadRiskCancel:true});c.event('d1-apk-download-start',{source:'return_flow'});c.event('blur');c.event('focus');expect(c.snapshot().overlay).toBeNull();c.event('d1-apk-download-start',{source:'page'});c.event('blur');c.event('focus');expect(c.snapshot().overlay).toBeTruthy();});
 });
+
+it('handles child history and interaction through the isolated DIY return-page hooks',()=>{const c=start('diy',{triggerMode:'back'});const initial=c.history.pushState.mock.calls.length;c.event('d1-diy-interaction');expect(c.history.pushState.mock.calls.length).toBe(initial+1);c.event('d1-diy-interaction');expect(c.history.pushState.mock.calls.length).toBe(initial+1);c.event('d1-diy-back');expect(c.document.getElementById('pwa-return-flow-overlay')).not.toBeNull();});
+
+it('does not traverse another history entry when parent and child report the same DIY back action',()=>{const c=start('diy',{triggerMode:'back',showOnce:false});c.event('d1-diy-back');expect(c.document.getElementById('pwa-return-flow-overlay')).not.toBeNull();c.event('popstate');expect(c.history.back).not.toHaveBeenCalled();expect(c.document.getElementById('pwa-return-flow-overlay')).not.toBeNull();});

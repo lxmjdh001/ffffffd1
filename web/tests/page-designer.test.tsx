@@ -9,10 +9,24 @@ import type { Config } from '../src/types';
 import { readPagePicture } from '../src/page-images';
 import { pageButtonText, pageLanguageOptions } from '../src/page-language';
 import { getLocale, setLocale, t } from '../src/i18n';
+import { defaultReturnFlow } from '../src/return-flow';
 
 vi.mock('../src/download-domain', () => ({ useDownloadDomain: () => ({ data: { download_base_url: 'http://localhost:8088' } }) }));
 vi.mock('../src/page-images', () => ({ readPagePicture: vi.fn() }));
+vi.mock('../src/landing-source-selector', () => ({ LandingSourceSelector: ({ value, onChange }: { value?: {page_id:string;revision_id:string}; onChange:(value:{page_id:string;revision_id:string}|undefined)=>void }) => <label>测试DIY版本<select required data-field="diy_landing" value={value?.revision_id || ''} onChange={event=>onChange(event.target.value?{page_id:'page-one',revision_id:event.target.value}:undefined)}><option value="">请选择</option><option value="revision-two">活动页 v2</option></select></label> }));
+vi.mock('../src/diy-landing-preview',()=>({DIYLandingPreview:({reference}:{reference?:{page_id:string;revision_id:string}})=><div data-testid="diy-preview">{reference?.revision_id}</div>}));
 const clients: QueryClient[] = [];
+it('binds DIY globally and keeps external-browser and return-flow configuration',async()=>{
+ const state=renderDesigner({title:'',external_browser:{enabled:true,url:'https://destination.example'},return_flow_config:defaultReturnFlow()}),user=userEvent.setup();
+ await user.click(await screen.findByRole('button',{name:'DIY落地页'}));
+ expect(screen.queryByLabelText('展示名称')).toBeNull();
+ expect(screen.queryByLabelText('下载按钮文字')).toBeNull();
+ await user.selectOptions(screen.getByLabelText('测试DIY版本'),'revision-two');
+ expect(screen.getByTestId('diy-preview').textContent).toBe('revision-two');
+ await user.click(screen.getByRole('button',{name:'保存并发布'}));
+ await screen.findByRole('heading',{name:'应用列表'});
+ expect(state.published).toMatchObject({layout:'diy',diy_landing:{page_id:'page-one',revision_id:'revision-two'},external_browser:{enabled:true,url:'https://destination.example'},return_flow_config:{enabled:false}});
+});
 it('shares the PWA multi-language picker, preserves separate APK content and saves its priority',async()=>{
  const state=renderDesigner(),user=userEvent.setup();await screen.findByLabelText('展示名称');
  expect(screen.getByRole('heading',{name:'多语言落地页'})).toBeTruthy();
@@ -201,8 +215,8 @@ it('keeps template language independent of console language and keeps it when re
 });
 
 it('uses the reference APK templates and publishes the new content settings only on save',async()=>{
- const state=renderDesigner({display_rating:'4.8'}),user=userEvent.setup();await screen.findByLabelText('展示名称');
- await user.selectOptions(screen.getByLabelText('页面模板'),'custom');
+ const state=renderDesigner({layout:'custom',display_rating:'4.8'}),user=userEvent.setup();await screen.findByLabelText('展示名称');
+ expect(screen.queryByRole('button',{name:'自定义图片模板'})).toBeNull();expect(screen.getByText('当前应用保留旧版模板。选择新模板后才会更换页面。')).toBeTruthy();
  await user.selectOptions(screen.getByLabelText('年龄分级'),'18');await user.selectOptions(screen.getByLabelText('按钮位置'),'top');await user.click(screen.getByLabelText('显示桌面二维码'));
  expect((screen.getByRole('checkbox',{name:/文字混淆/}) as HTMLInputElement).checked).toBe(false);
  await user.click(screen.getByRole('checkbox',{name:/文字混淆/}));

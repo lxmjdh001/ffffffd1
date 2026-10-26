@@ -52,6 +52,26 @@ it('places PWA and notifications after apps and ad tracking before referrals',()
  expect(links).toEqual(['/apps','/pwas','/pwa-push','/domains','/traffic','/cloaks','/billing','/integrations','/referrals','/activity','/account']);
 });
 
+it('expands landing pages into DIY and the template library without navigating the parent item', async () => {
+ const user=open();const toggle=screen.getByRole('button',{name:'落地页',exact:true});
+ expect(toggle.getAttribute('aria-expanded')).toBe('false');
+ expect(screen.queryByRole('link',{name:'DIY落地页',exact:true})).toBeNull();
+ await user.click(toggle);
+ expect(toggle.getAttribute('aria-expanded')).toBe('true');
+ expect(screen.getByRole('link',{name:'DIY落地页',exact:true}).getAttribute('href')).toBe('/diy-landings');
+ expect(screen.getByRole('link',{name:'模版库',exact:true}).getAttribute('href')).toBe('/landing-templates');
+ expect(screen.getByRole('heading',{name:'应用管理'})).toBeTruthy();
+ await user.click(toggle);expect(screen.queryByRole('link',{name:'模版库',exact:true})).toBeNull();
+});
+
+it('automatically opens landing navigation for its current child route',()=>{
+ open('/landing-templates');
+ expect(screen.getByRole('button',{name:'落地页',exact:true}).getAttribute('aria-expanded')).toBe('true');
+ expect(screen.getByRole('link',{name:'模版库',exact:true}).getAttribute('aria-current')).toBe('page');
+ expect(within(document.querySelector('header')!).getByText('模版库')).toBeTruthy();
+});
+
+
 it('keeps mobile navigation focus inside the open drawer and restores focus on Escape', async () => {
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
   const user = open();

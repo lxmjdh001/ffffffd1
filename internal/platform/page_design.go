@@ -37,6 +37,8 @@ var ratingStarsHTML string
 var ratingStarsCSS string
 
 type PageDesign struct {
+	DIYLanding           *DIYLandingReference   `json:"diy_landing,omitempty"`
+	SystemLayout         string                 `json:"system_layout,omitempty"`
 	ExternalBrowser      *ExternalBrowserConfig `json:"external_browser,omitempty"`
 	Localizations        []PageDesign           `json:"localizations,omitempty"`
 	LanguagePriority     []string               `json:"language_priority,omitempty"`
@@ -76,6 +78,9 @@ func (s *Server) pageDesign(a Application) (PageDesign, error) {
 	err := s.DB.First(&saved, "app_id = ?", a.ID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return defaultPageDesign(a), nil
+	}
+	if err == nil && saved.Design.Layout == "diy" {
+		saved.Design.DIYLanding, err = diyBindingReference(s.DB, "apk", a.ID)
 	}
 	return saved.Design, err
 }
@@ -128,6 +133,12 @@ func validatePageDesign(d PageDesign, publicURL ...string) error {
 	origin := ""
 	if len(publicURL) > 0 {
 		origin = publicURL[0]
+	}
+	if d.Layout == "diy" {
+		if d.ReturnFlowConfig != nil {
+			return normalizeReturnFlow(d.ReturnFlowConfig, origin)
+		}
+		return nil
 	}
 	if err := validateAPKLocales(d, origin); err != nil {
 		return err
@@ -185,7 +196,7 @@ func (s *Server) getPageDesign(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) savePageDesign(w http.ResponseWriter, r *http.Request) {
 	var d PageDesign
-	if err := decode(w, r, &d); err != nil {
+	if err := decodeDIYApplication(w, r, &d); err != nil {
 		fail(w, err)
 		return
 	}
@@ -199,6 +210,47 @@ func (s *Server) savePageDesign(w http.ResponseWriter, r *http.Request) {
 		}
 		var a Application
 		if err := tx.First(&a, "id = ? AND user_id = ?", r.PathValue("id"), userOf(r).ID).Error; err != nil {
+			return err
+		}
+		if d.Layout == "diy" {
+			ref := d.DIYLanding
+			prior, err := diyBindingReference(tx, "apk", a.ID)
+			if err != nil {
+				return err
+			}
+			if ref == nil {
+				var err error
+				ref, err = diyBindingReference(tx, "apk", a.ID)
+				if err != nil {
+					return err
+				}
+			}
+			if ref == nil {
+				return problem(400, "请选择已发布的 DIY 落地页")
+			}
+			if err := s.validateReturnFlowAsset(tx, a.UserID, d.ReturnFlowConfig); err != nil {
+				return err
+			}
+			if err := s.bindDIYLanding(tx, a.UserID, "apk", a.ID, ref); err != nil {
+				return err
+			}
+			var previous AppPageDesign
+			if tx.First(&previous, "app_id = ?", a.ID).Error == nil && previous.Design.Layout != "diy" {
+				d.SystemLayout = previous.Design.Layout
+			}
+			stored := d
+			stored.DIYLanding = nil
+			if err := tx.Save(&AppPageDesign{AppID: a.ID, Design: stored}).Error; err != nil {
+				return err
+			}
+			if previous.Design.Layout != "diy" || !diySameRevision(prior, ref) {
+				if err := tx.Model(&a).Update("download_mode", "info").Error; err != nil {
+					return err
+				}
+			}
+			return recordAudit(tx, a.UserID, "app.page_design", a.ID, "保存 DIY 落地页引用")
+		}
+		if err := setDIYBinding(tx, a.UserID, "apk", a.ID, nil); err != nil {
 			return err
 		}
 		if err := s.validatePageImageReferences(tx, a.ID, d); err != nil {
@@ -225,7 +277,9 @@ func (s *Server) savePageDesign(w http.ResponseWriter, r *http.Request) {
 		if err := s.validateReturnFlowAsset(tx, a.UserID, d.ReturnFlowConfig); err != nil {
 			return err
 		}
-		saved := AppPageDesign{AppID: a.ID, Design: d}
+		stored := d
+		stored.DIYLanding = nil
+		saved := AppPageDesign{AppID: a.ID, Design: stored}
 		if err := tx.Save(&saved).Error; err != nil {
 			return err
 		}
@@ -244,12 +298,26 @@ func (s *Server) previewPageDesign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var d PageDesign
-	if err := decode(w, r, &d); err != nil {
+	if err := decodeDIYApplication(w, r, &d); err != nil {
 		fail(w, err)
 		return
 	}
 	if err := validatePageDesign(d, s.Config.PublicURL); err != nil {
 		fail(w, err)
+		return
+	}
+	if d.Layout == "diy" {
+		rev, err := loadDIYRevision(s.DB, a.UserID, "apk", d.DIYLanding)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		body, err := diyContentDocument(rev.RenderHTML, rev.Config, randomHex(32), "apk", d.ButtonText, a.Name, "", true, func(raw, kind string) string { return "" })
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		jsonOut(w, 200, map[string]string{"html": body})
 		return
 	}
 	var out bytes.Buffer

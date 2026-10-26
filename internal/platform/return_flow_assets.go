@@ -211,12 +211,13 @@ func (s *Server) publicReturnFlowAsset(w http.ResponseWriter, r *http.Request) {
 	var file io.ReadSeekCloser
 	var err error
 	if asset.ObjectKey != "" {
-		if s.Media == nil {
+		store := s.diyLandingImageReadStore(asset.ObjectKey)
+		if store == nil {
 			http.Error(w, "Media unavailable", 503)
 			return
 		}
 		var size int64
-		file, size, err = s.Media.open(r.Context(), asset.ObjectKey)
+		file, size, err = store.open(r.Context(), asset.ObjectKey)
 		if err == nil && size != asset.Size {
 			file.Close()
 			err = io.ErrUnexpectedEOF

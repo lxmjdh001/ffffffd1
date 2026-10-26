@@ -78,6 +78,24 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 	if !launch {
 		data.ExternalBrowser = s.externalBrowserJSON(r, "pwa", a.ID, a.Slug, a.UserID, landing.Settings.ExternalBrowser)
 	}
+	if !launch && landing.Template == "diy" {
+		ref, refErr := diyBindingReference(s.DB, "pwa", a.ID)
+		if refErr != nil {
+			http.Error(w, "Page unavailable", 503)
+			return
+		}
+		label := "Install app"
+		if data.Chinese {
+			label = "安装应用"
+		}
+		w.Header().Add("Vary", "Accept-Language")
+		if err = s.renderDIYShell(w, r, diyShellData{PWA: true, Kind: "pwa", Base: data.Base, Name: a.Name, Description: a.Description, Chinese: data.Chinese, Push: a.PushEnabled, ExternalBrowser: data.ExternalBrowser, ReturnFlow: a.ReturnFlowJSON, ReturnFlowToken: data.ReturnFlowToken, ResourceID: a.ID, Label: label, ClientJS: data.ClientJS}, ref, a.UserID); err != nil {
+			http.Error(w, "Page unavailable", 503)
+			return
+		}
+		s.recordAccess(r, a.UserID, "pwas", a.ID, "allowed")
+		return
+	}
 	if !launch && (landing.Template == "google_play" || landing.Template == "custom") {
 		err = s.renderPWALanding(a, r, &buf)
 	} else {
@@ -137,7 +155,7 @@ func (s *Server) pwaManifest(w http.ResponseWriter, r *http.Request) {
 		theme = landing.StartupThemeColor
 	}
 	name, icon := a.Name, ""
-	if landing.Template != "" && landing.Template != "legacy" {
+	if landing.Template == "google_play" || landing.Template == "custom" {
 		v := pwaLandingLanguage(landing, r.Header.Get("Accept-Language"))
 		if v.AppName != "" {
 			name = v.AppName

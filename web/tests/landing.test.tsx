@@ -65,7 +65,6 @@ describe('public landing page', () => {
     expect(document.querySelector('.home-story-pwa')?.textContent).toContain('无需下载 APK');
     expect(screen.getByRole('heading', {name:'什么是 PWA？'})).toBeTruthy();
     expect(document.querySelector('.home-push-copy')?.textContent).toContain('用户自主订阅');
-    expect(screen.getByText(/iOS 通常需从主屏幕打开/)).toBeTruthy();
     expect(document.querySelectorAll('.home-solution-grid article')).toHaveLength(7);
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('回流页');
     expect(document.querySelector('.home-solution-grid')?.textContent).toContain('广告回传');

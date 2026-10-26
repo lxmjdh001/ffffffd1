@@ -9,6 +9,8 @@ import { defaultPWALanding } from '../src/pwa-landing';
 import type { PWAApp } from '../src/pwa-types';
 
 vi.mock('react-admin', () => ({ useNotify: () => vi.fn() }));
+vi.mock('../src/landing-source-selector', () => ({ LandingSourceSelector: ({ value, onChange }: { value?: {page_id:string;revision_id:string}; onChange:(value:{page_id:string;revision_id:string}|undefined)=>void }) => <label>测试DIY版本<select required data-field="diy_landing" value={value?.revision_id || ''} onChange={event=>onChange(event.target.value?{page_id:'page-one',revision_id:event.target.value}:undefined)}><option value="">请选择</option><option value="revision-one">活动页 v1</option><option value="revision-two">活动页 v2</option></select></label> }));
+vi.mock('../src/diy-landing-preview',()=>({DIYLandingPreview:({reference}:{reference?:{page_id:string;revision_id:string}})=><div data-testid="diy-preview">{reference?.revision_id}</div>}));
 const app: PWAApp = { id: 'own-app', slug: 'my-shop', name: '我的商店', target_url: 'https://shop.example', description: '随时查看好物', theme_color: '#6373e8', enabled: true, push_enabled: true, icon_url: '', entry_url: 'https://d1.example/p/my-shop', launch_url: 'https://my-shop.apps.example/', subscription_count: 12, created_at: '2026-10-24T01:00:00Z', updated_at: '2026-10-24T02:00:00Z' };
 let client: QueryClient;
 let rows: PWAApp[];
@@ -42,6 +44,37 @@ function setup() { render(<QueryClientProvider client={client}><MemoryRouter><Ro
 async function openCreate(user: ReturnType<typeof userEvent.setup>) { await user.click(await screen.findByRole('button', { name: '新建 PWA 应用' })); const form = within(await screen.findByRole('form')); await user.type(form.getByLabelText('应用名称'), '新应用'); await user.type(form.getByLabelText('网页 URL'), 'https://new.example'); return form; }
 
 describe('PWA applications', () => {
+ it('creates a PWA using a pinned DIY version while retaining installation and external-browser settings',async()=>{
+  const user=setup(),form=await openCreate(user);
+  await user.click(form.getByRole('button',{name:'DIY落地页'}));
+  expect(form.queryByLabelText('商店应用名称')).toBeNull();
+  await user.selectOptions(form.getByLabelText('测试DIY版本'),'revision-two');
+  await user.click(form.getByLabelText('跳转外部浏览器'));
+  await user.type(form.getByLabelText('外部浏览器目标网址'),'https://destination.example');
+  await user.click(form.getByLabelText('兼容 iOS'));
+  await user.click(form.getByRole('button',{name:'创建应用',exact:true}));
+  await waitFor(()=>expect(screen.queryByRole('form')).toBeNull());
+  expect(writes[0]).toMatchObject({body:{landing_config:{template:'diy',diy_landing:{page_id:'page-one',revision_id:'revision-two'},settings:{iosCompatible:false,externalBrowser:{enabled:true,url:'https://destination.example'}}}}});
+ });
+ it('edits the saved DIY version without validating hidden store fields or discarding return-flow settings',async()=>{
+  const landing=defaultPWALanding();landing.template='diy';landing.diy_landing={page_id:'page-one',revision_id:'revision-one'};landing.storeInfos[0].appIcon='javascript:unused';
+  rows[0].landing_config=landing;rows[0].return_flow_config={...defaultReturnFlow(),enabled:true,title:'欢迎回来'};
+  const user=setup();await user.click(await screen.findByRole('button',{name:'编辑',exact:true}));
+  const form=within(await screen.findByRole('form'));
+  expect((form.getByLabelText('测试DIY版本') as HTMLSelectElement).value).toBe('revision-one');
+  await user.selectOptions(form.getByLabelText('测试DIY版本'),'revision-two');
+  await user.click(form.getByRole('button',{name:'保存应用'}));
+  await waitFor(()=>expect(screen.queryByRole('form')).toBeNull());
+  expect(writes[0]).toMatchObject({method:'PUT',body:{landing_config:{template:'diy',diy_landing:{page_id:'page-one',revision_id:'revision-two'}},return_flow_config:{enabled:true,title:'欢迎回来'}}});
+ });
+ it('preserves application-specific DIY edits in the saved PWA configuration',async()=>{
+  const landing=defaultPWALanding(),content={'text-0':'PWA专属标题','primary-label':'安装体验','image-0':'https://assets.example/pwa.jpg'};
+  landing.template='diy';landing.diy_landing={page_id:'page-one',revision_id:'revision-one',content};rows[0].landing_config=landing;
+  const user=setup();await user.click(await screen.findByRole('button',{name:'编辑',exact:true}));
+  const form=within(await screen.findByRole('form'));await user.clear(form.getByLabelText('应用简介'));await user.type(form.getByLabelText('应用简介'),'保留专属页面内容');
+  await user.click(form.getByRole('button',{name:'保存应用'}));await waitFor(()=>expect(screen.queryByRole('form')).toBeNull());
+  expect(writes[0]).toMatchObject({method:'PUT',body:{landing_config:{template:'diy',diy_landing:{page_id:'page-one',revision_id:'revision-one',content}}}});
+ });
  it('validates and saves the external browser destination with the PWA',async()=>{
   const user=setup(),form=await openCreate(user);
   await user.click(form.getByLabelText('跳转外部浏览器'));
@@ -106,13 +139,13 @@ describe('PWA applications', () => {
     await user.click(form.getByLabelText('显示桌面二维码'));
     await user.click(form.getByLabelText('浏览器打开引导'));
     await user.type(form.getByLabelText('浏览器引导文案'),'Open in your browser');
-    await user.click(form.getByRole('button',{name:'自定义图片模板'}));
+    await user.click(form.getByRole('button',{name:'DIY落地页'}));
+    await user.selectOptions(form.getByLabelText('测试DIY版本'),'revision-one');
     await user.click(form.getByLabelText('嵌入网页'));
     expect(form.getAllByLabelText('显示桌面二维码')).toHaveLength(1);
-    await user.click(form.getByLabelText('显示桌面二维码'));
     await user.click(form.getByRole('button',{name:'创建应用',exact:true}));
     await waitFor(()=>expect(screen.queryByRole('form')).toBeNull());
-    expect(writes[0]).toMatchObject({body:{landing_config:{template:'custom',settings:{iosCompatible:false,w2aAutoDownload:true,enableIframeEmbed:true,enableQrcode:true,browserGuideConfig:{enabled:true,message:'Open in your browser'}},storeInfos:[{showQrCode:true}]}}});
+    expect(writes[0]).toMatchObject({body:{landing_config:{template:'diy',diy_landing:{page_id:'page-one',revision_id:'revision-one'},settings:{iosCompatible:false,w2aAutoDownload:true,enableIframeEmbed:true,enableQrcode:true,browserGuideConfig:{enabled:true,message:'Open in your browser'}}}}});
   });
   it('opens the right-side domain drawer for the install link',async()=>{
     const user=setup();await screen.findByRole('heading',{name:app.name});
@@ -171,13 +204,13 @@ describe('PWA applications', () => {
   it('opens a dedicated creation route and saves the selected reference landing template', async () => {
     const user=setup();const form=await openCreate(user);expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByRole('heading',{name:'新建 PWA 应用'})).toBeTruthy();
-    expect(form.getByRole('button',{name:'Google Play 商店模板'})).toBeTruthy();
-    await user.click(form.getByRole('button',{name:'自定义图片模板'}));
-    await user.type(form.getByLabelText('按钮文案'),'Install now');
-    await user.selectOptions(form.getByLabelText('按钮位置'),'top');
+    expect(form.getByRole('button',{name:'Google Play 商店模板'}).getAttribute('aria-pressed')).toBe('true');
+    expect(form.getByRole('button',{name:'DIY落地页'})).toBeTruthy();
+    expect(form.queryByRole('button',{name:'自定义图片模板'})).toBeNull();
+    expect(form.queryByRole('button',{name:'原有安装页'})).toBeNull();
     await user.click(form.getByRole('button',{name:'创建应用',exact:true}));
     await waitFor(()=>expect(screen.queryByRole('form')).toBeNull());
-    expect(writes[0]).toMatchObject({body:{landing_config:{template:'custom',storeInfos:[{appName:'新应用',buttonText:'Install now',buttonPosition:'top'}]}}});
+    expect(writes[0]).toMatchObject({body:{landing_config:{template:'google_play',storeInfos:[{appName:'新应用'}]}}});
   });
   it('preserves localized content, reviews and manifest settings on pause', async () => {
     const {defaultPWALanding}=await import('../src/pwa-landing');const landing=defaultPWALanding();landing.storeInfos[0].appName='Store title';landing.displayMode='fullscreen';landing.storeInfos[0].reviews=[{nickname:'M',comment:'Great',rating:5,commentLanguage:'en-US',sortOrder:0}];rows[0].landing_config=landing;
@@ -185,10 +218,13 @@ describe('PWA applications', () => {
   });
 
   it('reopens the saved template rather than an older cached draft', async () => {
+    rows[0].landing_config={...defaultPWALanding(),template:'custom'};
     const user=setup();await user.click(await screen.findByRole('button',{name:'编辑',exact:true}));let form=within(await screen.findByRole('form'));
-    await user.click(form.getByRole('button',{name:'自定义图片模板'}));await user.type(form.getByLabelText('按钮文案'),'Saved custom button');await user.click(form.getByRole('button',{name:'保存应用'}));
+    expect(form.queryByRole('button',{name:'自定义图片模板'})).toBeNull();
+    expect(form.getByText('当前应用保留旧版模板。选择新模板后才会更换页面。')).toBeTruthy();
+    await user.type(form.getByLabelText('按钮文案'),'Saved custom button');await user.click(form.getByRole('button',{name:'保存应用'}));
     await waitFor(()=>expect(screen.queryByRole('form')).toBeNull());await user.click(screen.getByRole('button',{name:'编辑',exact:true}));form=within(await screen.findByRole('form'));
-    expect((form.getByLabelText('按钮文案') as HTMLInputElement).value).toBe('Saved custom button');expect(form.getByRole('button',{name:'自定义图片模板'}).className).toContain('selected');
+    expect((form.getByLabelText('按钮文案') as HTMLInputElement).value).toBe('Saved custom button');expect(form.queryByRole('button',{name:'自定义图片模板'})).toBeNull();expect(rows[0].landing_config?.template).toBe('custom');
   });
 
 });

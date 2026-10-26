@@ -251,8 +251,8 @@ func TestPWAPublicPagesManifestScopeAndTenantAvailability(t *testing.T) {
 		t.Fatal("push public config key exposure wrong")
 	}
 	root := pwaPublicCall(t, s, "/", "", "")
-	if !strings.Contains(root.Header().Get("Content-Security-Policy"), "frame-src "+s.Config.PublicURL+"/api/pwa-landing/preview/;") {
-		t.Fatal("console must only embed its scoped authenticated template preview")
+	if !strings.Contains(root.Header().Get("Content-Security-Policy"), "frame-src "+s.Config.PublicURL+"/api/pwa-landing/preview/ "+s.Config.PublicURL+"/api/diy-landing-preview/;") {
+		t.Fatal("console must only embed its scoped authenticated template and DIY previews")
 	}
 	suffixes := []string{"", "launch", "manifest.webmanifest", "sw.js", "client.js", "style.css", "icon/192.png", "push-config"}
 	for _, suffix := range suffixes {

@@ -132,7 +132,19 @@ func Migrate(db *gorm.DB) error {
 			if err := migrateCommissionSettings(tx); err != nil {
 				return err
 			}
-			return migratePWA(tx)
+			if err := migratePWA(tx); err != nil {
+				return err
+			}
+			if err := migrateDIYLandings(tx); err != nil {
+				return err
+			}
+			if err := migrateLandingLibrary(tx); err != nil {
+				return err
+			}
+			if err := migrateLandingCovers(tx); err != nil {
+				return err
+			}
+			return migrateDIYContent(tx)
 		}
 		if err := tx.AutoMigrate(&Settings{}); err != nil {
 			return err
@@ -166,7 +178,19 @@ func Migrate(db *gorm.DB) error {
 		if err := migrateCommissionSettings(tx); err != nil {
 			return err
 		}
-		return migratePWA(tx)
+		if err := migratePWA(tx); err != nil {
+			return err
+		}
+		if err := migrateDIYLandings(tx); err != nil {
+			return err
+		}
+		if err := migrateLandingLibrary(tx); err != nil {
+			return err
+		}
+		if err := migrateLandingCovers(tx); err != nil {
+			return err
+		}
+		return migrateDIYContent(tx)
 	})
 }
 func BootstrapAdmin(db *gorm.DB, c Config) error {

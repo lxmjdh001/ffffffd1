@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,10 @@ import (
 )
 
 type Config struct {
+	DisableDIYLanding                                                     bool
+	LandingScreenshotBrowser                                              string
+	LandingScreenshotNoSandbox                                            bool
+	LandingScreenshotTimeout                                              time.Duration
 	R2                                                                    R2Config
 	PageImages                                                            PageImageConfig
 	Role, RemoteStorageURL                                                string
@@ -39,6 +44,10 @@ func env(key, fallback string) string {
 func LoadConfig() (Config, error) {
 	c := Config{Env: env("APP_ENV", "development"), Addr: env("HTTP_ADDR", "127.0.0.1:8088"), DatabaseURL: os.Getenv("DATABASE_URL"), DataDir: env("DATA_DIR", "data"), WebDir: env("WEB_DIR", "web/dist"), PublicURL: strings.TrimRight(env("APP_URL", "http://localhost:8088"), "/"), Secret: os.Getenv("APP_SECRET"), AdminEmail: env("ADMIN_ACCOUNT", os.Getenv("ADMIN_EMAIL")), AdminPassword: os.Getenv("ADMIN_PASSWORD"), ClamAVAddr: os.Getenv("CLAMAV_ADDR"), FutoonURL: os.Getenv("FUTOON_API_URL"), FutoonPID: os.Getenv("FUTOON_PID"), FutoonKey: os.Getenv("FUTOON_KEY"), USDTMonitorURL: os.Getenv("USDT_MONITOR_URL"), USDTMonitorSecret: os.Getenv("USDT_MONITOR_SECRET"), USDTWallet: os.Getenv("USDT_WALLET"), TronAPIURL: env("TRON_API_URL", "https://api.trongrid.io"), TronAPIKey: os.Getenv("TRON_API_KEY")}
 	c.Role = env("SERVER_ROLE", "all")
+	c.DisableDIYLanding = env("DISABLE_DIY_LANDING", "false") == "true"
+	if err := c.loadLandingScreenshotConfig(); err != nil {
+		return c, err
+	}
 	c.R2 = R2Config{Endpoint: os.Getenv("R2_ENDPOINT"), AccessKey: os.Getenv("R2_ACCESS_KEY"), SecretKey: os.Getenv("R2_SECRET_KEY"), Bucket: os.Getenv("R2_BUCKET")}
 	c.USDTProvider = env("USDT_PROVIDER", "tron")
 	c.USDTAddressPasswordHash = os.Getenv("USDT_ADDRESS_PASSWORD_HASH")
@@ -83,6 +92,21 @@ func LoadConfig() (Config, error) {
 	return c, c.Validate()
 }
 
+func (c *Config) loadLandingScreenshotConfig() error {
+	c.LandingScreenshotBrowser = strings.TrimSpace(os.Getenv("LANDING_SCREENSHOT_BROWSER"))
+	noSandbox, err := strconv.ParseBool(env("LANDING_SCREENSHOT_NO_SANDBOX", "false"))
+	if err != nil {
+		return errors.New("LANDING_SCREENSHOT_NO_SANDBOX must be true or false")
+	}
+	c.LandingScreenshotNoSandbox = noSandbox
+	seconds, err := strconv.Atoi(strings.TrimSpace(env("LANDING_SCREENSHOT_TIMEOUT_SECONDS", "25")))
+	if err != nil || seconds < 10 || seconds > 60 {
+		return errors.New("LANDING_SCREENSHOT_TIMEOUT_SECONDS must be an integer between 10 and 60")
+	}
+	c.LandingScreenshotTimeout = time.Duration(seconds) * time.Second
+	return nil
+}
+
 func (c Config) paymentMethods() []string {
 	methods := []string{}
 	if c.USDTWallet != "" && (c.usdtProvider() != "uzf" || (c.USDTMonitorURL != "" && c.USDTMonitorSecret != "")) {
@@ -117,6 +141,9 @@ func (c Config) Host() string {
 	return strings.ToLower(u.Hostname())
 }
 func (c Config) Validate() error {
+	if c.LandingScreenshotTimeout != 0 && (c.LandingScreenshotTimeout < 10*time.Second || c.LandingScreenshotTimeout > 60*time.Second) {
+		return errors.New("LANDING_SCREENSHOT_TIMEOUT_SECONDS must be an integer between 10 and 60")
+	}
 	if err := c.r2Config().validate(c); err != nil {
 		return err
 	}

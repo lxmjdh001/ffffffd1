@@ -61,7 +61,7 @@ export function PWAEditor({ initial, close }: { initial?: PWAApp; close: () => v
     if (!validReturnFlow(draft.return_flow_config)) { focusField(formRef.current?.querySelector('.return-flow-editor input')); return; }
     submitting.current = true; setBusy(true); setError('');
     try {
-      const landing=normalizePWALanding(draft.landing_config);landing.storeInfos=landing.storeInfos.map(v=>({...v,appName:v.appName.trim()||draft.name.trim()}));
+      const landing=normalizePWALanding(draft.landing_config);if(landing.template!=='diy')landing.storeInfos=landing.storeInfos.map(v=>({...v,appName:v.appName.trim()||draft.name.trim()}));
       const payload = { ...draft, import_from: saved ? undefined : imported?.id, landing_config:draft.landing_config ? landing : undefined, name: draft.name.trim(), description: draft.description.trim(), target_url: draft.target_url.trim() };
       let result = await send<PWAApp>(saved ? `/pwas/${saved.id}` : '/pwas', payload, saved ? 'PUT' : 'POST', saved ? undefined : requestKey.current);
       setSaved(result); cache.setQueryData(['pwa',result.id],result); await cache.invalidateQueries({ queryKey: ['pwas'] });

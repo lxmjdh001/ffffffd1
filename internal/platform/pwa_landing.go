@@ -63,6 +63,7 @@ type PWALandingSettings struct {
 }
 type PWALandingConfig struct {
 	Template             string               `json:"template"`
+	DIYLanding           *DIYLandingReference `json:"diy_landing,omitempty"`
 	AppRemark            string               `json:"appRemark"`
 	StartupBgColor       string               `json:"startupBgColor"`
 	StartupThemeColor    string               `json:"startupThemeColor"`
@@ -86,10 +87,10 @@ func (s *Server) normalizePWALanding(c *PWALandingConfig) error {
 	if err := normalizeExternalBrowser(c.Settings.ExternalBrowser); err != nil {
 		return err
 	}
-	if c.Template != "legacy" && c.Template != "google_play" && c.Template != "custom" {
+	if c.Template != "legacy" && c.Template != "google_play" && c.Template != "custom" && c.Template != "diy" {
 		return problem(400, "PWA 落地页配置无效")
 	}
-	if len(c.StoreInfos) > 32 || len(c.LanguagePriority) > 32 || (c.Template != "legacy" && len(c.StoreInfos) == 0) {
+	if len(c.StoreInfos) > 32 || len(c.LanguagePriority) > 32 || ((c.Template == "google_play" || c.Template == "custom") && len(c.StoreInfos) == 0) {
 		return problem(400, "PWA 落地页配置无效")
 	}
 	for _, v := range []*string{&c.StartupBgColor, &c.StartupThemeColor} {
@@ -128,6 +129,11 @@ func (s *Server) normalizePWALanding(c *PWALandingConfig) error {
 	}
 	if c.Settings.PackagePriority == "w2a_only" && c.Settings.APKURL == "" {
 		return problem(400, "请填写 APK 下载地址")
+	}
+	// The creator may retain previous store-template content while using DIY.
+	// Hidden store fields do not determine its validity or installation identity.
+	if c.Template == "diy" {
+		return nil
 	}
 	seen := map[string]bool{}
 	for i := range c.StoreInfos {
@@ -173,7 +179,7 @@ func (s *Server) normalizePWALanding(c *PWALandingConfig) error {
 	return nil
 }
 func (s *Server) validatePWALandingAssets(tx *gorm.DB, owner string, c *PWALandingConfig) error {
-	if c == nil {
+	if c == nil || c.Template == "diy" {
 		return nil
 	}
 	for _, v := range c.StoreInfos {
@@ -217,6 +223,9 @@ func (s *Server) pwaLandingRuntime(a *PWAApp, r *http.Request) map[string]any {
 		requested = r.Header.Get("Accept-Language")
 	}
 	v := pwaLandingLanguage(c, requested)
+	if c.Template == "diy" {
+		v = PWALandingLanguage{AppName: a.Name}
+	}
 	base := s.pwaRequestOrigin(r) + "/p/" + a.Slug + "/"
 	if v.AppIcon == "" {
 		v.AppIcon = base + "icon/512.png"

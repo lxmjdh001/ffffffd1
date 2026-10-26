@@ -168,6 +168,7 @@
  });
  if (standalone) setStatus(installStatus, text('You are using the installed app.', '你正在使用桌面应用。'));
  function downloadInCurrentPage(url) {
+  if(document.body.hasAttribute('data-d1-diy')) { window.location.assign(url);return true; }
   const frame=document.createElement('iframe');frame.name='d1-pwa-download-'+Date.now();frame.hidden=true;document.body.appendChild(frame);
   const link=document.createElement('a');link.href=url;link.target=frame.name;link.download='';link.hidden=true;document.body.appendChild(link);link.click();setTimeout(()=>{frame.remove();link.remove();},15000);return true;
  }
@@ -280,7 +281,11 @@
   try {
    // Explicit scope prevents this worker from controlling the console or other apps.
    registration = await navigator.serviceWorker.register(base+'sw.js', {scope:base,updateViaCache:'none'});
-   await navigator.serviceWorker.ready;
+   // A cloak entry is outside the app's SW scope. Its registration can still
+   // become active, but navigator.serviceWorker.ready would wait indefinitely.
+   if(document.body.hasAttribute('data-d1-diy')&&!window.location.pathname.startsWith(base)) {
+    if(!registration.active) await new Promise((resolve,reject)=>{const worker=registration.installing||registration.waiting;if(!worker){resolve();return;}const timer=setTimeout(()=>reject(new Error('worker activation timed out')),15000);const changed=()=>{if(worker.state==='activated'){clearTimeout(timer);resolve();}else if(worker.state==='redundant'){clearTimeout(timer);reject(new Error('worker activation failed'));}};worker.addEventListener('statechange',changed);changed();});
+   } else await navigator.serviceWorker.ready;
    if (!supported) { if (notificationButton) notificationButton.disabled = true; setStatus(notificationStatus,text('Notifications are not supported in this browser. On iPhone or iPad, install the app first and open it from the home screen.', '当前浏览器不支持通知。iPhone 或 iPad 请先添加到主屏幕，再从桌面打开。')); return; }
    const response = await fetch(base+'push-config', {credentials:'omit',cache:'no-store'});
    if (!response.ok) throw new Error('config'); config = await response.json();

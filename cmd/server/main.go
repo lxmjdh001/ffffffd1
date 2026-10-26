@@ -28,6 +28,17 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "check-landing-browser" {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		result, err := platform.CheckLandingScreenshot(ctx)
+		if err != nil {
+			slog.Error("landing screenshot browser check failed", "error", err)
+			os.Exit(1)
+		}
+		slog.Info("landing screenshot browser ready", "browser", result.Browser, "width", result.Width, "height", result.Height, "sandbox", result.Sandbox)
+		return
+	}
 	c, e := platform.LoadConfig()
 	if e != nil {
 		slog.Error("configuration invalid", "error", e)

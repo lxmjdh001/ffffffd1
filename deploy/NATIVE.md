@@ -98,6 +98,54 @@ prevent the service account from executing the binary. Check access as `d1apk`
 before restarting the running release. Do not apply these permissions to the secret environment
 file. Verify both `/healthz` and the actual website `/` after every deployment.
 
+### Template-library cover runtime
+
+Administrator-created templates and later HTML/configuration edits enqueue real
+preview screenshots automatically. The existing `d1apk` process runs the queue
+for `SERVER_ROLE=all` or `control`; the `download` role does not render covers.
+Keep the existing service and deployment layout.
+
+Install Chromium and the fonts used by Chinese and emoji content on the native
+Debian host, then validate using the service account:
+
+```sh
+sudo apt-get update
+sudo apt-get install --no-install-recommends chromium fonts-noto-cjk fonts-noto-color-emoji
+sudo -u d1apk /opt/d1apk/current/bin/d1apk check-landing-browser
+```
+
+These names are from Debian's official [Chromium package](https://packages.debian.org/stable/chromium),
+[Noto CJK package](https://packages.debian.org/trixie/fonts-noto-cjk), and
+[Noto Emoji package](https://packages.debian.org/trixie/fonts-noto-color-emoji).
+The diagnostic renders an isolated test page without connecting to the database
+or loading administrator credentials. It inherits only the optional screenshot
+configuration, so pass the same `LANDING_SCREENSHOT_BROWSER` value when a custom
+executable is configured in `/etc/d1apk/app.env`; do not print or source that
+secret environment file merely to run this check. Leave
+`LANDING_SCREENSHOT_NO_SANDBOX=false`.
+
+Preserve `NoNewPrivileges`, `PrivateTmp`, `ProtectSystem`, and `ProtectHome` in
+the existing unit. The browser uses a fresh private temporary profile with its
+own `HOME` and cache directories, and requires no access to `/home` or a desktop
+session. `PrivateTmp` supplies its writable temporary directory. Validation on
+the deployment host must also succeed under the service's existing restrictions;
+do not disable service protections or the browser sandbox to bypass a failure.
+This repository's local macOS check cannot certify a remote Debian host.
+
+After the normal application update, confirm that an administrator can add a
+template, see `cover_status` change from `pending`/`processing` to `ready`, and
+see its real image in the library. Edit the HTML and save again: a changed page
+must produce a new cover while a customer's existing favorite keeps its original
+snapshot. This check must leave application visits, downloads, and billing
+unchanged. Existing template/favorite covers are backfilled by migration v26;
+failed jobs can be retried from template management after fixing browser setup.
+See [DIY-LANDING.md](DIY-LANDING.md) for queue, image permissions, and configuration.
+
+Local development continues through `start.sh` and `scripts/dev.sh`. On macOS,
+install Google Chrome normally or set `LANDING_SCREENSHOT_BROWSER` to its
+executable. The development script builds the application, runs the same real
+screenshot check for control/all, and starts the server only after it succeeds.
+
 ### Administrator credentials
 
 USDT payment setup and secondary-password wallet protection are documented in

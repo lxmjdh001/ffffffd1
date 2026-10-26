@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -32,6 +33,10 @@ func (s *Server) ownedApp(r *http.Request) (Application, error) {
 func (s *Server) getApp(w http.ResponseWriter, r *http.Request) {
 	a, e := s.ownedApp(r)
 	if e != nil {
+		fail(w, e)
+		return
+	}
+	if e = s.projectAPKLanding(&a); e != nil {
 		fail(w, e)
 		return
 	}
@@ -78,7 +83,7 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, settings.MaxUploadBytes+(1<<20))
+	r.Body = http.MaxBytesReader(w, r.Body, settings.MaxUploadBytes+(1<<20)+(8<<20))
 	mr, e := r.MultipartReader()
 	if e != nil {
 		fail(w, problem(400, "请使用 multipart 上传文件"))
@@ -105,7 +110,7 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 		if err == io.EOF {
 			break
 		}
-		if err != nil || count > 10 {
+		if err != nil || count > 18 {
 			fail(w, problem(400, "上传表单无效或超出限制"))
 			return
 		}
@@ -125,8 +130,16 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		} else {
-			b, err := io.ReadAll(io.LimitReader(part, 16385))
-			if err != nil || len(b) > 16384 {
+			fieldLimit := int64(16384)
+			if part.FormName() == "diy_content" {
+				if _, exists := fields["diy_content"]; exists {
+					fail(w, problem(400, "落地页内容字段不能重复"))
+					return
+				}
+				fieldLimit = 8 << 20
+			}
+			b, err := io.ReadAll(io.LimitReader(part, fieldLimit+1))
+			if err != nil || int64(len(b)) > fieldLimit {
 				fail(w, problem(400, "表单字段过长"))
 				return
 			}
@@ -139,6 +152,13 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := strings.TrimSpace(fields["name"])
+	var diyContent DIYLandingContent
+	if raw := fields["diy_content"]; raw != "" {
+		if err := json.Unmarshal([]byte(raw), &diyContent); err != nil || diyContent == nil {
+			fail(w, problem(400, "落地页内容格式不正确"))
+			return
+		}
+	}
 	description := strings.TrimSpace(fields["description"])
 	version := strings.TrimSpace(fields["version"])
 	slug := ""
@@ -251,7 +271,35 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 		}
-		return appSaveError(tx.Save(&app).Error)
+		if err = appSaveError(tx.Save(&app).Error); err != nil {
+			return err
+		}
+		if r.PathValue("id") == "" {
+			source := fields["landing_source"]
+			if source == "" && fields["landing_template"] != "" {
+				source = "system"
+			}
+			var ref *DIYLandingReference
+			if source == "diy" {
+				ref = &DIYLandingReference{PageID: fields["diy_page_id"], RevisionID: fields["diy_revision_id"], Content: diyContent}
+			}
+			if source == "" && fields["import_from"] != "" {
+				ref, err = diyBindingReference(tx, "apk", fields["import_from"])
+				if err != nil {
+					return err
+				}
+				if ref != nil {
+					source = "diy"
+				}
+			}
+			if source != "" {
+				if err = s.saveAPKLandingSource(tx, &app, source, ref, fields["landing_template"]); err != nil {
+					return err
+				}
+				return tx.Save(&app).Error
+			}
+		}
+		return nil
 	})
 	if e != nil {
 		fail(w, e)
@@ -260,6 +308,10 @@ func (s *Server) uploadApp(w http.ResponseWriter, r *http.Request) {
 	committed = true
 	if oldKey != "" {
 		_ = s.Blobs.Delete(context.Background(), oldKey)
+	}
+	if e = s.projectAPKLanding(&app); e != nil {
+		fail(w, e)
+		return
 	}
 	jsonOut(w, 201, app)
 }
@@ -369,13 +421,16 @@ func (s *Server) scan(ctx context.Context, f *os.File) error {
 }
 func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Slug        *string `json:"slug"`
-		Name        string  `json:"name"`
-		Description string  `json:"description"`
-		Version     string  `json:"version"`
-		Enabled     bool    `json:"enabled"`
+		LandingSource   *string              `json:"landing_source"`
+		LandingTemplate *string              `json:"landing_template"`
+		DIYLanding      *DIYLandingReference `json:"diy_landing"`
+		Slug            *string              `json:"slug"`
+		Name            string               `json:"name"`
+		Description     string               `json:"description"`
+		Version         string               `json:"version"`
+		Enabled         bool                 `json:"enabled"`
 	}
-	if e := decode(w, r, &in); e != nil {
+	if e := decodeDIYApplication(w, r, &in); e != nil {
 		fail(w, e)
 		return
 	}
@@ -390,6 +445,16 @@ func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		in.Slug = &slug
+	}
+	if in.LandingTemplate != nil {
+		if *in.LandingTemplate != "google_play" {
+			fail(w, problem(400, "请选择有效的落地页来源"))
+			return
+		}
+		if in.LandingSource == nil {
+			source := "system"
+			in.LandingSource = &source
+		}
 	}
 	var app Application
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
@@ -406,9 +471,22 @@ func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
 		if in.Slug != nil {
 			app.Slug = *in.Slug
 		}
+		if in.LandingSource != nil {
+			template := ""
+			if in.LandingTemplate != nil {
+				template = *in.LandingTemplate
+			}
+			if e := s.saveAPKLandingSource(tx, &app, *in.LandingSource, in.DIYLanding, template); e != nil {
+				return e
+			}
+		}
 		return appSaveError(tx.Save(&app).Error)
 	})
 	if e != nil {
+		fail(w, e)
+		return
+	}
+	if e = s.projectAPKLanding(&app); e != nil {
 		fail(w, e)
 		return
 	}
@@ -421,6 +499,9 @@ func (s *Server) deleteApp(w http.ResponseWriter, r *http.Request) {
 			return e
 		}
 		if e := tx.First(&app, "id = ? AND user_id = ?", r.PathValue("id"), userOf(r).ID).Error; e != nil {
+			return e
+		}
+		if e := setDIYBinding(tx, app.UserID, "apk", app.ID, nil); e != nil {
 			return e
 		}
 		// Only the app and its live configuration are removed. Download and

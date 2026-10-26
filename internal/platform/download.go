@@ -146,6 +146,17 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 	design = design.localized(r.Header.Get("Accept-Language"))
 	w.Header().Add("Vary", "Accept-Language")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if design.Layout == "diy" {
+		label := design.ButtonText
+		if strings.TrimSpace(label) == "" {
+			label = "下载应用"
+		}
+		err := s.renderDIYShell(w, r, diyShellData{Kind: "apk", Name: a.Name, Description: a.Description, Base: "/a/" + a.Slug + "/", ResourceID: a.ID, Chinese: strings.HasPrefix(strings.ToLower(r.Header.Get("Accept-Language")), "zh"), ExternalBrowser: external, ReturnFlow: design.ReturnFlowJSON(), ReturnFlowToken: viewToken, Attribution: token, Nonce: randomHex(16), DeepLink: deepLinkWithToken(ads, token), AdsEnabled: ads.FacebookEnabled || ads.TikTokEnabled, Label: label, ClientJS: s.landingScriptURL("apk-client.js", "/a/"+a.Slug+"/client.js")}, design.DIYLanding, a.UserID)
+		if err != nil {
+			fail(w, err)
+		}
+		return
+	}
 	if design.Layout == "google_play" || design.Layout == "custom" {
 		var out bytes.Buffer
 		if e := s.renderAPKLanding(a, design, randomHex(16), token, viewToken, deepLinkWithToken(ads, token), ads.FacebookEnabled || ads.TikTokEnabled, &out, external); e != nil {
@@ -248,7 +259,7 @@ func apkClientScript() string {
 	return externalBrowserJS + "\n" + `"use strict";
 const languages=` + string(pageLocaleJSON) + `;
 const copy=languages[document.documentElement.lang]||languages['zh-CN'];
-const form=document.querySelector('form');
+const form=document.getElementById('d1-native-download')||document.querySelector('form');
 const button=form.querySelector('button');
 const status=document.getElementById('download-status');
 let returnFlowSource=false;

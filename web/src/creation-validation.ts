@@ -5,6 +5,7 @@ import { validReturnFlowURL } from './return-flow';
 
 type Issue = { language: string; selector: string; message: string };
 export function pwaLocaleIssue(config?: PWALandingConfig): Issue | undefined {
+ if (config?.template==='diy') return config.diy_landing?.page_id && config.diy_landing.revision_id ? undefined : {language:'',selector:'[data-field="diy_landing"]',message:t('请选择已发布的DIY落地页和版本')};
  for (const locale of config?.storeInfos || []) {
   const issue = (selector: string, message: string) => ({ language: locale.language, selector, message });
   if ([...locale.appName].length > 100) return issue('[data-field="store-name"]', t('请检查填写内容的长度'));
@@ -18,6 +19,7 @@ export function pwaLocaleIssue(config?: PWALandingConfig): Issue | undefined {
 }
 
 export function apkLocaleIssue(document: PageDesign): Issue | undefined {
+ if (document.layout==='diy') return document.diy_landing?.page_id && document.diy_landing.revision_id ? undefined : {language:'',selector:'[data-field="diy_landing"]',message:t('请选择已发布的DIY落地页和版本')};
  for (const locale of document.localizations?.length ? document.localizations : [document]) {
   const issue = (field: string, message: string) => ({ language: locale.language || 'zh-CN', selector: `[data-field="${field}"]`, message });
   for (const [field,max] of [['button_text',30],['title',100],['developer',80],['summary',200],['description',4000]] as const) {

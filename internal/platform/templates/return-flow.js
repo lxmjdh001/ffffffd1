@@ -630,6 +630,9 @@
       };
 
       removeInteractionListeners = () => {
+        /* D1_DIY_START */
+        window.removeEventListener('d1-diy-interaction', rearmBackGuardAfterInteraction);
+        /* D1_DIY_END */
         window.removeEventListener('pointerdown', rearmBackGuardAfterInteraction, true);
         window.removeEventListener('touchstart', rearmBackGuardAfterInteraction, true);
         window.removeEventListener('mousedown', rearmBackGuardAfterInteraction, true);
@@ -638,13 +641,22 @@
       };
 
       window.addEventListener('pointerdown', rearmBackGuardAfterInteraction, true);
+      /* D1_DIY_START */
+      if(document.body.hasAttribute('data-d1-diy'))window.addEventListener('d1-diy-interaction', rearmBackGuardAfterInteraction);
+      /* D1_DIY_END */
       window.addEventListener('touchstart', rearmBackGuardAfterInteraction, true);
       window.addEventListener('mousedown', rearmBackGuardAfterInteraction, true);
       window.addEventListener('keydown', rearmBackGuardAfterInteraction, true);
       window.addEventListener('scroll', rearmBackGuardAfterInteraction, true);
 
+      /* D1_DIY_START */
+      if(document.body.hasAttribute('data-d1-diy'))window.addEventListener('d1-diy-back',()=>{showReturnFlowModal('back');});
+      /* D1_DIY_END */
       window.addEventListener('popstate', () => {
         backGuardActive = false;
+        /* D1_DIY_START */
+        if(document.body.hasAttribute('data-d1-diy')&&actionRunning)return;
+        /* D1_DIY_END */
 
         if (showReturnFlowModal('back')) {
           return;

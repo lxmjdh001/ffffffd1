@@ -16,6 +16,7 @@ import (
 func (s *Server) RunWorker(ctx context.Context) {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
+	go s.RunLandingCoverWorker(ctx)
 	s.maintenance(ctx)
 	go s.runTrafficRiskChecks(ctx)
 	for {
@@ -45,7 +46,7 @@ func (s *Server) maintenance(ctx context.Context) {
 		}
 	}
 	s.DB.WithContext(ctx).Where("expires_at < ? AND (reserved = ? OR charged = ? OR released = ?)", now.Add(-24*time.Hour), false, true, true).Delete(&Ticket{})
-	for _, m := range []any{&Session{}, &Challenge{}, &RateBucket{}} {
+	for _, m := range []any{&Session{}, &Challenge{}, &RateBucket{}, &DIYLandingPreview{}} {
 		if e := s.DB.WithContext(ctx).Where("expires_at < ?", now).Delete(m).Error; e != nil {
 			slog.Error("expiry cleanup failed", "error", e)
 		}
