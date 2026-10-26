@@ -180,7 +180,9 @@ func TestLandingCoverRetriesAreBoundedAndRecoverExpiredLeases(t *testing.T) {
 	s := testServer(t)
 	admin, owner := landingLibraryAdmin(t, s), seedUser(t, s, 0)
 	source := createLandingLibraryFixture(t, s, admin, "Retry source")
-	clock := s.Now()
+	// PostgreSQL persists timestamps at microsecond precision. Keep this test
+	// clock at the same precision so exact backoff comparisons work on both DBs.
+	clock := s.Now().Truncate(time.Microsecond)
 	s.Now = func() time.Time { return clock }
 	s.landingCoverCapture = func(context.Context, LandingCoverRenderInput) ([]byte, error) {
 		return nil, errors.New("internal browser path and source details must remain private")
@@ -242,7 +244,7 @@ func TestLandingCoverAdministratorSaveRetriesFailedContent(t *testing.T) {
 			s := testServer(t)
 			admin, owner := landingLibraryAdmin(t, s), seedUser(t, s, 0)
 			source := createLandingLibraryFixture(t, s, admin, "Repaired browser")
-			clock := s.Now().Add(time.Minute)
+			clock := s.Now().Add(time.Minute).Truncate(time.Microsecond)
 			s.Now = func() time.Time { return clock }
 			if err := s.DB.Model(&LandingCover{}).Where("hash = ?", source.CoverHash).Updates(map[string]any{"state": "failed", "attempts": 3, "next_attempt_at": clock.Add(time.Hour), "last_error": "封面生成失败，请管理员重试", "lease_id": "old-worker", "lease_until": clock.Add(-time.Second)}).Error; err != nil {
 				t.Fatal(err)
