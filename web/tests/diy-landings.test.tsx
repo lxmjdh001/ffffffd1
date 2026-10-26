@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -15,8 +15,19 @@ const page = (overrides: Partial<DIYLandingPage> = {}): DIYLandingPage => ({
   id: 'page1', name: '活动安装页', draft_html: '<button data-d1-action="primary">安装</button>', draft_config: config,
   draft_version: 1, created_at: '2026-10-26T03:00:00Z', updated_at: '2026-10-26T03:00:00Z', revisions: [], ...overrides,
 });
-beforeEach(() => { setLocale('zh-CN', false); });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+const dialogDescriptors = { showModal: Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'showModal'), close: Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close') };
+beforeEach(() => {
+  setLocale('zh-CN', false);
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value(this: HTMLDialogElement) { this.setAttribute('open', ''); } });
+  Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute('open'); } });
+});
+afterEach(() => {
+  cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks();
+  for (const [key, descriptor] of Object.entries(dialogDescriptors)) {
+    if (descriptor) Object.defineProperty(HTMLDialogElement.prototype, key, descriptor);
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, key);
+  }
+});
 
 function workbench(path = '/diy-landings') {
   return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/diy-landings" element={<DIYLandingsPage/>}/><Route path="/diy-landings/:id/edit" element={<DIYLandingsPage/>}/></Routes></MemoryRouter>);
@@ -97,8 +108,11 @@ it('isolates preview loading from the application public entry and cancels stale
 
 it('allows keyboard adjustment of the editor split without changing source content', () => {
   workbench(); const divider = screen.getByRole('separator', { name: '调整代码与预览宽度' });
-  fireEvent.keyDown(divider, { key: 'ArrowRight' }); expect(divider.getAttribute('aria-valuenow')).toBe('55');
-  fireEvent.keyDown(divider, { key: 'Home' }); expect(divider.getAttribute('aria-valuenow')).toBe('50');
+  expect(divider.getAttribute('aria-valuenow')).toBe('60');
+  expect(screen.queryByText('模拟应用')).toBeNull();
+  expect(document.querySelector('.diy-context-toolbar')).toBeNull();
+  fireEvent.keyDown(divider, { key: 'ArrowRight' }); expect(divider.getAttribute('aria-valuenow')).toBe('65');
+  fireEvent.keyDown(divider, { key: 'Home' }); expect(divider.getAttribute('aria-valuenow')).toBe('60');
   expect((screen.getByRole('textbox', { name: '页面HTML代码' }) as HTMLTextAreaElement).value).toBe('');
 });
 
@@ -135,4 +149,31 @@ it('previews application-specific content through its owned revision and cancels
   expect(requests[1].body).toEqual({ reference: edited, mode: 'pwa' });
   expect(screen.getByTitle('DIY落地页实时预览').getAttribute('sandbox')).toBe('allow-scripts');
   expect(requests.every(request => !request.path.includes('/p/') && !request.path.includes('/a/'))).toBe(true);
+});
+
+it('opens desktop preview in a fullscreen dialog while keeping the workbench on the phone viewport', async () => {
+  const calls: unknown[] = [];
+  vi.stubGlobal('fetch', vi.fn(async (_input: string, options?: RequestInit) => {
+    calls.push(JSON.parse(String(options?.body)));
+    return response({ preview_url: '/api/diy-landing-preview/device-test', issues: [] });
+  }));
+  const user = userEvent.setup();
+  render(<DIYLandingPreview html="<h1>Device preview</h1>" mode="apk"/>);
+  const phone = await screen.findByTitle('DIY落地页实时预览');
+  await user.selectOptions(screen.getByRole('combobox', { name: '手机预览宽度' }), '430');
+  await user.click(screen.getByRole('button', { name: '桌面' }));
+  const dialog = screen.getByRole('dialog', { name: '桌面 · 全屏预览' });
+  expect(dialog.classList.contains('fullscreen')).toBe(true);
+  expect(document.body.style.overflow).toBe('hidden');
+  const desktop = within(dialog).getByTitle('DIY落地页全屏预览');
+  expect(desktop.closest('.diy-preview-stage')?.classList.contains('desktop')).toBe(true);
+  expect(desktop.getAttribute('sandbox')).toBe('allow-scripts');
+  expect(desktop.getAttribute('src')).toBe(phone.getAttribute('src'));
+  expect(phone.closest('.diy-preview-stage')?.classList.contains('phone')).toBe(true);
+  expect((screen.getByRole('combobox', { name: '手机预览宽度' }) as HTMLSelectElement).value).toBe('430');
+  expect(calls).toHaveLength(1);
+  await user.click(within(dialog).getByRole('button', { name: '关闭' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(document.body.style.overflow).toBe('');
+  expect(screen.getByTitle('DIY落地页实时预览')).toBe(phone);
 });

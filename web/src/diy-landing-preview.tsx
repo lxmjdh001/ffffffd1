@@ -18,7 +18,9 @@ export function DIYLandingPreview({ html, reference, mode, config, onIssues, ref
   useLocale();
   const [result, setResult] = useState<PreviewResponse>();
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
-  const [desktop, setDesktop] = useState(false), [width, setWidth] = useState(390), [full, setFull] = useState(false), [refresh, setRefresh] = useState(0);
+  const [width, setWidth] = useState(390), [full, setFull] = useState<'phone' | 'desktop'>(), [refresh, setRefresh] = useState(0);
+  const normalStage = useRef<HTMLDivElement>(null);
+  const [stageWidth, setStageWidth] = useState(0);
   const callback = useRef(onIssues); callback.current = onIssues;
   const normalFrame = useRef<HTMLIFrameElement>(null), fullFrame = useRef<HTMLIFrameElement>(null);
   const generation = useRef(0);
@@ -30,6 +32,24 @@ export function DIYLandingPreview({ html, reference, mode, config, onIssues, ref
   const [manualTick, setManualTick] = useState(0);
   manualContent.current = { html, options, mode };
   const currentHTML = large ? undefined : html;
+
+  useEffect(() => {
+    const stage = normalStage.current;
+    if (!stage) return;
+    const measure = () => {
+      const style = window.getComputedStyle(stage);
+      const available = stage.clientWidth - parseFloat(style.paddingLeft || '0') - parseFloat(style.paddingRight || '0');
+      if (available > 0) setStageWidth(available);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!result?.channel) return;
@@ -67,15 +87,15 @@ export function DIYLandingPreview({ html, reference, mode, config, onIssues, ref
     return () => { clearTimeout(timeout); controller.abort(); };
   }, [currentHTML, options, mode, referenceID, revisionID, content, refresh, refreshToken, manualTick, large]);
 
-  const frame = (expanded = false) => <div className={`diy-preview-stage ${desktop ? 'desktop' : 'phone'} ${expanded ? 'expanded' : ''}`}><div className="diy-preview-viewport" style={desktop ? undefined : { width }}>
+  const frame = (expanded = false) => <div ref={expanded ? undefined : normalStage} className={`diy-preview-stage ${expanded && full === 'desktop' ? 'desktop' : 'phone'} ${expanded ? 'expanded' : ''}`}><div className="diy-preview-viewport" style={expanded && full === 'desktop' ? undefined : { width, maxWidth: 'none', zoom: !expanded && stageWidth > 0 ? Math.min(1, stageWidth / width) : 1 }}>
     {result ? <iframe ref={expanded ? fullFrame : normalFrame} title={expanded ? t('DIY落地页全屏预览') : t('DIY落地页实时预览')} sandbox="allow-scripts" referrerPolicy="no-referrer" src={result.preview_url || result.src_url} srcDoc={result.preview_url || result.src_url ? undefined : result.html} /> : <div className="diy-preview-empty"><Smartphone size={38} strokeWidth={1.2}/><strong>{t('粘贴代码，查看页面效果')}</strong><p>{t('代码只用于预览，保存并发布后才可在应用中选择。')}</p></div>}
   </div></div>;
 
   return <section className={`diy-preview ${compact ? 'compact' : ''}`} aria-label={t('落地页实时预览')}>
-    <div className="diy-preview-toolbar"><div><strong>{t('实时预览')}</strong><span role="status">{busy ? t('更新中…') : error ? t('预览更新失败') : result ? t('预览已更新') : t('等待代码')}</span></div><div className="diy-preview-actions"><div className="diy-segment" aria-label={t('预览设备')}><button type="button" aria-pressed={!desktop} onClick={() => setDesktop(false)}><Smartphone size={15}/>{t('手机')}</button><button type="button" aria-pressed={desktop} onClick={() => setDesktop(true)}><Monitor size={15}/>{t('桌面')}</button></div>{!desktop && <select aria-label={t('手机预览宽度')} value={width} onChange={event => setWidth(Number(event.target.value))}><option value={375}>375 px</option><option value={390}>390 px</option><option value={430}>430 px</option></select>}<button type="button" className="icon-btn" aria-label={t('刷新预览')} onClick={() => { setRefresh(value => value + 1); setManualTick(value => value + 1); }}><RefreshCw size={16} className={busy ? 'spin' : ''}/></button><button type="button" className="icon-btn" aria-label={t('全屏预览')} disabled={!result} onClick={() => setFull(true)}><Expand size={16}/></button></div></div>
+    <div className="diy-preview-toolbar"><div><strong>{t('实时预览')}</strong><span role="status">{busy ? t('更新中…') : error ? t('预览更新失败') : result ? t('预览已更新') : t('等待代码')}</span></div><div className="diy-preview-actions"><span className="diy-preview-device"><Smartphone size={15}/>{t('手机')}</span><select aria-label={t('手机预览宽度')} value={width} onChange={event => setWidth(Number(event.target.value))}><option value={375}>375 px</option><option value={390}>390 px</option><option value={430}>430 px</option></select><button type="button" className="diy-desktop-preview" disabled={!result} onClick={() => setFull('desktop')}><Monitor size={15}/>{t('桌面')}<Expand size={13}/></button><button type="button" className="icon-btn" aria-label={t('刷新预览')} onClick={() => { setRefresh(value => value + 1); setManualTick(value => value + 1); }}><RefreshCw size={16} className={busy ? 'spin' : ''}/></button><button type="button" className="icon-btn" aria-label={t('全屏预览')} disabled={!result} onClick={() => setFull('phone')}><Expand size={16}/></button></div></div>
     {large && <p className="diy-preview-note">{t('代码较大，修改后点击刷新预览。')}</p>}
     <FormError>{error}</FormError>{frame()}
     <p className="diy-preview-note">{t('预览不会安装、下载、跳转或产生计费。')}</p>
-    {full && <Modal wide title={t('全屏预览')} close={() => setFull(false)}>{frame(true)}</Modal>}
+    {full && <Modal fullscreen title={`${full === 'desktop' ? t('桌面') : t('手机')} · ${t('全屏预览')}`} close={() => setFull(undefined)}>{frame(true)}</Modal>}
   </section>;
 }

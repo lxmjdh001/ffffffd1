@@ -25,11 +25,11 @@ export function Badge({ children, tone = 'green' }: { children: ReactNode; tone?
   useLocale(); return <span className={`badge ${tone}`}><i />{children}</span>; }
 export function CopyButton({ value, label }: { value: string; label?: string }) {
   useLocale(); const notify = useNotify(); return <button className="copy-btn" title={label || t("复制")} onClick={async () => { try { await navigator.clipboard.writeText(value); notify(t("已复制"), { type: 'success' }); } catch { notify(t("复制失败，请手动选择复制"), { type: 'warning' }); } }}><Copy size={14} />{label}</button>; }
-export function Modal({ title, children, close, wide = false, side = false }: { title: string; children: ReactNode; close: () => void; wide?: boolean; side?: boolean }) {
+export function Modal({ title, children, close, wide = false, side = false, fullscreen = false }: { title: string; children: ReactNode; close: () => void; wide?: boolean; side?: boolean; fullscreen?: boolean }) {
   useLocale();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { const dialog = ref.current!; dialog.showModal(); const old = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = old; if (dialog.open) dialog.close(); }; }, []);
-  return <dialog ref={ref} className={`modal ${wide ? 'wide' : ''} ${side ? 'side-drawer' : ''}`} onCancel={e => { e.preventDefault(); e.stopPropagation(); close(); }} onClick={e => { if (e.target === ref.current) close(); }}><div className="modal-inner"><div className="modal-head"><h2>{title}</h2><button type="button" className="icon-btn" aria-label={t("关闭")} onClick={close}><X size={20} /></button></div>{children}</div></dialog>;
+  return <dialog ref={ref} aria-label={title} className={`modal ${wide ? 'wide' : ''} ${side ? 'side-drawer' : ''} ${fullscreen ? 'fullscreen' : ''}`} onCancel={e => { e.preventDefault(); e.stopPropagation(); close(); }} onClick={e => { if (e.target === ref.current) close(); }}><div className="modal-inner"><div className="modal-head"><h2>{title}</h2><button type="button" className="icon-btn" aria-label={t("关闭")} onClick={close}><X size={20} /></button></div>{children}</div></dialog>;
 }
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   useLocale(); return <label className="field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>; }
