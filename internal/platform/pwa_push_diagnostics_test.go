@@ -141,6 +141,15 @@ func TestPWAPushDiagnosticMigrationPreservesExistingData(t *testing.T) {
 	if err := s.DB.Model(&d).Updates(map[string]any{"status": "sent", "sent_at": now, "displayed_at": now}).Error; err != nil {
 		t.Fatal(err)
 	}
+	if s.DB.Dialector.Name() == "postgres" {
+		// Simulate restarting on the old schema. A reused pgx SELECT * plan
+		// cannot survive dropping/re-adding columns in this fixture process.
+		pool, err := s.DB.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		pool.SetMaxIdleConns(0)
+	}
 	for _, field := range []string{"Provider", "ProviderStatus", "ErrorCode", "LastAttemptAt"} {
 		if err := s.DB.Migrator().DropColumn(&PWAPushDelivery{}, field); err != nil {
 			t.Fatal(err)
