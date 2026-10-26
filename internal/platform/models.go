@@ -80,6 +80,7 @@ type Settings struct {
 	AlipayCNYRateMicros    int64                `json:"alipay_cny_rate_micros" gorm:"not null;default:6650000"`
 	USDTWallet             *string              `json:"usdt_wallet"`
 	SupportEmail           string               `json:"support_email"`
+	SupportURL             string               `json:"support_url" gorm:"not null;default:''"`
 	RechargeBonusEnabled   bool                 `json:"recharge_bonus_enabled" gorm:"not null;default:true"`
 	RechargeBonusTiers     []RechargeTier       `json:"recharge_bonus_tiers" gorm:"serializer:json;type:text"`
 	UpdatedAt              time.Time            `json:"updated_at"`

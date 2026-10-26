@@ -225,21 +225,22 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 		Plans    []Plan   `json:"plans"`
 		Section  string   `json:"section"`
 	}
-	// Preserve this new field when older clients send a full legacy payload;
-	// an explicitly supplied zero is still invalid rather than silently reset.
+	// Older clients omit newly added settings. Keep their current values;
+	// an explicitly supplied zero Alipay rate still fails validation below.
 	currentSettings, e := getSettings(s.DB)
 	if e != nil {
 		fail(w, e)
 		return
 	}
 	in.Settings.AlipayCNYRateMicros = currentSettings.AlipayCNYRateMicros
+	in.Settings.SupportURL = currentSettings.SupportURL
 	if e := decode(w, r, &in); e != nil {
 		fail(w, e)
 		return
 	}
 	x := in.Settings
 	sectionFields := map[string][]string{
-		"basic":     {"site_name", "support_email", "registration_open"},
+		"basic":     {"site_name", "support_email", "support_url", "registration_open"},
 		"domains":   {"download_domain_rules"},
 		"billing":   {"download_price_micros", "pwa_install_price_micros", "cloak_uv_price_micros", "return_flow_price_micros", "pwa_push_price_micros", "registration_gift_micros", "app_limit", "storage_limit_bytes", "max_upload_bytes", "domain_limit", "usdt_rate_micros"},
 		"recharge":  {"recharge_bonus_enabled", "recharge_bonus_tiers"},
@@ -310,6 +311,11 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	x.SiteName = strings.TrimSpace(x.SiteName)
+	x.SupportURL, e = normalizeSupportURL(x.SupportURL)
+	if e != nil {
+		fail(w, e)
+		return
+	}
 	if !validAlipayRate(x.AlipayCNYRateMicros) {
 		fail(w, problem(400, "支付宝汇率须为 0.01–1000 人民币 / USDT"))
 		return

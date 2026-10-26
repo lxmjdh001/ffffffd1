@@ -19,7 +19,10 @@ it('opens an overlay menu, closes with Escape and restores focus', async () => {
   await user.click(toggle);
   expect(toggle.getAttribute('aria-expanded')).toBe('true');
   const panel = document.getElementById(toggle.getAttribute('aria-controls')!)!;
-  expect(within(panel).getAllByRole('button')).toHaveLength(4);
+  expect(within(panel.querySelector('.home-menu-sections')!).getAllByRole('button')).toHaveLength(4);
+  expect(within(panel).getByRole('button', { name: '联系商务' })).toBeTruthy();
+  expect(within(panel).getByRole('button', { name: '产品' }).getAttribute('data-section')).toBe('home-solutions');
+  expect(within(panel).getByRole('button', { name: '产品功能' }).getAttribute('data-section')).toBe('home-growth');
   await user.keyboard('{Escape}');
   expect(toggle.getAttribute('aria-expanded')).toBe('false');
   expect(document.activeElement).toBe(toggle);

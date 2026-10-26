@@ -1,10 +1,12 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LandingPage } from '../src/landing';
 import { ConfigContext } from '../src/ui';
 import type { Config } from '../src/types';
 import homeMedia from '../src/home-media.json';
+import homeContent from '../src/home-content.json';
 
 const config: Config = {
   currency: 'USD', site_name: '星河分发', development: false, registration_open: true,
@@ -23,11 +25,28 @@ function openLanding(registration_open = true) {
 }
 
 describe('public landing page', () => {
+  it('uses the configured support URL for the homepage sales contact', () => {
+    const url = 'https://t.me/example_support?start=business';
+    render(<MemoryRouter><ConfigContext.Provider value={{ config: { ...config, support_url: url }, reload: vi.fn() }}><LandingPage/></ConfigContext.Provider></MemoryRouter>);
+    const hero = document.querySelector('.home-hero')!;
+    const contact = within(hero).getByRole('link', { name: '联系商务' });
+    expect(contact.getAttribute('href')).toBe(url);
+    expect(contact.getAttribute('target')).toBe('_blank');
+    expect(contact.getAttribute('rel')).toContain('noopener');
+    expect(contact.classList.contains('home-contact-shine')).toBe(true);
+  });
+
+  it.each(['', 'javascript:alert(1)', 'https://user:password@example.com'])('keeps contact visible without linking to an unconfigured or unsafe destination %s', support_url => {
+    render(<MemoryRouter><ConfigContext.Provider value={{ config: { ...config, support_url }, reload: vi.fn() }}><LandingPage/></ConfigContext.Provider></MemoryRouter>);
+    expect(screen.queryByRole('link', { name: '联系商务' })).toBeNull();
+    expect(within(document.querySelector('.home-hero')!).getByRole('button', { name: '联系商务' })).toBeTruthy();
+  });
+
   it('shows two 0.05 prices, five free features, and a 100-dollar welcome credit', () => {
     render(<MemoryRouter><ConfigContext.Provider value={{config:{...config,metered_billing:true,download_price_micros:50000,pwa_install_price_micros:50000,plans:[{...config.plans[0],name:'按量计费'}],registration_gift_micros:100e6},reload:vi.fn()}}><LandingPage/></ConfigContext.Provider></MemoryRouter>);
     const pricing=document.getElementById('home-pricing')!;
     expect(pricing.textContent).toContain('仅下载与安装计费');expect(pricing.textContent).toContain('只为实际用量付费');expect(pricing.textContent).not.toContain('注册即赠 $100 用量额度。');expect(within(pricing).getAllByText('$0.05')).toHaveLength(2);expect(within(pricing).getAllByText('免费',{exact:true})).toHaveLength(5);expect(pricing.textContent).not.toContain('1,000');
-    expect(pricing.querySelectorAll('.usage-rate-grid article')).toHaveLength(7);expect(within(pricing).getByRole('heading',{name:'应用分流',exact:true})).toBeTruthy();expect(within(pricing).getByRole('heading',{name:'域名安全检测',exact:true})).toBeTruthy();expect(pricing.querySelector('.home-plan')).toBeNull();expect(pricing.textContent).not.toContain('/ 月');expect(document.getElementById('home-security')!.textContent).not.toContain('付费会员');
+    expect(pricing.querySelectorAll('.usage-rate-grid article')).toHaveLength(7);expect(within(pricing).getByRole('heading',{name:'应用分流',exact:true})).toBeTruthy();expect(within(pricing).getByRole('heading',{name:'域名安全检测',exact:true})).toBeTruthy();expect(pricing.querySelector('.home-plan')).toBeNull();expect(pricing.textContent).not.toContain('/ 月');
   });
   it('shows configured plan data and keeps the security benefit on the paid plan', () => {
     openLanding();
@@ -56,19 +75,20 @@ describe('public landing page', () => {
     expect(screen.getAllByRole('link').some(link => link.getAttribute('href')?.startsWith('/register'))).toBe(false);
   });
 
-  it('presents APK and PWA as separate publishing paths and explains permission-based notifications', () => {
+  it('presents APK and PWA as separate publishing paths without the removed connection section', () => {
     openLanding();
     expect(document.querySelector('.home-editorial')).toBeTruthy();
     expect(document.querySelector('.home-soft')).toBeNull();
     expect(document.querySelectorAll('.home-story')).toHaveLength(2);
     expect(document.querySelector('.home-story-apk')?.textContent).toContain('上传安装包');
     expect(document.querySelector('.home-story-pwa')?.textContent).toContain('无需下载 APK');
-    expect(screen.getByRole('heading', {name:'什么是 PWA？'})).toBeTruthy();
-    expect(document.querySelector('.home-push-copy')?.textContent).toContain('用户自主订阅');
-    expect(document.querySelectorAll('.home-solution-grid article')).toHaveLength(7);
-    expect(document.querySelector('.home-solution-grid')?.textContent).toContain('回流页');
-    expect(document.querySelector('.home-solution-grid')?.textContent).toContain('广告回传');
-    expect(document.querySelector('.home-solution-grid')?.textContent).toContain('斗篷');
+    expect(document.querySelector('.home-connection')).toBeNull();
+    expect(document.querySelector('.home-story-pwa')?.textContent).toContain('Web Push');
+    expect(document.querySelectorAll('.growth-feature')).toHaveLength(7);
+    expect(document.querySelector('.growth-feature-return')?.textContent).toContain('回流页');
+    expect(document.querySelector('.home-capability-strip')?.textContent).toContain('广告回传');
+    expect(document.querySelector('.growth-feature-cloak')?.textContent).toContain('数百万级投放计划数据沉淀');
+    expect(document.querySelector('.growth-feature-cloak')?.textContent).toContain('投放计划验证沉淀');
     expect(screen.getByRole('img', { name: 'APK 下载、PWA 安装与安全检测的卡通手机示意' }).getAttribute('src')).toBe(homeMedia.phoneImage);
     expect(homeMedia.phoneImage.endsWith('.webp')).toBe(true);
     expect(document.querySelector('.home-cartoon')).toBeNull();
@@ -86,30 +106,39 @@ describe('public landing page', () => {
     expect(pricing.children[1].classList.contains('home-pricing-grid')).toBe(true);
   });
 
-  it('highlights automatic domain safety without exposing the internal schedule', () => {
-    openLanding();
-    const safety = document.getElementById('home-security')!;
-    expect(safety).toBeTruthy();
-    expect(within(safety).getByRole('heading', {name:'域名安全检测，风险自动退出分流'})).toBeTruthy();
-    expect(safety.textContent).toMatch(/Google Web Risk/i);
-    expect(safety.textContent).toContain('自动检测');
-    expect(safety.textContent).not.toContain('120');
-    expect(safety.textContent).not.toContain('分钟');
-    expect(safety.textContent).toContain('可用余额或赠送额度');
-    expect(safety.textContent).toContain('不扫描主站');
-    expect(safety.textContent).toContain('风险域名自动停止参与分流');
-    expect(safety.textContent).not.toContain('付费会员');
-    expect(document.querySelector('.home-capability-strip button')?.textContent).toBe('自动检查域名安全');
-    expect(screen.queryByRole('heading', {name:'自定义域名与免费 SSL'})).toBeNull();
-    expect(screen.getByRole('heading', {name:'下载记录与来源统计'})).toBeTruthy();
+  it('presents seven growth capabilities and lets visitors try landing page themes without leaving the page', async () => {
+    const user = userEvent.setup(); openLanding();
+    const section = document.getElementById('home-growth')!;
+    expect(section.querySelectorAll('.growth-feature')).toHaveLength(7);
+    for (const item of homeContent.growth.items) expect(within(section).getByRole('heading', { name: item.title })).toBeTruthy();
+    expect(section.textContent).toContain('Cloudflare R2');
+    expect(section.textContent).toContain('数百万级');
+    expect(section.textContent).toContain('70%');
+    expect(section.textContent).toContain('关联误封降低目标');
+    expect(section.textContent).toContain('二次曝光点击增长目标');
+    const themes = within(section).getByRole('group', { name: '落地页 DIY' });
+    expect(within(themes).getByRole('button', { name: '极简' }).getAttribute('aria-pressed')).toBe('true');
+    await user.click(within(themes).getByRole('button', { name: '品牌' }));
+    expect(within(themes).getByRole('button', { name: '品牌' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(themes).getByRole('button', { name: '极简' }).getAttribute('aria-pressed')).toBe('false');
+    expect(within(section).getByRole('link', { name: '制作我的落地页' }).getAttribute('href')).toBe('/register?invite=invite-code');
   });
 
-  it('places the return feature last, opposite the double-width safety feature', () => {
-    openLanding();
-    const features = document.querySelectorAll('.home-solution-grid article');
-    expect(features[0].classList.contains('home-security-feature')).toBe(true);
-    expect(features[features.length-1].classList.contains('home-return-feature')).toBe(true);
-    expect(features[features.length-1].textContent).toContain('回流页');
-    expect(document.querySelector('.home-capability-strip')?.textContent).not.toContain('免费 SSL');
+  it('keeps product navigation connected after removing the tools and three-step sections', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView');
+    const scroll = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scroll });
+    try {
+      const user = userEvent.setup(); openLanding();
+      expect(document.querySelector('.home-toolbox-details, #home-how, #home-features')).toBeNull();
+      expect(screen.queryByRole('button', { name: '如何开始', exact: true })).toBeNull();
+      expect(document.querySelector('.home-capability-strip')?.textContent).toContain('自动检查域名安全');
+      await user.click(screen.getByRole('button', { name: '产品', exact: true }));
+      expect(scroll).toHaveBeenCalled();
+      expect(scroll.mock.instances[0]).toBe(document.getElementById('home-solutions'));
+    } finally {
+      if (descriptor) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', descriptor);
+      else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+    }
   });
 });

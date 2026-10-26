@@ -144,7 +144,10 @@ func Migrate(db *gorm.DB) error {
 			if err := migrateLandingCovers(tx); err != nil {
 				return err
 			}
-			return migrateDIYContent(tx)
+			if err := migrateDIYContent(tx); err != nil {
+				return err
+			}
+			return migrateHomeContact(tx)
 		}
 		if err := tx.AutoMigrate(&Settings{}); err != nil {
 			return err
@@ -190,7 +193,10 @@ func Migrate(db *gorm.DB) error {
 		if err := migrateLandingCovers(tx); err != nil {
 			return err
 		}
-		return migrateDIYContent(tx)
+		if err := migrateDIYContent(tx); err != nil {
+			return err
+		}
+		return migrateHomeContact(tx)
 	})
 }
 func BootstrapAdmin(db *gorm.DB, c Config) error {

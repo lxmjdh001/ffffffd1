@@ -1,0 +1,11 @@
+.home .home-contact{position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;max-width:100%;padding:10px 16px;border:1px solid #b8cbaa;border-radius:6px;background:#e5efcf;color:#254936;font-size:13px;font-weight:600;line-height:1.5;overflow:hidden;cursor:pointer;transition:background .18s,border-color .18s}
+.home .home-contact:hover{background:#d8e9b8;border-color:#8fae75}
+.home .home-contact>svg{flex-shrink:0}
+.home .home-contact>span{min-width:0;overflow-wrap:anywhere}
+.home .home-contact-shine::before{content:"";position:absolute;z-index:-1;top:-30%;bottom:-30%;left:-60%;width:40%;background:linear-gradient(100deg,transparent,#fff9,transparent);transform:skewX(-18deg);animation:home-contact-sheen 4.5s ease-in-out infinite;pointer-events:none}
+.home .home-pricing-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:15px}
+.home.home-growth .home-pricing-actions .home-button{margin-top:0}
+.home .home-menu-auth .home-contact{grid-column:1/-1;width:100%}
+@keyframes home-contact-sheen{0%,60%{left:-60%}88%,100%{left:140%}}
+@media(max-width:520px){.home .home-hero-actions .home-contact{padding-inline:12px;gap:6px;font-size:12px;flex:0 0 auto}}
+@media(prefers-reduced-motion:reduce){.home .home-contact{transition:none}.home .home-contact-shine::before{animation:none;display:none}}

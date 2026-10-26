@@ -81,7 +81,9 @@ describe('public homepage metadata', () => {
     wrapper.innerHTML = renderHomeBody();
     expect(wrapper.querySelectorAll('h1')).toHaveLength(1);
     expect(wrapper.querySelector('h1')?.textContent).toBe(content.hero.lines.join(''));
-    for (const item of content.solutions.items) expect(wrapper.textContent).toContain(item.description);
+    for (const value of [content.paths.apkHeading, content.paths.apkDescription, content.paths.pwaTitle, content.paths.pwaSummary]) expect(wrapper.textContent).toContain(value);
+    const features = homeStructuredData('D1 Apk', 'https://d1apk.com/')['@graph'][2].featureList!;
+    for (const feature of features) expect(wrapper.textContent).toContain(feature);
     for (const item of content.faq.items) {
       expect(wrapper.textContent).toContain(item.question);
       expect(wrapper.textContent).toContain(item.answer);

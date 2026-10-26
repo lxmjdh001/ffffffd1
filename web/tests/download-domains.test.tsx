@@ -90,6 +90,17 @@ it('allows administrators to save multiple domains with independent audience per
   expect(screen.queryByRole('button', { name: '保存全部设置' })).toBeNull();
 });
 
+it('lets administrators configure the homepage sales contact in basic settings', async () => {
+  role = 'admin';
+  const user = open('/admin/settings');
+  const input = await screen.findByRole('textbox', { name: '客服链接（选填）' });
+  await user.type(input, 'https://support.example.com/chat?source=home');
+  await user.click(screen.getByRole('button', { name: '保存基本设置' }));
+  await waitFor(() => expect(saved?.section).toBe('basic'));
+  expect(saved?.settings.support_url).toBe('https://support.example.com/chat?source=home');
+  expect(saved?.settings.download_price_micros).toBe(3000);
+});
+
 it('lets administrators retain old links without offering the domain to customers', async () => {
   role = 'admin';
   settings.settings.download_domain_rules = [{ url: 'https://test.d1apk.com', audience: 'all', legacy_only: true }];

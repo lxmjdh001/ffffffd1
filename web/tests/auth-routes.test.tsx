@@ -215,7 +215,7 @@ describe('real application routes', () => {
     open(`/register?invite=${invite}`);
     await screen.findByRole('heading', { name: '创建你的账户' });
     await user.click(screen.getByRole('link', { name: 'D1 Apk', exact: true }));
-    await screen.findByRole('heading', { name: /每一次抵达，\s*都有下一次。/ });
+    await screen.findByRole('heading', { name: /让每一次投放，\s*更快抵达用户。/ });
     expect(window.location.hash).toBe(`#/welcome?invite=${invite}`);
     await user.click(within(document.querySelector('.home-hero-actions')!).getByRole('link', { name: '免费创建账户' }));
     await screen.findByRole('heading', { name: '创建你的账户' });
@@ -227,7 +227,7 @@ describe('real application routes', () => {
   it('can navigate from the public welcome page through registration and login into the console', async () => {
     const user = userEvent.setup();
     open('/welcome');
-    await screen.findByRole('heading', { name: /每一次抵达，\s*都有下一次。/ });
+    await screen.findByRole('heading', { name: /让每一次投放，\s*更快抵达用户。/ });
     await user.click(within(document.querySelector('.home-hero-actions')!).getByRole('link', { name: '免费创建账户' }));
     await screen.findByRole('heading', { name: '创建你的账户' });
     await user.click(screen.getByRole('link', { name: /立即登录/ }));

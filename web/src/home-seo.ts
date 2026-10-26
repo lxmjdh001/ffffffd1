@@ -33,7 +33,7 @@ export function homeStructuredData(siteName: string, canonical: string) {
     '@graph': [
       { '@type': 'Organization', '@id': `${canonical}#organization`, name: siteName, url: canonical },
       { '@type': 'WebSite', '@id': `${canonical}#website`, name: siteName, url: canonical, inLanguage: getLocale(), publisher: { '@id': `${canonical}#organization` } },
-      { '@type': 'SoftwareApplication', '@id': `${canonical}#software`, name: siteName, url: canonical, description: t(content.description), applicationCategory: 'DeveloperApplication', operatingSystem: 'Web', publisher: { '@id': `${canonical}#organization` } },
+      { '@type': 'SoftwareApplication', '@id': `${canonical}#software`, name: siteName, url: canonical, description: t(content.description), applicationCategory: 'DeveloperApplication', operatingSystem: 'Web', featureList: [content.paths.apkHeading, content.paths.pwaTitle, ...content.growth.items.map(item => item.title)].map(value => t(value)), publisher: { '@id': `${canonical}#organization` } },
     ],
   };
 }
