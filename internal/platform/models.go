@@ -22,6 +22,9 @@ type User struct {
 	ProUntil          *time.Time `json:"pro_until"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+	// Keep the tombstone available to settlement/history queries. Interactive
+	// lists and authentication explicitly exclude deleted accounts.
+	DeletedAt *time.Time `json:"-" gorm:"index"`
 }
 
 func (u User) PlanID(now time.Time) string {

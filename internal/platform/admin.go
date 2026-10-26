@@ -39,7 +39,7 @@ func (s *Server) adminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	var user User
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
-		u, e := lockUser(tx, r.PathValue("id"))
+		u, e := lockActiveUser(tx, r.PathValue("id"))
 		if e != nil {
 			return e
 		}
@@ -89,7 +89,7 @@ func (s *Server) adminBalance(w http.ResponseWriter, r *http.Request) {
 	}
 	var out User
 	e = s.DB.Transaction(func(tx *gorm.DB) error {
-		u, e := lockUser(tx, r.PathValue("id"))
+		u, e := lockActiveUser(tx, r.PathValue("id"))
 		if e != nil {
 			return e
 		}
@@ -457,7 +457,7 @@ func (s *Server) adminResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	e = s.DB.Transaction(func(tx *gorm.DB) error {
-		u, e := lockUser(tx, r.PathValue("id"))
+		u, e := lockActiveUser(tx, r.PathValue("id"))
 		if e != nil {
 			return e
 		}

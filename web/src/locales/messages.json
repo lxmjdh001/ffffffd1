@@ -2568,7 +2568,19 @@
     "发送未完成，请检查应用和订阅状态。": "Delivery is incomplete. Check the app and subscription status.",
     "尝试 {0} 次": "{0} attempts",
     "下次重试：{0}": "Next retry: {0}",
-    "尚未收到设备展示回执": "No device display receipt yet"
+    "尚未收到设备展示回执": "No device display receipt yet",
+    "删除用户": "Delete user",
+    "确认删除用户？": "Delete this user?",
+    "用户已删除": "User deleted",
+    "删除中…": "Deleting…",
+    "输入用户邮箱确认删除": "Enter the user’s email to confirm deletion",
+    "删除后，该用户将无法登录，关联的 APK、PWA、分流和斗篷入口会停用。订单、资金流水和审计记录保留。": "After deletion, the user cannot sign in. Their APK, PWA, traffic routing and cloak links will be disabled. Orders, financial transactions and audit records are retained.",
+    "账户余额、冻结用量、未完成的充值订单和提现须先处理完成。": "Resolve any account balance, held usage, pending top-ups and withdrawals before deletion.",
+    "不可删除管理员账号": "Administrator accounts cannot be deleted",
+    "请输入该用户邮箱以确认删除": "Enter this user’s email to confirm deletion",
+    "账户仍有余额或冻结用量，请处理完成后再删除": "This account has a balance or held usage. Resolve it before deletion.",
+    "用户存在未完成的充值订单，请处理完成后再删除": "This user has pending top-up orders. Resolve them before deletion.",
+    "用户存在未完成的提现，请处理完成后再删除": "This user has pending withdrawals. Resolve them before deletion."
   },
   "pt": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Você pode solicitar reembolso da parte não utilizada, pelo valor nominal e pelo método de pagamento original. Contate o suporte ou a equipe comercial; verificaremos o saldo de uso restante antes de processar.",
@@ -5139,7 +5151,19 @@
     "发送未完成，请检查应用和订阅状态。": "A entrega não foi concluída. Verifique o aplicativo e a assinatura.",
     "尝试 {0} 次": "{0} tentativas",
     "下次重试：{0}": "Próxima tentativa: {0}",
-    "尚未收到设备展示回执": "Ainda sem confirmação de exibição do dispositivo"
+    "尚未收到设备展示回执": "Ainda sem confirmação de exibição do dispositivo",
+    "删除用户": "Excluir usuário",
+    "确认删除用户？": "Excluir este usuário?",
+    "用户已删除": "Usuário excluído",
+    "删除中…": "Excluindo…",
+    "输入用户邮箱确认删除": "Digite o e-mail do usuário para confirmar a exclusão",
+    "删除后，该用户将无法登录，关联的 APK、PWA、分流和斗篷入口会停用。订单、资金流水和审计记录保留。": "Após a exclusão, o usuário não poderá entrar. Seus links de APK, PWA, distribuição de tráfego e cloaking serão desativados. Pedidos, transações financeiras e registros de auditoria serão mantidos.",
+    "账户余额、冻结用量、未完成的充值订单和提现须先处理完成。": "Antes da exclusão, resolva o saldo, o uso reservado e as recargas e retiradas pendentes.",
+    "不可删除管理员账号": "Contas de administrador não podem ser excluídas",
+    "请输入该用户邮箱以确认删除": "Digite o e-mail deste usuário para confirmar a exclusão",
+    "账户仍有余额或冻结用量，请处理完成后再删除": "Esta conta tem saldo ou uso reservado. Resolva antes de excluir.",
+    "用户存在未完成的充值订单，请处理完成后再删除": "Este usuário tem recargas pendentes. Resolva antes de excluir.",
+    "用户存在未完成的提现，请处理完成后再删除": "Este usuário tem retiradas pendentes. Resolva antes de excluir."
   },
   "de": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Für den ungenutzten Anteil können Sie eine Erstattung zum Nennwert über den ursprünglichen Zahlungsweg beantragen. Kontaktieren Sie Support oder Vertrieb; wir prüfen die verbleibende Nutzung vor der Bearbeitung.",
@@ -7710,7 +7734,19 @@
     "发送未完成，请检查应用和订阅状态。": "Zustellung nicht abgeschlossen. Prüfen Sie App und Abonnementstatus.",
     "尝试 {0} 次": "{0} Versuche",
     "下次重试：{0}": "Nächster Versuch: {0}",
-    "尚未收到设备展示回执": "Noch keine Anzeigebestätigung vom Gerät"
+    "尚未收到设备展示回执": "Noch keine Anzeigebestätigung vom Gerät",
+    "删除用户": "Benutzer löschen",
+    "确认删除用户？": "Diesen Benutzer löschen?",
+    "用户已删除": "Benutzer gelöscht",
+    "删除中…": "Wird gelöscht…",
+    "输入用户邮箱确认删除": "E-Mail des Benutzers zur Bestätigung eingeben",
+    "删除后，该用户将无法登录，关联的 APK、PWA、分流和斗篷入口会停用。订单、资金流水和审计记录保留。": "Nach dem Löschen kann sich der Benutzer nicht mehr anmelden. Seine APK-, PWA-, Traffic-Routing- und Cloaking-Links werden deaktiviert. Bestellungen, Finanztransaktionen und Audit-Protokolle bleiben erhalten.",
+    "账户余额、冻结用量、未完成的充值订单和提现须先处理完成。": "Vor dem Löschen müssen Guthaben, reservierte Nutzung sowie offene Einzahlungen und Auszahlungen geklärt sein.",
+    "不可删除管理员账号": "Administratorkonten können nicht gelöscht werden",
+    "请输入该用户邮箱以确认删除": "Geben Sie die E-Mail dieses Benutzers zur Bestätigung ein",
+    "账户仍有余额或冻结用量，请处理完成后再删除": "Dieses Konto hat Guthaben oder reservierte Nutzung. Bitte vor dem Löschen klären.",
+    "用户存在未完成的充值订单，请处理完成后再删除": "Dieser Benutzer hat offene Einzahlungen. Bitte vor dem Löschen abschließen.",
+    "用户存在未完成的提现，请处理完成后再删除": "Dieser Benutzer hat offene Auszahlungen. Bitte vor dem Löschen abschließen."
   },
   "fr": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Vous pouvez demander le remboursement de la partie non utilisée, à sa valeur nominale et via le moyen de paiement d’origine. Contactez l’assistance ou le service commercial ; nous vérifierons l’utilisation restante avant traitement.",
@@ -10281,7 +10317,19 @@
     "发送未完成，请检查应用和订阅状态。": "Livraison incomplète. Vérifiez l’application et l’état de l’abonnement.",
     "尝试 {0} 次": "{0} tentatives",
     "下次重试：{0}": "Prochaine tentative : {0}",
-    "尚未收到设备展示回执": "Aucune confirmation d’affichage de l’appareil pour le moment"
+    "尚未收到设备展示回执": "Aucune confirmation d’affichage de l’appareil pour le moment",
+    "删除用户": "Supprimer l’utilisateur",
+    "确认删除用户？": "Supprimer cet utilisateur ?",
+    "用户已删除": "Utilisateur supprimé",
+    "删除中…": "Suppression…",
+    "输入用户邮箱确认删除": "Saisissez l’e-mail de l’utilisateur pour confirmer la suppression",
+    "删除后，该用户将无法登录，关联的 APK、PWA、分流和斗篷入口会停用。订单、资金流水和审计记录保留。": "Après suppression, l’utilisateur ne pourra plus se connecter. Ses liens APK, PWA, de répartition du trafic et de cloaking seront désactivés. Les commandes, transactions financières et journaux d’audit seront conservés.",
+    "账户余额、冻结用量、未完成的充值订单和提现须先处理完成。": "Avant la suppression, régularisez le solde, l’utilisation réservée ainsi que les recharges et retraits en cours.",
+    "不可删除管理员账号": "Les comptes administrateur ne peuvent pas être supprimés",
+    "请输入该用户邮箱以确认删除": "Saisissez l’e-mail de cet utilisateur pour confirmer la suppression",
+    "账户仍有余额或冻结用量，请处理完成后再删除": "Ce compte présente un solde ou une utilisation réservée. Régularisez-les avant la suppression.",
+    "用户存在未完成的充值订单，请处理完成后再删除": "Cet utilisateur a des recharges en cours. Traitez-les avant la suppression.",
+    "用户存在未完成的提现，请处理完成后再删除": "Cet utilisateur a des retraits en cours. Traitez-les avant la suppression."
   },
   "ko": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "미사용 부분은 액면 금액 기준으로 원래 결제 수단을 통해 환불을 신청할 수 있습니다. 고객 지원 또는 영업팀에 문의하세요. 남은 사용량을 확인한 후 처리합니다.",
@@ -12852,7 +12900,19 @@
     "发送未完成，请检查应用和订阅状态。": "전달이 완료되지 않았습니다. 앱과 구독 상태를 확인하세요.",
     "尝试 {0} 次": "시도 {0}회",
     "下次重试：{0}": "다음 재시도: {0}",
-    "尚未收到设备展示回执": "아직 기기의 표시 확인 응답이 없음"
+    "尚未收到设备展示回执": "아직 기기의 표시 확인 응답이 없음",
+    "删除用户": "사용자 삭제",
+    "确认删除用户？": "이 사용자를 삭제할까요?",
+    "用户已删除": "사용자가 삭제되었습니다",
+    "删除中…": "삭제 중…",
+    "输入用户邮箱确认删除": "삭제를 확인하려면 사용자 이메일을 입력하세요",
+    "删除后，该用户将无法登录，关联的 APK、PWA、分流和斗篷入口会停用。订单、资金流水和审计记录保留。": "삭제 후 사용자는 로그인할 수 없으며 연결된 APK, PWA, 트래픽 분배 및 클로킹 링크가 비활성화됩니다. 주문, 금융 거래 및 감사 기록은 보존됩니다.",
+    "账户余额、冻结用量、未完成的充值订单和提现须先处理完成。": "삭제 전에 계정 잔액, 예약된 사용량, 미완료 충전 및 출금을 처리해야 합니다.",
+    "不可删除管理员账号": "관리자 계정은 삭제할 수 없습니다",
+    "请输入该用户邮箱以确认删除": "삭제를 확인하려면 해당 사용자의 이메일을 입력하세요",
+    "账户仍有余额或冻结用量，请处理完成后再删除": "계정에 잔액 또는 예약된 사용량이 있습니다. 처리 후 삭제하세요.",
+    "用户存在未完成的充值订单，请处理完成后再删除": "사용자에게 미완료 충전 주문이 있습니다. 처리 후 삭제하세요.",
+    "用户存在未完成的提现，请处理完成后再删除": "사용자에게 미완료 출금이 있습니다. 처리 후 삭제하세요."
   },
   "ja": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用分は額面金額で元のお支払い方法への返金を申請できます。サポートまたは営業担当にご連絡ください。残りの利用量を確認してから手続きします。",
@@ -15423,7 +15483,19 @@
     "发送未完成，请检查应用和订阅状态。": "配信が完了していません。アプリと購読状態を確認してください。",
     "尝试 {0} 次": "試行回数: {0}",
     "下次重试：{0}": "次の再試行: {0}",
-    "尚未收到设备展示回执": "端末からの表示確認はまだ届いていません"
+    "尚未收到设备展示回执": "端末からの表示確認はまだ届いていません",
+    "删除用户": "ユーザーを削除",
+    "确认删除用户？": "このユーザーを削除しますか？",
+    "用户已删除": "ユーザーを削除しました",
+    "删除中…": "削除中…",
+    "输入用户邮箱确认删除": "削除を確認するためユーザーのメールアドレスを入力",
+    "删除后，该用户将无法登录，关联的 APK、PWA、分流和斗篷入口会停用。订单、资金流水和审计记录保留。": "削除後はログインできなくなり、関連するAPK、PWA、トラフィック振り分け、クローキングのリンクが無効になります。注文、取引履歴、監査記録は保持されます。",
+    "账户余额、冻结用量、未完成的充值订单和提现须先处理完成。": "削除する前に残高、確保済み利用枠、未完了のチャージと出金を処理してください。",
+    "不可删除管理员账号": "管理者アカウントは削除できません",
+    "请输入该用户邮箱以确认删除": "削除を確認するため対象ユーザーのメールアドレスを入力してください",
+    "账户仍有余额或冻结用量，请处理完成后再删除": "残高または確保済み利用枠があります。処理後に削除してください。",
+    "用户存在未完成的充值订单，请处理完成后再删除": "未完了のチャージ注文があります。処理後に削除してください。",
+    "用户存在未完成的提现，请处理完成后再删除": "未完了の出金があります。処理後に削除してください。"
   },
   "zh-TW": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用的部分可申請退款，按面額循原付款管道退回。請聯絡客服或商務處理，我們會核對剩餘用量後辦理。",
@@ -17994,7 +18066,19 @@
     "发送未完成，请检查应用和订阅状态。": "傳送未完成，請檢查應用程式和訂閱狀態。",
     "尝试 {0} 次": "嘗試 {0} 次",
     "下次重试：{0}": "下次重試：{0}",
-    "尚未收到设备展示回执": "尚未收到裝置顯示回報"
+    "尚未收到设备展示回执": "尚未收到裝置顯示回報",
+    "删除用户": "刪除使用者",
+    "确认删除用户？": "確認刪除使用者？",
+    "用户已删除": "使用者已刪除",
+    "删除中…": "刪除中…",
+    "输入用户邮箱确认删除": "輸入使用者信箱確認刪除",
+    "删除后，该用户将无法登录，关联的 APK、PWA、分流和斗篷入口会停用。订单、资金流水和审计记录保留。": "刪除後，該使用者將無法登入，關聯的 APK、PWA、分流和斗篷入口會停用。訂單、資金流水和稽核記錄保留。",
+    "账户余额、冻结用量、未完成的充值订单和提现须先处理完成。": "帳戶餘額、凍結用量、未完成的儲值訂單和提領須先處理完成。",
+    "不可删除管理员账号": "不可刪除管理員帳號",
+    "请输入该用户邮箱以确认删除": "請輸入該使用者信箱以確認刪除",
+    "账户仍有余额或冻结用量，请处理完成后再删除": "帳戶仍有餘額或凍結用量，請處理完成後再刪除",
+    "用户存在未完成的充值订单，请处理完成后再删除": "使用者存在未完成的儲值訂單，請處理完成後再刪除",
+    "用户存在未完成的提现，请处理完成后再删除": "使用者存在未完成的提領，請處理完成後再刪除"
   },
   "ru": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Можно запросить возврат неиспользованной части по номинальной стоимости исходным способом оплаты. Обратитесь в поддержку или отдел продаж; перед обработкой мы проверим оставшийся объём использования.",
@@ -20565,6 +20649,18 @@
     "发送未完成，请检查应用和订阅状态。": "Доставка не завершена. Проверьте приложение и состояние подписки.",
     "尝试 {0} 次": "Попыток: {0}",
     "下次重试：{0}": "Следующая попытка: {0}",
-    "尚未收到设备展示回执": "Подтверждение показа от устройства ещё не получено"
+    "尚未收到设备展示回执": "Подтверждение показа от устройства ещё не получено",
+    "删除用户": "Удалить пользователя",
+    "确认删除用户？": "Удалить этого пользователя?",
+    "用户已删除": "Пользователь удалён",
+    "删除中…": "Удаление…",
+    "输入用户邮箱确认删除": "Введите email пользователя для подтверждения удаления",
+    "删除后，该用户将无法登录，关联的 APK、PWA、分流和斗篷入口会停用。订单、资金流水和审计记录保留。": "После удаления пользователь не сможет войти. Его ссылки APK, PWA, распределения трафика и клоакинга будут отключены. Заказы, финансовые операции и журнал аудита сохраняются.",
+    "账户余额、冻结用量、未完成的充值订单和提现须先处理完成。": "Перед удалением урегулируйте остаток средств, зарезервированное использование, незавершённые пополнения и выводы.",
+    "不可删除管理员账号": "Аккаунты администраторов нельзя удалять",
+    "请输入该用户邮箱以确认删除": "Введите email этого пользователя для подтверждения удаления",
+    "账户仍有余额或冻结用量，请处理完成后再删除": "На счёте есть средства или зарезервированное использование. Урегулируйте их перед удалением.",
+    "用户存在未完成的充值订单，请处理完成后再删除": "У пользователя есть незавершённые пополнения. Обработайте их перед удалением.",
+    "用户存在未完成的提现，请处理完成后再删除": "У пользователя есть незавершённые выводы. Обработайте их перед удалением."
   }
 }

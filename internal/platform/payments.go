@@ -160,7 +160,7 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	var order Order
 	e = s.DB.Transaction(func(tx *gorm.DB) error {
-		u, e := lockUser(tx, userOf(r).ID)
+		u, e := lockActiveUser(tx, userOf(r).ID)
 		if e != nil {
 			return e
 		}

@@ -192,7 +192,7 @@ func (s *Server) saveUserReferralRates(w http.ResponseWriter, r *http.Request) {
 	}
 	out := referralRatesView{Rates: commissionPercentages(rates), Overridden: true}
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
-		user, err := lockUser(tx, r.PathValue("id"))
+		user, err := lockActiveUser(tx, r.PathValue("id"))
 		if err != nil {
 			return err
 		}
@@ -213,7 +213,7 @@ func (s *Server) saveUserReferralRates(w http.ResponseWriter, r *http.Request) {
 func (s *Server) clearUserReferralRates(w http.ResponseWriter, r *http.Request) {
 	var out referralRatesView
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
-		user, err := lockUser(tx, r.PathValue("id"))
+		user, err := lockActiveUser(tx, r.PathValue("id"))
 		if err != nil {
 			return err
 		}
@@ -249,7 +249,7 @@ type adminUserCommissionView struct {
 }
 
 func (s *Server) adminUsersWithCommission(w http.ResponseWriter, r *http.Request) {
-	q := addQuery(s.DB.Model(&User{}), r, "name", "email")
+	q := addQuery(s.DB.Model(&User{}).Where("deleted_at IS NULL"), r, "name", "email")
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
 		fail(w, err)

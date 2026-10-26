@@ -249,6 +249,7 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("GET /api/admin/commission-settings", s.admin(s.getCommissionSettings))
 	m.Handle("PUT /api/admin/commission-settings", s.admin(s.saveCommissionSettings))
 	m.Handle("PATCH /api/admin/users/{id}", s.admin(s.adminUpdateUser))
+	m.Handle("DELETE /api/admin/users/{id}", s.admin(s.adminDeleteUser))
 	m.Handle("POST /api/admin/users/{id}/password", s.admin(s.adminResetPassword))
 	m.Handle("POST /api/admin/users/{id}/balance", s.admin(s.adminBalance))
 	m.Handle("GET /api/admin/apps", s.admin(s.adminApps))

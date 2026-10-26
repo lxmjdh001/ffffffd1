@@ -197,7 +197,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var u User
-	q := s.DB.Where("email = ?", email)
+	q := s.DB.Where("email = ? AND deleted_at IS NULL", email)
 	if !strings.Contains(email, "@") {
 		q = q.Where("role = ?", "admin")
 	}
@@ -250,7 +250,7 @@ func (s *Server) auth(fn http.HandlerFunc) http.Handler {
 			return
 		}
 		var u User
-		if e = s.DB.First(&u, "id = ?", session.UserID).Error; e != nil || u.Disabled {
+		if e = s.DB.First(&u, "id = ?", session.UserID).Error; e != nil || u.Disabled || u.DeletedAt != nil {
 			fail(w, problem(401, "账户不可用"))
 			return
 		}

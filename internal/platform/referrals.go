@@ -161,6 +161,9 @@ func creditReferralRewards(tx *gorm.DB, order Order, ancestors []string, users m
 		return err
 	}
 	for i, id := range ancestors {
+		if users[id].DeletedAt != nil {
+			continue
+		}
 		// Calculate from paid principal only, excluding recharge gifts and the
 		// payment provider's matching suffix. Integer division rounds down.
 		amount := order.AmountMicros * rates[id][i] / 10000
