@@ -17,7 +17,7 @@ export function HomeNavigation({ inviteQuery, startPath }: { inviteQuery: string
   const sections = [
     { id: 'home-solutions', label: t('产品功能') },
     { id: 'home-how', label: t('如何开始') },
-    { id: 'home-pricing', label: t('套餐价格') },
+    { id: 'home-pricing', label: config.metered_billing ? t('按量计费') : t('套餐价格') },
     { id: 'home-faq', label: t('常见问题') },
   ];
   useEffect(() => {

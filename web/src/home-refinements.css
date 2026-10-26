@@ -1,0 +1,66 @@
+/* Keep the illustrated publishing identity; give real product content more space. */
+.home.home-editorial{--muted:#555e51}
+.home.home-editorial .home-nav-sections{gap:30px;flex:1;justify-content:flex-end}
+.home.home-editorial .home-nav-sections button,.home.home-editorial .home-login{font-size:13px}
+.home.home-editorial .home-button{border-radius:6px;min-height:48px;font-size:14px}
+.home.home-editorial .home-button-small{min-height:42px;font-size:13px}
+.home.home-editorial .home-hero h1 span{color:var(--ink)}
+.home.home-editorial .home-hero-aside>p{font-size:15px;line-height:1.9;max-width:38em}
+.home.home-editorial .home-hero-aside small{font-size:12px}
+.home.home-editorial .home-edition{letter-spacing:.06em}
+.home.home-editorial .home-edition span:last-child{display:none}
+.home.home-editorial .home-capability-strip{font-size:13px}
+.home.home-editorial .home-section-top{grid-template-columns:minmax(0,1fr);gap:0;margin-bottom:32px}
+.home.home-editorial .home-section-top>.home-eyebrow{display:none}
+.home.home-editorial .home-section-top p{margin-top:14px;max-width:54em;font-size:15px}
+.home.home-editorial .home-story p,.home.home-editorial .home-solution-grid p,.home.home-editorial .home-connection-notes p,.home.home-editorial .home-steps p{font-size:14px;line-height:1.9}
+.home.home-editorial .home-story ul,.home.home-editorial .home-solution-grid ul{font-size:12px}
+.home.home-editorial .home-story>a{font-size:14px;min-height:48px}
+.home.home-editorial .home-connection-notes small{font-size:12px}
+.home.home-editorial .home-menu-toggle,.home.home-editorial .home-text-button{width:44px;height:44px}
+.home.home-editorial .home-menu-panel{background:var(--paper);border-color:var(--rule);border-radius:10px}
+.home.home-editorial .home-menu-sections{gap:4px}
+.home.home-editorial .home-menu-sections button{font-size:14px;min-height:44px}
+.home.home-editorial .home-faq summary{font-size:17px;line-height:1.6;min-height:56px}
+.home.home-editorial .home-faq details>p{font-size:14px;line-height:1.9;max-width:68ch}
+.home.home-editorial .home-pricing-copy h2 em{font-style:normal}
+.home.home-editorial .home-pricing-copy .home-button{margin-top:22px}
+.home.home-editorial .home-pricing .usage-pricing{padding:24px;background:#e9eddf;border:1px solid #c9d2ba;border-radius:12px}
+.home.home-editorial .usage-pricing-heading{color:#344d31}
+.home.home-editorial .home-pricing .usage-pricing-heading h2{font-family:inherit;font-weight:600;font-size:20px}
+.home.home-editorial .home-pricing .usage-pricing-heading p{color:#555e51;font-size:13px}
+.home.home-editorial .home-pricing .usage-rate-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.home.home-editorial .home-pricing .usage-rate-grid article{grid-column:auto;background:#fafbf6;border:1px solid #d3dcc6;border-radius:8px;min-height:104px;padding:16px;grid-template-columns:20px minmax(0,1fr) auto}
+.home.home-editorial .home-pricing .usage-rate-grid article>svg{color:#537048}
+.home.home-editorial .home-pricing .usage-rate-grid h3{color:#354b30;font-size:14px}
+.home.home-editorial .home-pricing .usage-rate-grid small{color:#555e51;font-size:12px}
+.home.home-editorial .home-pricing .usage-rate-grid strong{color:#30472b;font-size:24px;justify-self:start;font-variant-numeric:tabular-nums}
+.home.home-editorial .home-pricing .usage-rate-grid article.usage-rate-free{grid-column:1/-1;display:flex;gap:10px;min-height:46px;padding:10px 0;background:transparent;border:0;border-bottom:1px solid #cbd5bd;border-radius:0}
+.home.home-editorial .home-pricing .usage-rate-grid article.usage-rate-free:last-child{border-bottom:0}
+.home.home-editorial .home-pricing .usage-rate-grid article.usage-rate-free h3{flex:1}
+.home.home-editorial .home-pricing .usage-rate-grid article.usage-rate-free strong{font-size:13px;margin:0;align-self:center;font-weight:500}
+@media(max-width:800px){
+  .home.home-editorial .home-hero-aside>p{font-size:14px}
+  .home.home-editorial .home-nav{gap:16px}
+  .home.home-editorial .home-section-top{margin-bottom:26px}
+}
+@media(max-width:520px){
+  .home.home-editorial .home-hero-layout{padding-block:24px 20px;gap:12px}
+  .home.home-editorial .home-hero h1{font-size:clamp(36px,10.7vw,52px);line-height:1.22}
+  .home.home-editorial .home-hero-aside{margin-top:18px}
+  .home.home-editorial .home-hero-aside small{font-size:11px;line-height:1.8;display:block}
+  .home.home-editorial .home-hero-actions{margin:20px 0 10px;gap:16px}
+  .home.home-editorial .home-hero-actions .home-button{font-size:14px}
+  .home.home-editorial .home-phone-visual{max-width:260px}
+  .home.home-editorial .home-edition{font-size:9px;gap:12px;letter-spacing:0;flex-wrap:wrap}
+  .home.home-editorial .home-capability-strip{font-size:12px;gap:12px}
+  .home.home-editorial .home-section-top p{font-size:14px}
+  .home.home-editorial .home-story h3{font-size:24px}
+  .home.home-editorial .home-connection-notes h3{font-size:23px}
+  .home.home-editorial .home-faq summary{font-size:16px}
+  .home.home-editorial .home-pricing .usage-pricing{padding:18px}
+  .home.home-editorial .home-pricing .usage-rate-grid article{padding:12px;gap:6px;min-height:100px;grid-template-columns:18px minmax(0,1fr) auto}
+  .home.home-editorial .home-pricing .usage-rate-grid strong{font-size:21px}
+  .home.home-editorial .home-pricing .usage-rate-price{grid-column:1/-1}
+  .home.home-editorial .home-pricing .usage-rate-grid article.usage-rate-free{padding:10px 0;min-height:44px}
+}

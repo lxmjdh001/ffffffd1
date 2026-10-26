@@ -10,6 +10,7 @@ import originalHomeContent from './home-content.json';
 import homeMedia from './home-media.json';
 import { HomeNavigation } from './home-navigation';
 import './landing.css';
+import './home-refinements.css';
 
 function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });

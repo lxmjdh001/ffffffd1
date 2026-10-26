@@ -1,0 +1,148 @@
+/* Distribution workspace: quiet surfaces, readable data, a single blue action color.
+   Scoped to the console so published application pages keep their own identity. */
+.shell{--console-ink:#24374b;--console-muted:#5c7084;--console-accent:#167d9a;--console-line:#dce5ed;background:#f3f6fa;color:var(--console-ink);font-family:"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif}
+.shell .sidebar{background:#182d43;color:#bdcbd8}
+.shell .sidebar-brand small{color:#a1b5c8;letter-spacing:1px;font-size:10px}
+.shell .workspace-label{background:#203b54;border-color:#35516b;margin-bottom:20px}
+.shell .workspace-label>div{font-size:12px;color:#e0eaf2}
+.shell .workspace-label small{color:#a4bed1;font-size:8px}
+.shell .workspace-label.active{background:#21485f;border-color:#42869b;box-shadow:none}
+.shell .workspace-mark,.shell .workspace-label.active .workspace-mark{background:#167d9a;color:#fff}
+.shell .sidebar nav{gap:4px}
+.shell .nav-link{font-size:13px;padding:11px 13px;color:#bfcedc;border-radius:6px}
+.shell .nav-link:hover{background:#244259;color:#fff}
+.shell .nav-link.active{background:#23516b;color:#fff;box-shadow:inset 3px 0 #6bd2df}
+.shell .nav-label{font-size:11px;color:#a5bacd;letter-spacing:0}
+.shell .nav-label span{background:#2c4962;color:#c1d0dc;font-size:8px}
+.shell .upgrade-box{background:#203b54;border-color:#35516b;border-radius:8px;padding:16px 13px}
+.shell .upgrade-box strong{font-size:12px}
+.shell .upgrade-box p{font-size:11px;color:#b6c9d8}
+.shell .upgrade-box a{font-size:12px;color:#91dfeb}
+.shell .upgrade-box>svg{color:#91dfeb}
+.shell .sidebar-user{background:#15283b;border-color:#35516b}
+.shell .sidebar-user>span:nth-child(2){font-size:12px}
+.shell .sidebar-user small{color:#acc0d1;font-size:10px}
+.shell .avatar{background:#d9edf1;color:#21627b;border-radius:10px}
+.shell .topbar{height:72px;border-color:var(--console-line)}
+.shell .breadcrumb{font-size:12px;color:var(--console-muted)}
+.shell .breadcrumb strong{color:var(--console-ink);font-weight:600}
+.shell .help-link{font-size:12px;color:var(--console-muted)}
+.shell .page-content{padding-top:32px;padding-bottom:40px}
+.shell .page-heading{margin-bottom:28px}
+.shell h1{font-size:28px;letter-spacing:-.6px;color:#20364b}
+.shell .eyebrow{color:#60768b;font-size:10px;letter-spacing:.7px}
+.shell .page-heading p{font-size:13px;color:var(--console-muted);line-height:1.8}
+.shell .btn{min-height:40px;font-size:13px;border-radius:7px;font-weight:550}
+.shell .btn.primary{background:var(--console-accent);box-shadow:0 3px 7px #167d9a18}
+.shell .btn.primary:hover:not(:disabled){background:#116681}
+.shell .btn.secondary{border-color:#cddae5;color:#38566f}
+.shell .text-btn,.shell .copy-btn,.shell .inline-accent{color:#126d8a;font-size:12px}
+.shell :is(a,button,input,select,textarea):focus-visible{outline:3px solid #167d9a;outline-offset:3px}
+.shell :is(input,textarea,select):focus{border-color:#167d9a;box-shadow:0 0 0 3px #167d9a14}
+.shell .panel{border-color:var(--console-line);border-radius:10px}
+.shell .panel-heading h2{font-size:16px;color:#2a4055}
+.shell .panel-heading p{font-size:12px;color:var(--console-muted);line-height:1.7}
+.shell .muted{color:var(--console-muted)}
+.shell .soft-chip{font-size:11px;color:#4c647a;background:#f3f7fa;border-color:var(--console-line)}
+.shell th{font-size:12px;font-weight:550;color:#52697e;background:#f5f8fb;padding-top:15px;padding-bottom:15px}
+.shell td{font-size:13px;color:#435c73;padding-top:19px;padding-bottom:19px}
+.shell tbody tr:hover{background:#f4f9fc}
+.shell .table-title{font-size:15px;color:#294358}
+.shell .app-name-cell{font-size:13px;color:#294358}
+.shell .app-name-cell small,.shell .cell-sub{font-size:11px;color:#61768a}
+.shell .table-toolbar select,.shell .toolbar-controls select,.shell .search-box input{font-size:12px}
+.shell .search-box{border-color:#cddae5}
+.shell .badge{font-size:11px;padding:5px 9px}
+.shell .badge.green{color:#207454;background:#e8f5ee}
+.shell .badge.gray{color:#5d6c7e;background:#edf1f5}
+.shell .badge.violet{color:#5261a2;background:#eef0fa}
+.shell .field>span{font-size:13px;color:#405971}
+.shell .field>small,.shell .switch-field small{font-size:12px;color:var(--console-muted)}
+.shell .empty h3{font-size:15px;color:#3c566e}
+.shell .empty p{font-size:12px;color:var(--console-muted);max-width:46ch}
+.shell .empty-icon{color:#4f8da7;background:#f0f7fa;border-color:#b7d1de}
+.shell .pager{font-size:12px;color:var(--console-muted)}
+.shell .app-footer{font-size:11px;color:#657a8d;border-top:1px solid var(--console-line);margin-inline:32px;padding:20px 0}
+
+/* The welcome panel is the workspace's one expressive surface. */
+.shell .welcome-banner{background:#dfeef3;border:1px solid #c4dce6;min-height:190px;padding:30px 32px}
+.shell .welcome-kicker{font-size:11px;color:#426c80}
+.shell .welcome-kicker>span{background:#167d9a}
+.shell .welcome-banner h2{font-size:26px;letter-spacing:-.6px;color:#1e4960;margin:12px 0}
+.shell .welcome-banner p{font-size:13px;color:#456b80;max-width:48ch}
+.shell .welcome-banner a{font-size:13px;font-weight:600;color:#12627e}
+.shell .art-orbit{border-color:#b4d2df;box-shadow:0 0 0 25px #cce2eb66,0 0 0 55px #cce2eb44}
+.shell .card-back{background:#a6cedd}
+.shell .card-front{color:#167d9a;border-color:#b9d7e2}
+.shell .art-check,.shell .art-link{color:#277b8c}
+.shell .stat-card{border-color:var(--console-line);border-radius:9px;padding:21px 22px 0}
+.shell .stat-heading{font-size:13px;color:#526a80}
+.shell .stat-value{font-size:34px;font-weight:600;letter-spacing:-1px;color:#243e54;margin:14px 0 20px;font-variant-numeric:tabular-nums}
+.shell .stat-value small{font-size:12px;color:#60768a}
+.shell .stat-footer{font-size:11px;color:#5d7489;min-height:43px;white-space:normal;line-height:1.6}
+.shell .stat-icon{border-radius:8px}
+.shell .chart-summary>strong{color:#284c64;font-variant-numeric:tabular-nums;font-size:32px}
+.shell .chart-summary>span{font-size:12px;color:#5c7084}
+.shell .chart-legend i{background:#167d9a}
+.shell .chart-empty{color:#5c7084;font-size:12px}
+.shell .plan-hero strong{font-size:16px;color:#314d64}
+.shell .plan-hero p,.shell .plan-detail,.shell .usage-heading{font-size:12px;color:#5c7084}
+.shell .plan-detail strong,.shell .usage-heading strong{color:#354f65}
+.shell .plan-spark{background:#e7f2f6;color:#167d9a}
+.shell .progress-track>span{background:#167d9a}
+.shell .plan-overview>.btn{font-size:12px}
+.shell .quick-step{padding-block:17px}
+.shell .quick-step strong{font-size:13px;color:#354f65}
+.shell .quick-step p{font-size:12px;color:#5c7084;max-width:34ch;line-height:1.7}
+.shell .quick-step>span{background:#eef4f8;color:#52758c}
+.shell .quick-step:hover{background:#f3f8fb}
+.shell .quick-note{font-size:11px;color:#61788b}
+.shell .balance-panel{background:#21667f;color:#fff}
+.shell .balance-panel p,.shell .balance-panel .balance-main>span{color:#e0edf3}
+.shell .balance-panel .balance-recharge{color:#205a73;background:#fff}
+.shell .usage-pricing-heading,.shell .usage-rate-grid article>svg{color:#35677e}
+.shell .usage-pricing-heading p,.shell .usage-rate-grid small{color:var(--console-muted)}
+.shell .usage-rate-grid h3{font-size:13px;color:#456078}
+.shell .usage-rate-grid strong{color:#294b63;font-variant-numeric:tabular-nums}
+.shell .modal-intro,.shell .upload-zone span,.shell .bottom-hint{color:var(--console-muted);font-size:12px}
+.shell .upload-zone strong{font-size:13px;color:#46667d}
+.shell .amount-options button{color:#46647b;font-size:13px;min-height:44px}
+.shell .amount-options button.selected,.shell .payment-options button.selected{border-color:#167d9a;background:#edf6f9;color:#1b657e}
+.shell .payment-methods legend,.shell .payment-options button small{font-size:12px;color:#5c7084}
+.shell .tab-bar button{font-size:13px;color:#5c7084}
+.shell .tab-bar button.active{color:#126d8a;border-color:#167d9a}
+.shell .pwa-editor .field>span{font-size:13px;color:#405971}
+.shell .pwa-editor .field>small,.shell .pwa-settings small,.shell .pwa-icon-field small,.shell .pwa-form-section p,.shell .pwa-creation-page .muted{font-size:12px;color:#5c7084}
+.shell .pwa-settings>label,.shell .pwa-form-section h3,.shell .pwa-icon-field strong{font-size:13px;color:#405971}
+.shell .pwa-template-options button.selected{background:#edf6f9;border-color:#167d9a;box-shadow:none}
+@media(max-width:1150px){.shell .nav-link{padding-inline:10px}.shell .welcome-banner p{max-width:30ch}}
+@media(max-width:900px){.shell .welcome-banner>div:first-child{max-width:70%}.shell .welcome-banner p{max-width:100%}}
+@media(max-width:650px){
+  .shell .sidebar-close{position:absolute;top:16px;right:6px;color:#d9e7f0;background:#244259;width:44px;height:44px}
+  .shell .mobile-menu,.shell .help-link{min-width:44px;min-height:44px;justify-content:center}
+  .shell .sidebar-brand{padding-right:32px}
+  .shell .topbar{height:62px;padding-inline:16px}.shell .breadcrumb{gap:6px}.shell .breadcrumb-root{display:none}
+  .shell .page-content{padding:24px 16px}.shell h1{font-size:25px}.shell .page-heading{flex-wrap:wrap;gap:14px}
+  .shell .heading-action{padding-top:0;flex-wrap:wrap}.shell .page-heading p{max-width:100%;font-size:12px}
+  .shell .welcome-banner{padding:24px;min-height:200px}.shell .welcome-banner>div:first-child{max-width:100%}
+  .shell .welcome-banner h2{font-size:23px}.shell .welcome-banner p{max-width:30ch;font-size:12px}
+  .shell .welcome-banner a{font-size:12px}.shell .banner-art{display:none}
+  .shell .stat-card{padding:18px 20px 0}.shell .stat-value{font-size:32px}
+  .shell .stats-grid.dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .shell .dashboard-stats .stat-card{padding:15px 14px 0}
+  .shell .dashboard-stats .stat-card:last-child{grid-column:1/-1}
+  .shell .dashboard-stats .stat-value{font-size:28px;margin:10px 0 12px;overflow-wrap:anywhere}
+  .shell .dashboard-stats .stat-footer{min-height:38px;font-size:11px}
+  .shell .dashboard-stats .stat-footer a{min-width:30px;min-height:32px;display:inline-flex;align-items:center;justify-content:flex-end;flex-shrink:0}
+  .shell .dashboard-stats .stat-heading{gap:6px;font-size:12px}
+  .shell .dashboard-stats .stat-icon{width:26px;height:26px}
+  .shell .welcome-banner{min-height:180px}
+  .shell .usage-rate-grid article{padding:16px}
+  .shell .amount-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .shell .amount-options button{min-height:48px}
+  .shell .modal-footer .btn{min-height:44px}
+  .shell .field input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),.shell .field textarea,.shell .field select{font-size:16px}
+  .shell .app-footer{margin-inline:16px;font-size:10px;gap:12px;flex-wrap:wrap}
+  .shell .topbar-right{gap:10px!important}.shell .dev-tag{display:none}
+}
+@media(prefers-reduced-motion:reduce){.shell *,.shell *::before,.shell *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

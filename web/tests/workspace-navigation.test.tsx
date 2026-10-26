@@ -13,7 +13,7 @@ vi.mock('react-admin', async importOriginal => ({
   useLogout: () => vi.fn(),
   Notification: () => null,
 }));
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 function open(path='/apps') {
   render(<MemoryRouter initialEntries={[path]}><ConfigContext.Provider value={{ config: { site_name: 'D1 Apk', development: false } as Config, reload: vi.fn() }}>
@@ -50,4 +50,24 @@ it('closes the mobile navigation after using the workspace entry and keeps other
 it('places PWA and notifications after apps and ad tracking before referrals',()=>{
  open();expect(screen.getByRole('link', {name: 'PWA管理', exact:true}).getAttribute('href')).toBe('/pwas');const links=within(document.querySelector('aside nav')!).getAllByRole('link').map(link=>link.getAttribute('href'));
  expect(links).toEqual(['/apps','/pwas','/pwa-push','/domains','/traffic','/cloaks','/billing','/integrations','/referrals','/activity','/account']);
+});
+
+it('keeps mobile navigation focus inside the open drawer and restores focus on Escape', async () => {
+  vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+  const user = open();
+  const sidebar = document.querySelector('aside')!;
+  const toggle = screen.getByRole('button', { name: '打开导航' });
+  expect(sidebar.hasAttribute('inert')).toBe(true);
+  await user.click(toggle);
+  expect(sidebar.hasAttribute('inert')).toBe(false);
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  expect(sidebar.contains(document.activeElement)).toBe(true);
+  const controls = sidebar.querySelectorAll<HTMLElement>('a[href], button:not(:disabled)');
+  controls[controls.length - 1].focus();
+  await user.tab();
+  expect(document.activeElement).toBe(controls[0]);
+  await user.keyboard('{Escape}');
+  expect(sidebar.hasAttribute('inert')).toBe(true);
+  expect(document.activeElement).toBe(toggle);
+  expect(document.body.style.overflow).toBe('');
 });
