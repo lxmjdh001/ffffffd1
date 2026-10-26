@@ -240,8 +240,24 @@
  async function syncSubscription(automatic = false) {
   if (!registration || !config || !config.enabled || !config.public_key) throw new Error(text('Notifications are not ready. Refresh and try again.', '通知服务未就绪，请刷新后重试。'));
   let subscription = await registration.pushManager.getSubscription();
+  const preference = storageRead();
+  if (automatic && preference && preference.unsubscribed) {
+   await preserveOptOut(preference, subscription, false);
+   return;
+  }
+  // A subscription belongs to the VAPID key used when it was created. After
+  // key rotation, reusing it would make the provider reject every notification.
+  const publicKey = keyBytes(config.public_key);
+  const existingKey = subscription && subscription.options && subscription.options.applicationServerKey;
+  if (existingKey) {
+   const bytes = new Uint8Array(existingKey);
+   if (bytes.length !== publicKey.length || bytes.some((value,index) => value !== publicKey[index])) {
+    if (!await subscription.unsubscribe()) throw new Error(text('Unable to update the notification subscription. Try again.', '通知订阅更新失败，请重试。'));
+    subscription = null;
+   }
+  }
   const newlyCreated = !subscription;
-  if (!subscription) subscription = await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:keyBytes(config.public_key)});
+  if (!subscription) subscription = await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicKey});
   const serialized = subscription.toJSON();
   const body = {endpoint:serialized.endpoint,keys:serialized.keys};
   const latest = storageRead();

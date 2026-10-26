@@ -58,7 +58,7 @@ describe('PWA notification management', () => {
   });
 
   it('shows per-delivery display/click outcomes without revealing subscription secrets or internal errors', async () => {
-    const user = setup(); await user.click(await screen.findByRole('button', { name: '查看详情' })); const dialog = within(screen.getByRole('dialog')); expect(dialog.getByText('已发送表示消息已交付通知服务；展示与点击以设备回报为准。')).toBeTruthy(); expect(await dialog.findByRole('cell', { name: '已发送' })).toBeTruthy(); expect(dialog.getByRole('columnheader', { name: '点击时间' })).toBeTruthy(); expect(screen.queryByText(/never-show/)).toBeNull(); expect(writes).toHaveLength(0);
+    const user = setup(); await user.click(await screen.findByRole('button', { name: '查看详情' })); const dialog = within(screen.getByRole('dialog')); expect(dialog.getByText('服务接受不代表设备已显示。展示、点击以设备回执为准；未收到回执不等于发送失败。')).toBeTruthy(); expect(await dialog.findByRole('cell', { name: '设备已显示' })).toBeTruthy(); expect(dialog.getByRole('columnheader', { name: '点击时间' })).toBeTruthy(); expect(screen.queryByText(/never-show/)).toBeNull(); expect(writes).toHaveLength(0);
   });
 
   it('shows the actual icon, large image and separate button destinations in task details', async () => {

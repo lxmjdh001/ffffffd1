@@ -154,7 +154,9 @@ func (s *Server) claimPWAPushDelivery(ctx context.Context) (PWAPushDelivery, err
 			return e
 		}
 		delivery.Attempts++
-		until := s.Now().Add(time.Minute)
+		now := s.Now()
+		delivery.LastAttemptAt = &now
+		until := now.Add(time.Minute)
 		delivery.LeaseUntil = &until
 		delivery.LeaseToken = randomHex(16)
 		delivery.Status = "processing"
@@ -170,6 +172,8 @@ type pwaPushOutcome struct {
 	accepted, expired, retryable bool
 	message                      string
 	retryAfter                   time.Duration
+	provider, code               string
+	providerStatus               int
 }
 
 func (s *Server) deliverOnePWAPush(ctx context.Context) bool {
@@ -189,53 +193,53 @@ func (s *Server) deliverOnePWAPush(ctx context.Context) bool {
 func (s *Server) sendPWAPush(ctx context.Context, d PWAPushDelivery) pwaPushOutcome {
 	var task PWAPushTask
 	if e := s.DB.WithContext(ctx).First(&task, "id = ?", d.TaskID).Error; e != nil {
-		return pwaPushOutcome{retryable: true, message: "推送任务暂时不可用"}
+		return pwaPushOutcome{retryable: true, message: "推送任务暂时不可用", code: "task_unavailable"}
 	}
 	if task.Status == "cancelled" {
-		return pwaPushOutcome{message: "推送已取消"}
+		return pwaPushOutcome{message: "推送已取消", code: "cancelled"}
 	}
 	enabled, e := s.pwaPushAppEnabled(s.DB.WithContext(ctx), d.PWAID, d.UserID)
 	if e != nil {
-		return pwaPushOutcome{retryable: true, message: "应用状态暂时不可用"}
+		return pwaPushOutcome{retryable: true, message: "应用状态暂时不可用", code: "app_unavailable"}
 	}
 	if !enabled {
-		return pwaPushOutcome{message: "应用或账户已停用通知"}
+		return pwaPushOutcome{message: "应用或账户已停用通知", code: "app_disabled"}
 	}
 	var sub PWAPushSubscription
 	if e := s.DB.WithContext(ctx).First(&sub, "id = ? AND pwa_id = ? AND status = ?", d.SubscriptionID, d.PWAID, "active").Error; e != nil {
 		if !errors.Is(e, gorm.ErrRecordNotFound) {
-			return pwaPushOutcome{retryable: true, message: "订阅状态暂时不可用"}
+			return pwaPushOutcome{retryable: true, message: "订阅状态暂时不可用", code: "subscription_unavailable"}
 		}
-		return pwaPushOutcome{message: "订阅已停用"}
+		return pwaPushOutcome{message: "订阅已停用", code: "subscription_inactive"}
 	}
 	// Keep retries bounded even if the process is repeatedly killed mid-request.
 	if d.Attempts > 5 || !d.ExpiresAt.After(s.Now()) {
-		return pwaPushOutcome{message: "通知重试期限已结束"}
+		return pwaPushOutcome{message: "通知重试期限已结束", code: "delivery_expired"}
 	}
 	var app PWAApp
 	if e := s.DB.WithContext(ctx).First(&app, "id = ?", d.PWAID).Error; e != nil {
-		return pwaPushOutcome{message: "应用已移除"}
+		return pwaPushOutcome{message: "应用已移除", code: "app_removed"}
 	}
 	raw, e := s.decryptSecret(sub.EncryptedSubscription)
 	if e != nil {
-		return pwaPushOutcome{message: "订阅密钥不可用"}
+		return pwaPushOutcome{message: "订阅密钥不可用", code: "subscription_key_invalid"}
 	}
 	var stored pwaSubscriptionInput
 	if e = json.Unmarshal([]byte(raw), &stored); e != nil {
-		return pwaPushOutcome{message: "订阅信息无效"}
+		return pwaPushOutcome{message: "订阅信息无效", code: "subscription_invalid"}
 	}
 	if e = validatePWASubscription(&stored); e != nil {
-		return pwaPushOutcome{message: "订阅信息无效"}
+		return pwaPushOutcome{message: "订阅信息无效", code: "subscription_invalid"}
 	}
 	privateKey, e := s.decryptSecret(app.VAPIDPrivateKey)
 	if e != nil {
-		return pwaPushOutcome{message: "推送身份密钥不可用"}
+		return pwaPushOutcome{message: "推送身份密钥不可用", code: "vapid_key_invalid"}
 	}
 	content := pwaPushContentPayload(task.Title, task.Body, task.URL, task.Icon, task.Image, pwaTaskActions(task))
 	content["delivery_id"], content["event_token"] = d.ID, s.pwaEventToken(d)
 	payload, e := json.Marshal(content)
 	if e != nil {
-		return pwaPushOutcome{message: "通知内容无效"}
+		return pwaPushOutcome{message: "通知内容无效", code: "payload_invalid"}
 	}
 	subscription := &webpush.Subscription{Endpoint: stored.Endpoint, Keys: webpush.Keys{P256dh: stored.Keys.P256DH, Auth: stored.Keys.Auth}}
 	client := s.pwaPushHTTP
@@ -244,19 +248,25 @@ func (s *Server) sendPWAPush(ctx context.Context, d PWAPushDelivery) pwaPushOutc
 	}
 	reqctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	response, e := webpush.SendNotificationWithContext(reqctx, payload, subscription, &webpush.Options{HTTPClient: client, Subscriber: s.Config.PublicURL, VAPIDPublicKey: app.VAPIDPublicKey, VAPIDPrivateKey: privateKey, TTL: 24 * 60 * 60, Topic: d.ID, Urgency: webpush.UrgencyNormal})
+	// Match ntfy's Web Push delivery priority, including iOS background delivery.
+	response, e := webpush.SendNotificationWithContext(reqctx, payload, subscription, &webpush.Options{HTTPClient: client, Subscriber: s.Config.PublicURL, VAPIDPublicKey: app.VAPIDPublicKey, VAPIDPrivateKey: privateKey, TTL: 24 * 60 * 60, Topic: d.ID, Urgency: webpush.UrgencyHigh})
+	outcome := pwaPushOutcome{provider: pwaPushProviderName(stored.Endpoint)}
 	if e != nil {
-		return pwaPushOutcome{retryable: true, message: "推送服务暂时无法连接"}
+		outcome.retryable, outcome.message, outcome.code = true, "推送服务暂时无法连接", pwaPushNetworkCode(e)
+		return outcome
 	}
 	if response.Body != nil {
 		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
 		_ = response.Body.Close()
 	}
+	outcome.providerStatus = response.StatusCode
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
-		return pwaPushOutcome{accepted: true}
+		outcome.accepted = true
+		return outcome
 	}
 	if response.StatusCode == 404 || response.StatusCode == 410 {
-		return pwaPushOutcome{expired: true, message: "浏览器订阅已失效", subscriptionCiphertext: sub.EncryptedSubscription}
+		outcome.expired, outcome.message, outcome.code, outcome.subscriptionCiphertext = true, "浏览器订阅已失效", "subscription_expired", sub.EncryptedSubscription
+		return outcome
 	}
 	if response.StatusCode == 429 || response.StatusCode >= 500 {
 		retry := time.Duration(0)
@@ -265,9 +275,23 @@ func (s *Server) sendPWAPush(ctx context.Context, d PWAPushDelivery) pwaPushOutc
 		} else if t, e := http.ParseTime(response.Header.Get("Retry-After")); e == nil {
 			retry = min(max(t.Sub(s.Now()), 0), 6*time.Hour)
 		}
-		return pwaPushOutcome{retryable: true, message: "推送服务繁忙，等待重试", retryAfter: retry}
+		outcome.retryable, outcome.message, outcome.retryAfter = true, "推送服务繁忙，等待重试", retry
+		outcome.code = "provider_unavailable"
+		if response.StatusCode == 429 {
+			outcome.code = "rate_limited"
+		}
+		return outcome
 	}
-	return pwaPushOutcome{message: "推送服务拒绝此通知 (HTTP " + strconv.Itoa(response.StatusCode) + ")"}
+	outcome.message, outcome.code = "推送服务拒绝此通知 (HTTP "+strconv.Itoa(response.StatusCode)+")", "provider_rejected"
+	switch response.StatusCode {
+	case 400:
+		outcome.code = "invalid_request"
+	case 401, 403:
+		outcome.code = "auth_failed"
+	case 413:
+		outcome.code = "payload_too_large"
+	}
+	return outcome
 }
 func (s *Server) finishPWAPushDelivery(ctx context.Context, d PWAPushDelivery, outcome pwaPushOutcome) error {
 	return s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -282,7 +306,7 @@ func (s *Server) finishPWAPushDelivery(ctx context.Context, d PWAPushDelivery, o
 			}
 			return e
 		}
-		update := map[string]any{"lease_until": nil, "lease_token": "", "last_error": outcome.message}
+		update := map[string]any{"lease_until": nil, "lease_token": "", "last_error": outcome.message, "provider": outcome.provider, "provider_status": outcome.providerStatus, "error_code": outcome.code}
 		switch {
 		case outcome.accepted:
 			update["status"] = "sent"
@@ -353,7 +377,7 @@ func (s *Server) securePWAPushClient() *http.Client {
 		}
 		ips, e := resolver.LookupIPAddr(ctx, host)
 		if e != nil || len(ips) == 0 {
-			return nil, errors.New("push DNS unavailable")
+			return nil, errPWAPushDNS
 		}
 		// Fail the entire mixed DNS answer; never fall back to a private address.
 		for _, ip := range ips {

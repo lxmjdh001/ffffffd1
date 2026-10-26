@@ -565,7 +565,7 @@ func TestPWAPushWorkerEncryptedPayloadVAPIDSnapshotAndEvents(t *testing.T) {
 	sent := 0
 	s.pwaPushHTTP = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		sent++
-		if r.Method != "POST" || r.Header.Get("TTL") != "86400" || r.Header.Get("Content-Encoding") != "aes128gcm" {
+		if r.Method != "POST" || r.Header.Get("TTL") != "86400" || r.Header.Get("Content-Encoding") != "aes128gcm" || r.Header.Get("Urgency") != "high" {
 			t.Fatal("invalid Web Push request")
 		}
 		expected := b.VAPIDPublicKey

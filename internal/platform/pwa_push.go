@@ -73,6 +73,10 @@ type PWAPushDelivery struct {
 	LeaseUntil     *time.Time `json:"-"`
 	LeaseToken     string     `json:"-" gorm:"size:32"`
 	LastError      string     `json:"last_error" gorm:"size:200"`
+	Provider       string     `json:"provider" gorm:"size:20;not null;default:''"`
+	ProviderStatus int        `json:"provider_status" gorm:"not null;default:0"`
+	ErrorCode      string     `json:"error_code" gorm:"size:40;not null;default:''"`
+	LastAttemptAt  *time.Time `json:"last_attempt_at"`
 	CreatedAt      time.Time  `json:"created_at"`
 	SentAt         *time.Time `json:"sent_at"`
 	DisplayedAt    *time.Time `json:"displayed_at"`
@@ -167,7 +171,7 @@ func pwaPushProvider(raw string) bool {
 	case "fcm.googleapis.com", "android.googleapis.com", "updates.push.services.mozilla.com", "push.services.mozilla.com", "web.push.apple.com":
 		return true
 	}
-	return (strings.HasSuffix(h, ".push.services.mozilla.com") || strings.HasSuffix(h, ".notify.windows.com")) && !strings.ContainsAny(h, "%\\")
+	return (strings.HasSuffix(h, ".push.apple.com") || strings.HasSuffix(h, ".push.services.mozilla.com") || strings.HasSuffix(h, ".notify.windows.com")) && !strings.ContainsAny(h, "%\\")
 }
 func pwaDecodeKey(raw string) ([]byte, error) {
 	if strings.ContainsAny(raw, " \r\n\t") {
@@ -796,5 +800,9 @@ func (s *Server) listPWAPushDeliveries(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
-	jsonOut(w, 200, map[string]any{"data": rows, "total": total, "page": p, "per_page": n})
+	views := make([]pwaPushDeliveryView, 0, len(rows))
+	for _, row := range rows {
+		views = append(views, newPWAPushDeliveryView(row))
+	}
+	jsonOut(w, 200, map[string]any{"data": views, "total": total, "page": p, "per_page": n})
 }

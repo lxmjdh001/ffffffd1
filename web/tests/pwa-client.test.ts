@@ -9,8 +9,9 @@ const storeKey = 'd1-pwa-subscription:' + base;
 const capability = { subscription_id: 'subscription-one', token: 'subscription-one.proof' };
 const configuration = { enabled: true, public_key: 'AQID', subscribe_url: base + 'subscribe', unsubscribe_url: base + 'unsubscribe' };
 
-function subscription(endpoint = 'https://web.push.apple.com/new-endpoint') {
+function subscription(endpoint = 'https://web.push.apple.com/new-endpoint', publicKey = new Uint8Array([1, 2, 3])) {
   return {
+    options: { applicationServerKey: publicKey.buffer },
     toJSON: () => ({ endpoint, keys: { p256dh: 'browser-public-key', auth: 'browser-auth-key' } }),
     unsubscribe: vi.fn().mockResolvedValue(true),
   };
@@ -84,6 +85,42 @@ function start(options: Options = {}) {
 beforeEach(() => localStorage.clear());
 
 describe('PWA subscription renewal follows the reference PWA', () => {
+  it('replaces a subscription made with an old VAPID key and keeps its renewal capability', async () => {
+    const existing = subscription('https://web.push.apple.com/old-key', new Uint8Array([4, 5, 6]));
+    const c = start({ permission: 'granted', existing, saved: capability });
+    await vi.waitFor(() => expect(c.status()).toContain('Notifications enabled'));
+    expect(existing.unsubscribe).toHaveBeenCalledOnce();
+    expect(c.subscribe).toHaveBeenCalledExactlyOnceWith({ userVisibleOnly: true, applicationServerKey: new Uint8Array([1, 2, 3]) });
+    expect(JSON.parse(c.calls()[0][1]!.body as string)).toMatchObject({ token: capability.token, automatic: true, endpoint: 'https://fcm.googleapis.com/fcm/send/recreated' });
+    expect(c.notification.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('does not rotate a mismatched subscription after an explicit opt-out', async () => {
+    const existing = subscription('https://web.push.apple.com/old-key', new Uint8Array([4, 5, 6]));
+    const c = start({ permission: 'granted', existing, saved: { ...capability, unsubscribed: true } });
+    await vi.waitFor(() => expect(c.enable.disabled).toBe(false));
+    expect(existing.unsubscribe).not.toHaveBeenCalled();
+    expect(c.subscribe).not.toHaveBeenCalled();
+    expect(c.calls()).toHaveLength(0);
+  });
+
+  it('leaves the subscription unchanged when a browser cannot expose the application key', async () => {
+    const existing = subscription();
+    Object.defineProperty(existing, 'options', { value: {} });
+    const c = start({ permission: 'granted', existing, saved: capability });
+    await vi.waitFor(() => expect(c.status()).toContain('Notifications enabled'));
+    expect(existing.unsubscribe).not.toHaveBeenCalled();
+    expect(c.subscribe).not.toHaveBeenCalled();
+  });
+
+  it('does not create a new subscription when removing the old key fails', async () => {
+    const existing = subscription('https://web.push.apple.com/old-key', new Uint8Array([4, 5, 6]));
+    const c = start({ permission: 'granted', existing, saved: capability });
+    existing.unsubscribe.mockResolvedValue(false);
+    await vi.waitFor(() => expect(c.status()).toContain('Unable to sync'));
+    expect(c.subscribe).not.toHaveBeenCalled();
+    expect(c.calls()).toHaveLength(0);
+  });
   it('handles an external request before browser guide, package download or install reservation',async()=>{
     const showBrowserGuide=vi.fn(()=>true);
     const c=start({showBrowserGuide,runtime:{app:{settings:{packagePriority:'w2a_only',apkUrl:'https://apk.example/app.apk'}}}});
