@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#eef5ff" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/assets/home-loading-v4.js" as="script" />
     <!-- HOME_SEO_HEAD -->
     <style>
       #home-loading[hidden]{display:none}
@@ -19,6 +20,7 @@
       .home-loading-ring:after{content:"";position:absolute;inset:9px;border:1px dashed #bac8aa;border-radius:50%;animation:home-loading-spin 8s linear infinite reverse}
       .home-loading-core{position:relative;display:grid;place-items:center;width:40px;height:44px;border-radius:14px;background:linear-gradient(145deg,#536b4b,#344b3c);color:#f3f7e8;font-size:23px;line-height:1;font-weight:700;box-shadow:0 6px 15px #344b3c24,inset 0 1px 0 #ffffff30}
       .home-loading-label{font-size:14px;font-weight:550;letter-spacing:.025em}
+      .home-loading-retry{padding:7px 18px;border:1px solid #b8cbaa;border-radius:8px;background:#e5efcf;color:#254936;font:inherit;cursor:pointer}
       .home-loading-dots{display:flex;gap:5px;height:5px;margin-top:1px}
       .home-loading-dots i{width:4px;height:4px;border-radius:50%;background:#82966d;animation:home-loading-pulse 1.2s ease-in-out infinite}
       .home-loading-dots i:nth-child(2){animation-delay:.15s}.home-loading-dots i:nth-child(3){animation-delay:.3s}
@@ -31,7 +33,7 @@
     <div id="root"><!-- HOME_PRERENDER --></div>
     <div id="home-loading" role="status" aria-live="polite" lang="en" hidden><div class="home-loading-card"><div class="home-loading-brand" aria-hidden="true">D1 APK</div><div class="home-loading-orbit" aria-hidden="true"><i class="home-loading-ring"></i><b class="home-loading-core">D</b></div><span class="home-loading-label" data-loading-label>Loading...</span><div class="home-loading-dots" aria-hidden="true"><i></i><i></i><i></i></div></div></div>
     <!-- Run before deferred modules so the first paint includes the loader. -->
-    <script src="/assets/home-loading-v3.js"></script>
+    <script src="/assets/home-loading-v4.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

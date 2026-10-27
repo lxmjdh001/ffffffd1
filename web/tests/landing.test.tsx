@@ -46,7 +46,7 @@ describe('public landing page', () => {
     render(<MemoryRouter><ConfigContext.Provider value={{config:{...config,metered_billing:true,download_price_micros:50000,pwa_install_price_micros:50000,plans:[{...config.plans[0],name:'按量计费'}],registration_gift_micros:100e6},reload:vi.fn()}}><LandingPage/></ConfigContext.Provider></MemoryRouter>);
     const pricing=document.getElementById('home-pricing')!;
     expect(pricing.textContent).toContain('仅下载与安装计费');expect(pricing.textContent).toContain('只为实际用量付费');expect(pricing.textContent).not.toContain('注册即赠 $100 用量额度。');expect(within(pricing).getAllByText('$0.05')).toHaveLength(2);expect(within(pricing).getAllByText('免费',{exact:true})).toHaveLength(5);expect(pricing.textContent).not.toContain('1,000');
-    expect(pricing.querySelectorAll('.usage-rate-grid article')).toHaveLength(7);expect(within(pricing).getByRole('heading',{name:'应用分流',exact:true})).toBeTruthy();expect(within(pricing).getByRole('heading',{name:'域名安全检测',exact:true})).toBeTruthy();expect(pricing.querySelector('.home-plan')).toBeNull();expect(pricing.textContent).not.toContain('/ 月');
+    expect(pricing.querySelectorAll('.usage-rate-grid article')).toHaveLength(7);expect(within(pricing).getByRole('heading',{name:'应用分流',exact:true})).toBeTruthy();expect(within(pricing).getByRole('heading',{name:'安装包报毒安全检测',exact:true})).toBeTruthy();expect(pricing.querySelector('.home-plan')).toBeNull();expect(pricing.textContent).not.toContain('/ 月');
   });
   it('shows configured plan data and keeps the security benefit on the paid plan', () => {
     openLanding();
