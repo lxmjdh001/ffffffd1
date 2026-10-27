@@ -1,5 +1,6 @@
 // i18n: static UI literals
-import { useLocale } from './i18n';
+import { installMessages, useLocale } from './i18n';
+import fullMessages from './locales/messages.json' with { type: 'json' };
 import { type ComponentProps, type ReactNode } from 'react';
 import { Admin, CustomRoutes, Resource } from 'react-admin';
 import { Route } from 'react-router-dom';
@@ -27,6 +28,9 @@ import { AdminListPage, AdminSettingsPage } from './admin';
 import { HelpPage, DIYLandingGuidePage } from './help';
 import { AdsPage, IntegrationsPage } from './ads';
 import { RouteMetadata } from './home-seo';
+
+// Fetch the full dictionary only when navigating to the console.
+installMessages(fullMessages);
 
 function MetadataPage({ children }: { children: ReactNode }) {
   useLocale();

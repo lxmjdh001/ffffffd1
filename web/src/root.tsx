@@ -20,7 +20,7 @@ export function Root({ initialHomeHTML = '' }: { initialHomeHTML?: string }) {
   const reload = useCallback(() => {
     const prefetched = window.__d1HomeConfig;
     const request = prefetched ? prefetched.then(c => c ?? api<Config>('/config')) : api<Config>('/config');
-    request.then(c => { delete window.__d1HomeConfig; initializeLocale(c.country_code); setConfig(c); setError(undefined); }).catch(failure => { delete window.__d1HomeConfig; setError(failure); });
+    request.then(c => { delete window.__d1HomeConfig; initializeLocale(c.country_code); setConfig(c); setError(undefined); }).catch(failure => { delete window.__d1HomeConfig; setError(failure); window.dispatchEvent(new Event('d1:home-error')); });
   }, []);
   useEffect(reload, [reload]);
   usePageMetadata(config?.site_name, config?.public_url);

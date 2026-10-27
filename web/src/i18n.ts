@@ -14,6 +14,10 @@ const preferenceKey = 'd1.locale';
 const listeners = new Set<() => void>();
 const catalogs = messages as Partial<Record<Locale, Record<string, string>>>;
 
+export function installMessages(messages: Partial<Record<Locale, Record<string, string>>>) {
+  Object.assign(catalogs, messages);
+}
+
 export function isLocale(value: unknown): value is Locale {
   return typeof value === 'string' && locales.includes(value as Locale);
 }

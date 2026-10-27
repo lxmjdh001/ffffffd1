@@ -5,7 +5,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { Root } from '../src/root';
 
-const script = readFileSync(resolve('public/assets/home-loading-v3.js'), 'utf8');
+const script = readFileSync(resolve('public/assets/home-loading-v4.js'), 'utf8');
 beforeEach(() => {
  vi.useFakeTimers();
  window.history.replaceState(null, '', '/#/welcome');
@@ -34,11 +34,14 @@ it('starts a blurred overlay and fetches configuration before the main app',asyn
  vi.advanceTimersByTime(1);expect(document.getElementById('home-loading')!.hidden).toBe(true);
  expect(document.documentElement.hasAttribute('data-home-loading')).toBe(false);
 });
-it('never leaves the homepage blocked indefinitely if the app fails to load',()=>{
+it('offers recovery on a slow connection without exposing an unfinished homepage',()=>{
  start();vi.advanceTimersByTime(12000);
+ expect(document.getElementById('home-loading')!.hidden).toBe(false);
+ vi.advanceTimersByTime(3000);
+ expect(screen.getByRole('button',{name:'Retry'})).toBeTruthy();
+ expect(document.getElementById('root')!.inert).toBe(true);
+ window.dispatchEvent(new Event('d1:home-ready'));vi.advanceTimersByTime(0);
  expect(document.getElementById('home-loading')!.hidden).toBe(true);
- expect(document.getElementById('root')!.inert).not.toBe(true);
- expect(document.body.textContent).toContain('Homepage preview');
 });
 it('keeps the animation visible during a slow first load instead of hiding at two seconds',()=>{
  start();vi.advanceTimersByTime(3000);
@@ -49,7 +52,7 @@ it('keeps the animation visible during a slow first load instead of hiding at tw
 });
 it('uses an independent parser-time bootstrap rather than waiting for deferred app modules',()=>{
  const html=readFileSync(resolve('index.html'),'utf8');
- const tag=html.match(/<script\b[^>]*src="\/assets\/home-loading-v3\.js"[^>]*>/)?.[0];
+ const tag=html.match(/<script\b[^>]*src="\/assets\/home-loading-v4\.js"[^>]*>/)?.[0];
  expect(tag).toBeTruthy();
  expect(tag).not.toMatch(/\bdefer\b|type="module"/);
 });
@@ -80,3 +83,5 @@ it('preserves the static homepage while configuration is still pending',()=>{
  expect(screen.queryByText('正在加载…')).toBeNull();
  expect(fetch).not.toHaveBeenCalled();
 });
+
+it('offers an immediate retry when config loading fails',()=>{start();window.dispatchEvent(new Event('d1:home-error'));expect(screen.getByRole('button',{name:'Retry'})).toBeTruthy();window.dispatchEvent(new Event('d1:home-ready'));vi.advanceTimersByTime(1000);});

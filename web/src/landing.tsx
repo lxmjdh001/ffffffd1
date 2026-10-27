@@ -12,13 +12,18 @@ import { HomeNavigation } from './home-navigation';
 import { HomeContact } from './home-contact';
 import './landing.css';
 import './home-refinements.css';
+import { waitForHomePaint } from './home-ready';
 import { HomeGrowthFeatures } from './home-growth';
 import './home-growth.css';
 import './home-density.css';
 
 export function LandingPage() {
   useLocale();
-  useEffect(() => { window.dispatchEvent(new Event('d1:home-ready')); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    waitForHomePaint().then(() => { if (!cancelled) window.dispatchEvent(new Event('d1:home-ready')); });
+    return () => { cancelled = true; };
+  }, []);
   const content = translateContent(originalHomeContent);
   const { config } = useConfig();
   const location = useLocation();
