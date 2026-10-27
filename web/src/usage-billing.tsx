@@ -19,7 +19,7 @@ export function usagePrices(config: Rates) {
     { key: 'return_flow_price_micros' as const, label: t('回流页功能'), price: 0, paid: false, icon: Eye },
     { key: 'pwa_push_price_micros' as const, label: t('推送用量'), price: 0, paid: false, icon: Bell },
     { key: 'traffic_routing' as const, label: t('应用分流'), price: 0, paid: false, icon: Link2 },
-    { key: 'domain_safety' as const, label: t('域名安全检测'), price: 0, paid: false, icon: Globe2 },
+    { key: 'domain_safety' as const, label: t('安装包报毒安全检测'), price: 0, paid: false, icon: Globe2 },
   ];
 }
 export const usagePrice = (micros: number) => (micros / 1e6).toFixed(6).replace(/\.?0+$/, '') || '0';
