@@ -88,7 +88,7 @@ describe('recharge promotion', () => {
     const toggle=screen.getByRole('button',{name:/计费规则/});expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByRole('heading',{name:'APK 下载',exact:true})).toBeNull();await user.click(toggle);
     const rates=await screen.findByRole('region',{name:'按量计费'});
-    expect(within(rates).getAllByText('$0.05')).toHaveLength(2);expect(within(rates).getAllByText('免费',{exact:true})).toHaveLength(5);expect(within(rates).getByRole('heading',{name:'应用分流',exact:true})).toBeTruthy();expect(within(rates).getByRole('heading',{name:'域名安全检测',exact:true})).toBeTruthy();expect(within(rates).queryByText('注册即赠 $100 用量额度。')).toBeNull();expect(screen.queryByRole('heading',{name:'赠送用量额度'})).toBeNull();expect(screen.queryByText('$ 99.95')).toBeNull();expect(screen.queryByText('注册共享赠送')).toBeNull();
+    expect(within(rates).getAllByText('$0.05')).toHaveLength(2);expect(within(rates).getAllByText('免费',{exact:true})).toHaveLength(5);expect(within(rates).getByRole('heading',{name:'应用分流',exact:true})).toBeTruthy();expect(within(rates).getByRole('heading',{name:'安装包报毒安全检测',exact:true})).toBeTruthy();expect(within(rates).queryByText('注册即赠 $100 用量额度。')).toBeNull();expect(screen.queryByRole('heading',{name:'赠送用量额度'})).toBeNull();expect(screen.queryByText('$ 99.95')).toBeNull();expect(screen.queryByText('注册共享赠送')).toBeNull();
     expect(screen.queryByText('选择适合你的套餐')).toBeNull();expect(screen.queryByRole('button',{name:/开通|续费/})).toBeNull();expect(screen.getByRole('button',{name:'充值余额'})).toBeTruthy();
     expect(screen.queryByText('赠送额度优先抵扣 APK/PWA 用量，不可提现。')).toBeNull();
   });
@@ -284,11 +284,11 @@ describe('recharge promotion', () => {
     expect(submissions).toEqual([]);
   });
 
-  it('offers four quick amounts, marks the gift tier and submits only the real payment amount', async () => {
+  it('offers five quick amounts, marks the gift tier and submits only the real payment amount', async () => {
     const user = openBilling();
     await user.click(await screen.findByRole('button', { name: '充值余额' }));
     const dialog = within(screen.getByRole('dialog'));
-    expect(dialog.getAllByRole('button', { name: /^\$/ }).map(button => button.textContent)).toEqual(['$100', '$200赠送15%', '$500赠送35%', '$1000赠送50%']);
+    expect(dialog.getAllByRole('button', { name: /^\$/ }).map(button => button.textContent)).toEqual(['$50', '$100', '$200赠送15%', '$500赠送35%', '$1000赠送50%']);
     expect(dialog.queryByText('活动赠送')).toBeNull();
     await user.click(dialog.getByRole('button', { name: /^\$1000/ }));
     expect(dialog.getByText('+ $500.00')).toBeTruthy();
@@ -331,4 +331,19 @@ describe('recharge promotion', () => {
     expect(payment.getByText('+ $500.00')).toBeTruthy();
     expect(payment.getByText('$1,500.00')).toBeTruthy();
   });
+  it('blocks top-ups below 50 and accepts the exact minimum', async () => {
+    const user = openBilling();
+    await user.click(await screen.findByRole('button', { name: '充值余额' }));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByText('最低充值 50 USDT（50 美元）')).toBeTruthy();
+    const input = dialog.getByRole('spinbutton', { name: '充值金额（美元）' }) as HTMLInputElement;
+    expect(input.min).toBe('50');
+    await user.clear(input); await user.type(input, '49.99');
+    await user.click(dialog.getByRole('button', { name: '创建充值订单' }));
+    expect(submissions).toEqual([]);
+    await user.click(dialog.getByRole('button', { name: '$50', exact: true }));
+    await user.click(dialog.getByRole('button', { name: '创建充值订单' }));
+    await waitFor(() => expect(submissions).toEqual([{ amount: '50', method: 'manual' }]));
+  });
+
 });
