@@ -2572,7 +2572,8 @@
     "立即开始": "Get started",
     "创建账户": "Create account",
     "立即注册": "Register now",
-    "从现在开始，": "Start today,"
+    "从现在开始，": "Start today,",
+    "安装包报毒安全检测": "APK malware risk detection"
   },
   "pt": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Você pode solicitar reembolso da parte não utilizada, pelo valor nominal e pelo método de pagamento original. Contate o suporte ou a equipe comercial; verificaremos o saldo de uso restante antes de processar.",
@@ -5147,7 +5148,8 @@
     "立即开始": "Começar agora",
     "创建账户": "Criar conta",
     "立即注册": "Cadastre-se agora",
-    "从现在开始，": "Comece agora,"
+    "从现在开始，": "Comece agora,",
+    "安装包报毒安全检测": "Detecção de risco de malware em APK"
   },
   "de": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Für den ungenutzten Anteil können Sie eine Erstattung zum Nennwert über den ursprünglichen Zahlungsweg beantragen. Kontaktieren Sie Support oder Vertrieb; wir prüfen die verbleibende Nutzung vor der Bearbeitung.",
@@ -7722,7 +7724,8 @@
     "立即开始": "Jetzt starten",
     "创建账户": "Konto erstellen",
     "立即注册": "Jetzt registrieren",
-    "从现在开始，": "Jetzt beginnen,"
+    "从现在开始，": "Jetzt beginnen,",
+    "安装包报毒安全检测": "APK-Malware-Risikoerkennung"
   },
   "fr": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Vous pouvez demander le remboursement de la partie non utilisée, à sa valeur nominale et via le moyen de paiement d’origine. Contactez l’assistance ou le service commercial ; nous vérifierons l’utilisation restante avant traitement.",
@@ -10297,7 +10300,8 @@
     "立即开始": "Commencer",
     "创建账户": "Créer un compte",
     "立即注册": "S’inscrire",
-    "从现在开始，": "Commencez dès maintenant,"
+    "从现在开始，": "Commencez dès maintenant,",
+    "安装包报毒安全检测": "Détection des risques de logiciels malveillants APK"
   },
   "ko": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "미사용 부분은 액면 금액 기준으로 원래 결제 수단을 통해 환불을 신청할 수 있습니다. 고객 지원 또는 영업팀에 문의하세요. 남은 사용량을 확인한 후 처리합니다.",
@@ -12872,7 +12876,8 @@
     "立即开始": "지금 시작",
     "创建账户": "계정 만들기",
     "立即注册": "지금 가입",
-    "从现在开始，": "지금 시작하고,"
+    "从现在开始，": "지금 시작하고,",
+    "安装包报毒安全检测": "APK 악성코드 위험 검사"
   },
   "ja": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用分は額面金額で元のお支払い方法への返金を申請できます。サポートまたは営業担当にご連絡ください。残りの利用量を確認してから手続きします。",
@@ -15447,7 +15452,8 @@
     "立即开始": "今すぐ始める",
     "创建账户": "アカウントを作成",
     "立即注册": "今すぐ登録",
-    "从现在开始，": "今すぐ始めて、"
+    "从现在开始，": "今すぐ始めて、",
+    "安装包报毒安全检测": "APKマルウェアリスク検査"
   },
   "zh-TW": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用的部分可申請退款，按面額循原付款管道退回。請聯絡客服或商務處理，我們會核對剩餘用量後辦理。",
@@ -18022,7 +18028,8 @@
     "立即开始": "立即開始",
     "创建账户": "建立帳戶",
     "立即注册": "立即註冊",
-    "从现在开始，": "從現在開始，"
+    "从现在开始，": "從現在開始，",
+    "安装包报毒安全检测": "安裝包報毒安全檢測"
   },
   "ru": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Можно запросить возврат неиспользованной части по номинальной стоимости исходным способом оплаты. Обратитесь в поддержку или отдел продаж; перед обработкой мы проверим оставшийся объём использования.",
@@ -20597,6 +20604,7 @@
     "立即开始": "Начать",
     "创建账户": "Создать аккаунт",
     "立即注册": "Зарегистрироваться",
-    "从现在开始，": "Начните сейчас,"
+    "从现在开始，": "Начните сейчас,",
+    "安装包报毒安全检测": "Проверка APK на риск вредоносного ПО"
   }
 }
