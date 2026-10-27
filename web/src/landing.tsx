@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { UsageRates } from './usage-billing';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, Globe2, Monitor, Package, Radio, RotateCcw, ShieldCheck, Smartphone } from 'lucide-react';
-import { Brand } from './auth';
+import { Brand } from './brand';
 import { localizedPlanName, t, translateContent, useLocale } from './i18n';
 import { bytes, money, number, useConfig } from './ui';
 import originalHomeContent from './home-content.json';

@@ -2,7 +2,8 @@
 import { t, useLocale } from './i18n';
 import type { ReactNode } from 'react';
 import type { Order } from './types';
-import { CopyButton } from './ui';
+import { CopyButton } from './copy-button';
+
 import './usdt-payment-details.css';
 
 export function UsdtPaymentDetails({ order, status, showAddress = true }: { order: Order; status?: ReactNode; showAddress?: boolean }) {

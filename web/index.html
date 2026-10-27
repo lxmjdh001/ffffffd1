@@ -8,8 +8,8 @@
     <!-- HOME_SEO_HEAD -->
     <style>
       #home-loading[hidden]{display:none}
-      html[data-home-loading] #root{filter:blur(4px);pointer-events:none;user-select:none}
-      #home-loading{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:rgba(247,246,240,.56);color:#34483d;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      html[data-home-loading] #root{pointer-events:none;user-select:none}
+      #home-loading{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:rgba(247,246,240,.56);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);color:#34483d;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
       .home-loading-card{position:relative;isolation:isolate;display:flex;align-items:center;flex-direction:column;width:230px;max-width:calc(100vw - 48px);box-sizing:border-box;gap:13px;padding:26px 28px 25px;border:1px solid #fff;border-radius:28px;background:linear-gradient(145deg,#fffef9f5,#f3f4e9f2);box-shadow:0 20px 70px #26352218,inset 0 1px 0 #fff;overflow:hidden}
       .home-loading-brand{font-size:9px;font-weight:650;letter-spacing:.23em;color:#7a8874}
       .home-loading-orbit{position:relative;display:grid;place-items:center;width:92px;height:92px;margin:2px 0}
@@ -30,7 +30,8 @@
   <body>
     <div id="root"><!-- HOME_PRERENDER --></div>
     <div id="home-loading" role="status" aria-live="polite" lang="en" hidden><div class="home-loading-card"><div class="home-loading-brand" aria-hidden="true">D1 APK</div><div class="home-loading-orbit" aria-hidden="true"><i class="home-loading-ring"></i><b class="home-loading-core">D</b></div><span class="home-loading-label" data-loading-label>Loading...</span><div class="home-loading-dots" aria-hidden="true"><i></i><i></i><i></i></div></div></div>
-    <script defer src="/assets/home-loading-v2.js"></script>
+    <!-- Run before deferred modules so the first paint includes the loader. -->
+    <script src="/assets/home-loading-v3.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
