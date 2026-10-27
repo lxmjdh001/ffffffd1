@@ -2574,7 +2574,10 @@
     "立即注册": "Register now",
     "从现在开始，": "Start today,",
     "安装包报毒安全检测": "APK malware risk detection",
-    "最低充值 50 USDT（50 美元）": "Minimum top-up: 50 USDT (USD 50)"
+    "最低充值 50 USDT（50 美元）": "Minimum top-up: 50 USDT (USD 50)",
+    "机器人看到的": "What bots see",
+    "安装包报毒风险检测，风险自动退出分流": "APK malware risk checks: risky links leave the rotation",
+    "采用预充值、按量扣费，无需购买包月套餐。APK 分发和 PWA 安装按对应单价结算，当前单价可在「用量与账单」查看。应用分流、安装包报毒安全检测、智能斗篷、回流页和 Web Push 消息推送目前免费。": "Top up your balance and pay as you go; no monthly package is required. APK distribution and PWA installations are billed at their respective rates, which you can view under Usage & Billing. App routing, APK malware risk checks, smart cloaking, return pages and Web Push notifications are currently free."
   },
   "pt": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Você pode solicitar reembolso da parte não utilizada, pelo valor nominal e pelo método de pagamento original. Contate o suporte ou a equipe comercial; verificaremos o saldo de uso restante antes de processar.",
@@ -5151,7 +5154,10 @@
     "立即注册": "Cadastre-se agora",
     "从现在开始，": "Comece agora,",
     "安装包报毒安全检测": "Detecção de risco de malware em APK",
-    "最低充值 50 USDT（50 美元）": "Recarga mínima: 50 USDT (50 USD)"
+    "最低充值 50 USDT（50 美元）": "Recarga mínima: 50 USDT (50 USD)",
+    "机器人看到的": "O que os robôs veem",
+    "安装包报毒风险检测，风险自动退出分流": "Verificação de risco de malware em APK: links de risco saem da rotação",
+    "采用预充值、按量扣费，无需购买包月套餐。APK 分发和 PWA 安装按对应单价结算，当前单价可在「用量与账单」查看。应用分流、安装包报毒安全检测、智能斗篷、回流页和 Web Push 消息推送目前免费。": "Recarregue seu saldo e pague conforme o uso, sem contratar um plano mensal. A distribuição de APK e as instalações de PWA são cobradas pelas respectivas tarifas, disponíveis em Uso e faturamento. O roteamento de apps, a verificação de risco de malware em APK, o cloaking inteligente, as páginas de retorno e as notificações Web Push são gratuitos atualmente."
   },
   "de": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Für den ungenutzten Anteil können Sie eine Erstattung zum Nennwert über den ursprünglichen Zahlungsweg beantragen. Kontaktieren Sie Support oder Vertrieb; wir prüfen die verbleibende Nutzung vor der Bearbeitung.",
@@ -7728,7 +7734,10 @@
     "立即注册": "Jetzt registrieren",
     "从现在开始，": "Jetzt beginnen,",
     "安装包报毒安全检测": "APK-Malware-Risikoerkennung",
-    "最低充值 50 USDT（50 美元）": "Mindestaufladung: 50 USDT (50 USD)"
+    "最低充值 50 USDT（50 美元）": "Mindestaufladung: 50 USDT (50 USD)",
+    "机器人看到的": "Was Bots sehen",
+    "安装包报毒风险检测，风险自动退出分流": "APK-Malware-Risikoprüfung: riskante Links werden aus der Verteilung entfernt",
+    "采用预充值、按量扣费，无需购买包月套餐。APK 分发和 PWA 安装按对应单价结算，当前单价可在「用量与账单」查看。应用分流、安装包报毒安全检测、智能斗篷、回流页和 Web Push 消息推送目前免费。": "Laden Sie Ihr Guthaben auf und zahlen Sie nach Verbrauch; ein Monatspaket ist nicht erforderlich. APK-Verteilung und PWA-Installationen werden zu den jeweiligen Tarifen abgerechnet, die Sie unter Nutzung & Abrechnung einsehen können. App-Verteilung, APK-Malware-Risikoprüfungen, intelligentes Cloaking, Rückkehrseiten und Web-Push-Benachrichtigungen sind derzeit kostenlos."
   },
   "fr": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Vous pouvez demander le remboursement de la partie non utilisée, à sa valeur nominale et via le moyen de paiement d’origine. Contactez l’assistance ou le service commercial ; nous vérifierons l’utilisation restante avant traitement.",
@@ -10305,7 +10314,10 @@
     "立即注册": "S’inscrire",
     "从现在开始，": "Commencez dès maintenant,",
     "安装包报毒安全检测": "Détection des risques de logiciels malveillants APK",
-    "最低充值 50 USDT（50 美元）": "Recharge minimale : 50 USDT (50 USD)"
+    "最低充值 50 USDT（50 美元）": "Recharge minimale : 50 USDT (50 USD)",
+    "机器人看到的": "Ce que voient les robots",
+    "安装包报毒风险检测，风险自动退出分流": "Vérification des risques de malware APK : les liens à risque sont retirés de la rotation",
+    "采用预充值、按量扣费，无需购买包月套餐。APK 分发和 PWA 安装按对应单价结算，当前单价可在「用量与账单」查看。应用分流、安装包报毒安全检测、智能斗篷、回流页和 Web Push 消息推送目前免费。": "Rechargez votre solde et payez à l’usage, sans forfait mensuel. La distribution d’APK et les installations de PWA sont facturées selon leurs tarifs respectifs, consultables dans Utilisation et facturation. Le routage des applications, les vérifications des risques de malware APK, le cloaking intelligent, les pages de retour et les notifications Web Push sont actuellement gratuits."
   },
   "ko": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "미사용 부분은 액면 금액 기준으로 원래 결제 수단을 통해 환불을 신청할 수 있습니다. 고객 지원 또는 영업팀에 문의하세요. 남은 사용량을 확인한 후 처리합니다.",
@@ -12882,7 +12894,10 @@
     "立即注册": "지금 가입",
     "从现在开始，": "지금 시작하고,",
     "安装包报毒安全检测": "APK 악성코드 위험 검사",
-    "最低充值 50 USDT（50 美元）": "최소 충전: 50 USDT (50 USD)"
+    "最低充值 50 USDT（50 美元）": "최소 충전: 50 USDT (50 USD)",
+    "机器人看到的": "봇이 보는 내용",
+    "安装包报毒风险检测，风险自动退出分流": "APK 악성코드 위험 검사: 위험 링크는 분산 대상에서 자동 제외",
+    "采用预充值、按量扣费，无需购买包月套餐。APK 分发和 PWA 安装按对应单价结算，当前单价可在「用量与账单」查看。应用分流、安装包报毒安全检测、智能斗篷、回流页和 Web Push 消息推送目前免费。": "월정액 요금제 없이 잔액을 충전하고 사용한 만큼 결제합니다. APK 배포와 PWA 설치에는 각각의 단가가 적용되며, 현재 단가는 사용량 및 결제에서 확인할 수 있습니다. 앱 트래픽 분산, APK 악성코드 위험 검사, 스마트 클로킹, 재방문 페이지 및 Web Push 알림은 현재 무료입니다."
   },
   "ja": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用分は額面金額で元のお支払い方法への返金を申請できます。サポートまたは営業担当にご連絡ください。残りの利用量を確認してから手続きします。",
@@ -15459,7 +15474,10 @@
     "立即注册": "今すぐ登録",
     "从现在开始，": "今すぐ始めて、",
     "安装包报毒安全检测": "APKマルウェアリスク検査",
-    "最低充值 50 USDT（50 美元）": "最低チャージ額：50 USDT（50米ドル）"
+    "最低充值 50 USDT（50 美元）": "最低チャージ額：50 USDT（50米ドル）",
+    "机器人看到的": "ボットに見える内容",
+    "安装包报毒风险检测，风险自动退出分流": "APKマルウェアリスク検査：危険なリンクを振り分け対象から自動除外",
+    "采用预充值、按量扣费，无需购买包月套餐。APK 分发和 PWA 安装按对应单价结算，当前单价可在「用量与账单」查看。应用分流、安装包报毒安全检测、智能斗篷、回流页和 Web Push 消息推送目前免费。": "月額プランの購入は不要です。残高をチャージし、使用量に応じてお支払いいただきます。APK配信とPWAインストールにはそれぞれの単価が適用され、現在の単価は「使用量と請求」で確認できます。アプリのトラフィック振り分け、APKマルウェアリスク検査、スマートクローキング、再訪問ページ、Web Push通知は現在無料です。"
   },
   "zh-TW": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用的部分可申請退款，按面額循原付款管道退回。請聯絡客服或商務處理，我們會核對剩餘用量後辦理。",
@@ -18036,7 +18054,10 @@
     "立即注册": "立即註冊",
     "从现在开始，": "從現在開始，",
     "安装包报毒安全检测": "安裝包報毒安全檢測",
-    "最低充值 50 USDT（50 美元）": "最低儲值 50 USDT（50 美元）"
+    "最低充值 50 USDT（50 美元）": "最低儲值 50 USDT（50 美元）",
+    "机器人看到的": "機器人看到的",
+    "安装包报毒风险检测，风险自动退出分流": "安裝包報毒風險檢測，風險自動退出分流",
+    "采用预充值、按量扣费，无需购买包月套餐。APK 分发和 PWA 安装按对应单价结算，当前单价可在「用量与账单」查看。应用分流、安装包报毒安全检测、智能斗篷、回流页和 Web Push 消息推送目前免费。": "採用預儲值、按量扣費，無需購買包月方案。APK 分發和 PWA 安裝按對應單價結算，目前單價可在「用量與帳單」查看。應用分流、安裝包報毒安全檢測、智慧斗篷、回流頁和 Web Push 訊息推播目前免費。"
   },
   "ru": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Можно запросить возврат неиспользованной части по номинальной стоимости исходным способом оплаты. Обратитесь в поддержку или отдел продаж; перед обработкой мы проверим оставшийся объём использования.",
@@ -20613,6 +20634,9 @@
     "立即注册": "Зарегистрироваться",
     "从现在开始，": "Начните сейчас,",
     "安装包报毒安全检测": "Проверка APK на риск вредоносного ПО",
-    "最低充值 50 USDT（50 美元）": "Минимальное пополнение: 50 USDT (50 USD)"
+    "最低充值 50 USDT（50 美元）": "Минимальное пополнение: 50 USDT (50 USD)",
+    "机器人看到的": "Что видят боты",
+    "安装包报毒风险检测，风险自动退出分流": "Проверка APK на вредоносные угрозы: опасные ссылки исключаются из ротации",
+    "采用预充值、按量扣费，无需购买包月套餐。APK 分发和 PWA 安装按对应单价结算，当前单价可在「用量与账单」查看。应用分流、安装包报毒安全检测、智能斗篷、回流页和 Web Push 消息推送目前免费。": "Пополняйте баланс и платите по мере использования — месячный пакет не требуется. Распространение APK и установки PWA оплачиваются по соответствующим тарифам, доступным в разделе «Использование и счета». Распределение трафика приложений, проверка APK на вредоносные угрозы, умный клоакинг, страницы возврата и уведомления Web Push сейчас бесплатны."
   }
 }
