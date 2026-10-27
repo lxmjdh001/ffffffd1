@@ -143,6 +143,7 @@
 .home.home-growth .home-pricing-copy{padding-top:0}
 .home.home-growth .home-pricing-copy h2{font-size:30px;line-height:1.35}
 .home.home-growth .home-pricing-copy .home-button{margin-top:15px}
+.home.home-growth .home-pricing-copy .home-pricing-actions>.home-button,.home.home-growth .home-pricing-copy .home-pricing-actions>.home-contact{margin:0;min-height:42px;padding-block:10px;box-sizing:border-box}
 .home.home-growth .home-pricing .usage-pricing{padding:16px;border-radius:10px}
 .home.home-growth .home-pricing .usage-pricing-heading h2{font-size:18px}
 .home.home-growth .home-pricing .usage-pricing-heading p{font-size:12px;margin-top:6px}
