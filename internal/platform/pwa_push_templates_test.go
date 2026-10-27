@@ -72,7 +72,7 @@ func TestPWAPushTemplatesOwnershipCRUDAndIdempotency(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &task); err != nil {
 		t.Fatal(err)
 	}
-	if task.Title != view.Title || task.Body != view.Body || task.Image != view.Image || task.Icon != view.Icon || len(task.Actions) != 1 || task.TemplateID == nil || *task.TemplateID != view.ID {
+	if task.Title != view.Title || task.Body != view.Body || task.Image != view.Image || task.Icon != s.Config.PublicURL+pwaPushGoogleIconPath || len(task.Actions) != 1 || task.TemplateID == nil || *task.TemplateID != view.ID {
 		t.Fatalf("task did not snapshot template content: %+v", task)
 	}
 	in.Name, in.Title, in.URL, in.Image, in.Actions = "Updated", "A different title", "", "", []PWAPushAction{}

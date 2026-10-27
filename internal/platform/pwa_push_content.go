@@ -10,6 +10,8 @@ import (
 	"unicode/utf8"
 )
 
+const pwaPushGoogleIconPath = "/pwa-template-assets/push-google.png"
+
 // Action destinations travel inside the encrypted notification data. Only the
 // stable action ID and label are passed to the browser's notification buttons.
 type PWAPushAction struct {

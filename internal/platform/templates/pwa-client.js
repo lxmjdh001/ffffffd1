@@ -221,6 +221,7 @@
  }
  function keyBytes(key) { const padded = key.replace(/-/g,'+').replace(/_/g,'/') + '='.repeat((4-key.length%4)%4); return Uint8Array.from(atob(padded), ch => ch.charCodeAt(0)); }
  function activeUI(active, canUnsubscribe = active) {
+  if(active&&consentDialog&&consentPhase==='consent'&&!consentBusy)closeConsent('accepted');
   if (notificationButton) notificationButton.textContent = active ? text('Notifications on', '通知已开启') : text('Enable notifications', '开启通知');
   if (unsubscribeButton) unsubscribeButton.hidden = !canUnsubscribe;
  }
@@ -291,6 +292,75 @@
    throw error;
   }
  }
+ // Installation and notification permission are separate browser capabilities.
+ // One clear consent starts the flow; every native permission request remains
+ // tied to the visitor's own click. Merely loading a page never grants consent.
+ const consentKey='d1-pwa-notification-consent:'+base;
+ let consentDialog, consentAllow, consentLater, consentMessage;
+ let consentPhase='consent', consentBusy=false;
+ const readConsent=()=>{try{return localStorage.getItem(consentKey);}catch(_){return null;}};
+ const saveConsent=value=>{try{localStorage.setItem(consentKey,value);}catch(_){}};
+ function closeConsent(value) {
+  if(value)saveConsent(value);
+  if(!consentDialog)return;
+  if(typeof consentDialog.close==='function'&&consentDialog.open){try{consentDialog.close();}catch(_){consentDialog.removeAttribute('open');}}
+  else consentDialog.removeAttribute('open');
+ }
+ function refreshConsent() {
+  if(!consentDialog)return;
+  consentAllow.disabled=busy||consentBusy;
+  consentLater.disabled=busy||consentBusy;
+ }
+ async function continueConsentInstall() {
+  if(!installPrompt&&!installed){
+   closeConsent('pending');showGuide();return;
+  }
+  closeConsent('accepted');
+  await installApp();
+ }
+ async function acceptConsent() {
+  if(busy||consentBusy)return;
+  if(consentPhase==='install'){await continueConsentInstall();return;}
+  consentBusy=true;refreshConsent();
+  try {
+   if(supported&&(!isIOS||standalone)&&pushReady) {
+    // Start this call before any await or network request to preserve activation.
+    const permission=Notification.permission==='default'?await Notification.requestPermission():Notification.permission;
+    if(permission==='granted')await syncSubscription();
+   }
+   if(installPage&&!standalone){
+    saveConsent('pending');consentPhase='install';
+    consentAllow.textContent=text('Continue installation','继续安装');
+    consentLater.textContent=text('Not now','暂不安装');
+    consentMessage.textContent=isIOS?text('Add the app to your Home Screen, then open it to enable notifications.','请添加到主屏幕，再从桌面打开应用以开启通知。'):text('Confirm installation in your browser. Notification permission is managed separately by your device.','请继续在浏览器中确认安装。通知权限由设备单独管理。');
+    // Permission prompts and asynchronous subscription can consume activation.
+    // Ask for a fresh Continue click when the browser requires one.
+    if(installPrompt&&navigator.userActivation?.isActive)await continueConsentInstall();
+   } else closeConsent('accepted');
+  } catch(error){consentMessage.textContent=error.message||text('Unable to enable notifications. Please try again.','通知开启失败，请重试。');}
+  finally{consentBusy=false;refreshConsent();}
+ }
+ function showConsent() {
+  if(document.body.dataset.pushEnabled!=='true'||savedSubscription?.unsubscribed)return;
+  if(!installPage&&!standalone)return;
+  if(installPage&&!usesPWAInstall())return;
+  if(supported&&Notification.permission==='granted'&&savedSubscription)return;
+  const preference=readConsent();
+  if(preference==='dismissed'||preference==='accepted')return;
+  if(standalone&&(!supported||Notification.permission==='denied'||(Notification.permission==='granted'&&savedSubscription)))return;
+  if(consentDialog)return;
+  const style=document.createElement('link');style.rel='stylesheet';style.href=base+'notification.css';document.head.appendChild(style);
+  consentDialog=document.createElement('dialog');consentDialog.id='d1-notification-consent';consentDialog.className='d1-notification-consent';consentDialog.setAttribute('aria-labelledby','d1-notification-consent-title');
+  const icon=document.createElement('img');icon.src=base+'icon/192.png';icon.alt='';
+  const title=document.createElement('h2');title.id='d1-notification-consent-title';title.textContent=standalone?text('Enable app notifications','开启应用通知'):text('Install app and enable notifications','安装应用并开启通知');
+  consentMessage=document.createElement('p');consentMessage.id='d1-notification-consent-message';consentDialog.setAttribute('aria-describedby',consentMessage.id);
+  consentMessage.textContent=isIOS&&!standalone?text('Add the app to your Home Screen. On first opening, you can allow notifications. You can also install without enabling notifications.','添加到主屏幕后，首次打开可允许通知。你也可以选择仅安装，不开启通知。'):text('Install this app and allow it to send notifications. You can also install without notifications and change your preference later.','安装此应用，并允许接收通知。你也可以仅安装，之后随时调整通知设置。');
+  consentAllow=document.createElement('button');consentAllow.type='button';consentAllow.className='d1-consent-allow';consentAllow.textContent=standalone?text('Enable notifications','开启通知'):text('Agree to install and enable notifications','同意安装并开启通知');consentAllow.addEventListener('click',acceptConsent);
+  consentLater=document.createElement('button');consentLater.type='button';consentLater.className='d1-consent-later';consentLater.textContent=standalone?text('Not now','暂不开启'):text('Install only','仅安装');consentLater.addEventListener('click',()=>{if(consentBusy)return;closeConsent('dismissed');if(installPage&&!standalone)void installApp();});
+  consentDialog.addEventListener('cancel',()=>saveConsent('dismissed'));
+  consentDialog.append(icon,title,consentMessage,consentAllow,consentLater);document.body.appendChild(consentDialog);refreshConsent();
+  if(typeof consentDialog.showModal==='function'){try{consentDialog.showModal();}catch(_){consentDialog.setAttribute('open','');}}else consentDialog.setAttribute('open','');
+ }
  async function setup() {
   if (document.body.dataset.pushEnabled !== 'true') { if (notificationButton) notificationButton.hidden = true; setStatus(notificationStatus,text('Notifications are currently unavailable for this app.', '此应用暂未开启通知功能。')); }
   if (!('serviceWorker' in navigator) || !window.isSecureContext) { if (notificationButton) notificationButton.disabled = true; setStatus(notificationStatus,text('This browser does not support web app notifications.', '当前浏览器不支持网页应用通知。')); return; }
@@ -351,5 +421,7 @@
  });
  const closeGuide=document.getElementById('install-guide-close');if(closeGuide)closeGuide.addEventListener('click',()=>{document.getElementById('d1-pwa-status').hidden=true;});
  syncInstallButtons();
- setup();
+ const preparing=setup();
+ showConsent();
+ preparing.finally(()=>{busy=false;refreshConsent();});
 })();

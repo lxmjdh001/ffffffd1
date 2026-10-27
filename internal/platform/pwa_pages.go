@@ -30,6 +30,9 @@ var pwaPageCSS string
 //go:embed templates/pwa-install-animation.css
 var pwaInstallAnimationCSS string
 
+//go:embed templates/pwa-notification-consent.css
+var pwaNotificationConsentCSS string
+
 var pwaPageTemplate = template.Must(template.New("pwa-page").Parse(pwaPageHTML))
 
 // Called only after the host middleware has validated the configured host,
@@ -213,7 +216,10 @@ func (s *Server) pwaStyles(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("launch") != "1" {
 		css += "\n" + pwaInstallAnimationCSS
 	}
-	s.pwaAsset(w, r, css+"\n"+returnFlowCSS+"\n"+pwaBrowserGuideCSS+"\n"+externalBrowserCSS, "text/css; charset=utf-8")
+	s.pwaAsset(w, r, css+"\n"+pwaNotificationConsentCSS+"\n"+returnFlowCSS+"\n"+pwaBrowserGuideCSS+"\n"+externalBrowserCSS, "text/css; charset=utf-8")
+}
+func (s *Server) pwaNotificationStyles(w http.ResponseWriter, r *http.Request) {
+	s.pwaAsset(w, r, pwaNotificationConsentCSS, "text/css; charset=utf-8")
 }
 func (s *Server) pwaServiceWorker(w http.ResponseWriter, r *http.Request) {
 	// The browser's default maximum scope is the worker's /p/{slug}/ directory.

@@ -39,7 +39,7 @@ func TestPWAPushRichTemplateSnapshotsAndReplay(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &created); err != nil {
 		t.Fatal(err)
 	}
-	if created.Title != template.Title || created.Image != template.Image || len(created.Actions) != 2 || created.TemplateID == nil || *created.TemplateID != template.ID || created.URL != s.Config.PublicURL+"/p/"+app.Slug+"/launch" || !strings.HasSuffix(created.Icon, "/icon/192.png") {
+	if created.Title != template.Title || created.Image != template.Image || len(created.Actions) != 2 || created.TemplateID == nil || *created.TemplateID != template.ID || created.URL != s.Config.PublicURL+"/p/"+app.Slug+"/launch" || created.Icon != s.Config.PublicURL+pwaPushGoogleIconPath {
 		t.Fatalf("template snapshot mismatch: %+v", created)
 	}
 	requireCode(t, pushTaskCall(t, s, "POST", "/api/pwa-push/tasks", request, owner, key, "correct"), 200)
@@ -64,7 +64,7 @@ func TestPWAPushRichTemplateSnapshotsAndReplay(t *testing.T) {
 	requireCode(t, edited, 201)
 	var explicitTask pwaPushTaskView
 	_ = json.Unmarshal(edited.Body.Bytes(), &explicitTask)
-	if explicitTask.Image != "" || len(explicitTask.Actions) != 0 || !strings.HasSuffix(explicitTask.Icon, "/icon/192.png") || explicitTask.Title != explicit.Title {
+	if explicitTask.Image != "" || len(explicitTask.Actions) != 0 || explicitTask.Icon != s.Config.PublicURL+pwaPushGoogleIconPath || explicitTask.Title != explicit.Title {
 		t.Fatal("explicit draft did not override source template")
 	}
 	explicit.Image = "https://images.example/different.png"
@@ -93,7 +93,7 @@ func TestPWAPushRichEncryptedPayloadAndContentValidation(t *testing.T) {
 	s.pwaPushHTTP = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		sends++
 		payload := decryptPushTestPayload(t, r, private, auth)
-		if payload["image"] != task.Image || payload["icon"] != task.Icon || payload["delivery_id"] == "" {
+		if payload["image"] != task.Image || payload["icon"] != s.Config.PublicURL+"/pwa-template-assets/push-google.png" || payload["delivery_id"] == "" {
 			t.Fatal("encrypted rich payload lost its snapshot")
 		}
 		actions, ok := payload["actions"].([]any)
