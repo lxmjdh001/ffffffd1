@@ -12,6 +12,13 @@ for (const locale of ['en', 'pt', 'de', 'fr', 'ko', 'ja', 'zh-TW', 'ru']) {
     if (placeholders(key) !== placeholders(catalog[key])) throw Error(`${locale}: damaged placeholders in ${key}`);
   }
 }
+// JSON content is translated at runtime too: fail a build when edited homepage
+// copy has not been registered, rather than silently falling back to Chinese.
+function checkHomeContent(value, path = 'home-content') {
+  if (typeof value === 'string' && /[\u3400-\u9fff]/.test(value) && !keys.includes(value)) throw Error(`${path}: unregistered homepage translation ${value}`);
+  if (value && typeof value === 'object') for (const [key, item] of Object.entries(value)) checkHomeContent(item, `${path}.${key}`);
+}
+checkHomeContent(JSON.parse(readFileSync(new URL('home-content.json', root))));
 for (const file of readdirSync(root).filter(name => /\.tsx?$/.test(name) && !name.includes('.test.'))) {
   const source = ts.createSourceFile(file, readFileSync(new URL(file, root), 'utf8'), ts.ScriptTarget.Latest, true, file.endsWith('tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   function visit(node) {
