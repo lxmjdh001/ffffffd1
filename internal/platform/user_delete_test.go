@@ -286,7 +286,7 @@ func TestUserDeletionLateSettlementAndReferralChain(t *testing.T) {
 	requireCode(t, w, 404)
 	// An order request authenticated before deletion must check the tombstone
 	// again under the account lock before opening a new payable order.
-	body, _ = json.Marshal(map[string]string{"amount": "1", "method": "manual"})
+	body, _ = json.Marshal(map[string]string{"amount": "50", "method": "manual"})
 	r = httptest.NewRequest("POST", "http://localhost:8088/api/orders", bytes.NewReader(body))
 	r.Header.Set("Idempotency-Key", randomHex(16))
 	r = r.WithContext(context.WithValue(r.Context(), userKey, removed))

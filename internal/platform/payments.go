@@ -105,7 +105,7 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	amount, e := ParseMoney(in.Amount)
 	if e != nil || amount < Dollar || amount > 10000*Dollar || amount%10000 != 0 {
-		fail(w, problem(400, "单笔充值须为 1–10,000 美元，最多两位小数"))
+		fail(w, problem(400, "单笔充值须为 50–10,000 美元，最多两位小数"))
 		return
 	}
 	if in.Method != "manual" && in.Method != "usdt" && in.Method != "alipay" {
@@ -126,6 +126,10 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		fail(w, err)
+		return
+	}
+	if amount < 50*Dollar {
+		fail(w, problem(400, "单笔充值须为 50–10,000 美元，最多两位小数"))
 		return
 	}
 	// Keep idempotent access to historical Alipay orders above, but never

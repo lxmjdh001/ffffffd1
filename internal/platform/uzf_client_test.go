@@ -38,7 +38,7 @@ func TestExistingUZFOrderWorkerAndRetry(t *testing.T) {
 	s.HTTP = provider.Client()
 	key := randomHex(16)
 	create := func(idkey string) *httptest.ResponseRecorder {
-		r := httptest.NewRequest("POST", "http://localhost:8088/api/orders", bytes.NewBufferString(`{"amount":"10","method":"usdt"}`))
+		r := httptest.NewRequest("POST", "http://localhost:8088/api/orders", bytes.NewBufferString(`{"amount":"50","method":"usdt"}`))
 		r.AddCookie(cookie)
 		r.Header.Set("X-CSRF-Token", csrf)
 		r.Header.Set("Idempotency-Key", idkey)
@@ -56,7 +56,7 @@ func TestExistingUZFOrderWorkerAndRetry(t *testing.T) {
 	s.maintenance(t.Context())
 	s.DB.First(&u, "id = ?", u.ID)
 	s.DB.First(&order, "id = ?", order.ID)
-	if order.Status != "paid" || u.BalanceMicros != 10*Dollar || countRows(t, s, &Ledger{}) != 1 {
+	if order.Status != "paid" || u.BalanceMicros != 50*Dollar || countRows(t, s, &Ledger{}) != 1 {
 		t.Fatal("existing UZF worker settlement failed")
 	}
 	s.Config.USDTMonitorURL, s.Config.USDTMonitorSecret = "", ""

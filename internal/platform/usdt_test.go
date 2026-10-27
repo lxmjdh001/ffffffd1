@@ -115,7 +115,7 @@ func TestUSDTWalletRequiresSecondaryPasswordAndCannotBypass(t *testing.T) {
 	// New orders snapshot the database address, not the legacy environment value.
 	s.Config.USDTWallet = "legacy-environment-address"
 	create := func() *httptest.ResponseRecorder {
-		r := httptest.NewRequest("POST", "http://localhost:8088/api/orders", bytes.NewBufferString(`{"amount":"10","method":"usdt"}`))
+		r := httptest.NewRequest("POST", "http://localhost:8088/api/orders", bytes.NewBufferString(`{"amount":"50","method":"usdt"}`))
 		r.AddCookie(cookie)
 		r.Header.Set("X-CSRF-Token", csrf)
 		r.Header.Set("Idempotency-Key", randomHex(16))
