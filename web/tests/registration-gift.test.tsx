@@ -15,7 +15,7 @@ it('shows configured credit to guests and preserves the invitation in the regist
  setup();
  const card=await screen.findByRole('complementary',{name:'注册赠送用量额度'},{timeout:2500});
  expect(card.textContent).toContain('$100');
- expect(screen.getByRole('link',{name:'免费创建账户'}).getAttribute('href')).toBe('/register?invite=test');
+ expect(screen.getByRole('link',{name:'创建账户'}).getAttribute('href')).toBe('/register?invite=test');
  await userEvent.click(screen.getByRole('button',{name:'关闭'}));
  expect(screen.queryByRole('complementary')).toBeNull();
  expect(sessionStorage.getItem('d1.registration-gift.dismissed')).toBe('1');

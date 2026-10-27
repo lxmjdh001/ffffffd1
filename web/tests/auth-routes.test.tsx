@@ -119,7 +119,7 @@ describe('real application routes', () => {
     await user.type(screen.getByRole('textbox', { name: '邮箱地址', exact: true }), account.email);
     await user.type(screen.getByLabelText(/^密码/), 'test-password-123');
     await user.type(screen.getByRole('textbox', { name: /图形验证码/ }), '12345');
-    await user.click(screen.getByRole('button', { name: '免费创建账户' }));
+    await user.click(screen.getByRole('button', { name: '创建账户' }));
   }
 
   it('registers an invited user directly into the console, survives a remount, and supports logout and login', async () => {
@@ -217,7 +217,7 @@ describe('real application routes', () => {
     await user.click(screen.getByRole('link', { name: 'D1 Apk', exact: true }));
     await screen.findByRole('heading', { name: /让每一次投放，\s*更快抵达用户。/ });
     expect(window.location.hash).toBe(`#/welcome?invite=${invite}`);
-    await user.click(within(document.querySelector('.home-hero-actions')!).getByRole('link', { name: '免费创建账户' }));
+    await user.click(within(document.querySelector('.home-hero-actions')!).getByRole('link', { name: '创建账户' }));
     await screen.findByRole('heading', { name: '创建你的账户' }, { timeout: 5000 });
     expect((screen.getByRole('textbox', { name: '邀请码（选填）', exact: true }) as HTMLInputElement).value).toBe(invite);
     await user.click(screen.getByRole('link', { name: /立即登录/ }));
@@ -228,7 +228,7 @@ describe('real application routes', () => {
     const user = userEvent.setup();
     open('/welcome');
     await screen.findByRole('heading', { name: /让每一次投放，\s*更快抵达用户。/ });
-    await user.click(within(document.querySelector('.home-hero-actions')!).getByRole('link', { name: '免费创建账户' }));
+    await user.click(within(document.querySelector('.home-hero-actions')!).getByRole('link', { name: '创建账户' }));
     await screen.findByRole('heading', { name: '创建你的账户' }, { timeout: 5000 });
     await user.click(screen.getByRole('link', { name: /立即登录/ }));
     await screen.findByRole('heading', { name: '登录控制台' });

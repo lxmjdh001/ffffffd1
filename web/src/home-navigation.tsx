@@ -21,7 +21,7 @@ export function HomeNavigation({ inviteQuery, startPath }: { inviteQuery: string
   const menu = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const panelID = useId();
-  const startLabel = config.registration_open ? t('免费开始') : t('进入控制台');
+  const startLabel = config.registration_open ? t('立即开始') : t('进入控制台');
   const sections = [
     { id: 'home-solutions', label: t('产品') },
     { id: 'home-growth', label: t('产品功能') },

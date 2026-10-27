@@ -32,7 +32,7 @@ it('keeps invitation links in the compact menu and dismisses on section navigati
   const user = open();
   await user.click(screen.getByRole('button', { name: '打开导航' }));
   const panel = document.querySelector('.home-menu-panel')!;
-  expect(within(panel).getByRole('link', { name: '免费开始' }).getAttribute('href')).toBe('/register?invite=keep-me');
+  expect(within(panel).getByRole('link', { name: '立即开始' }).getAttribute('href')).toBe('/register?invite=keep-me');
   expect(within(panel).getByRole('link', { name: '登录' }).getAttribute('href')).toBe('/login?invite=keep-me');
   await user.click(within(panel).getByRole('button', { name: '常见问题' }));
   expect(document.querySelector('.home-menu-panel')).toBeNull();
@@ -46,7 +46,7 @@ it('closes the menu when clicking outside without changing language', async () =
 it('keeps long translated controls accessible and menu labels reactive', async () => {
   setLocale('fr', false);
   const user = open();
-  expect(screen.getByRole('link', { name: t('免费开始') }).getAttribute('title')).toBe(t('免费开始'));
+  expect(screen.getByRole('link', { name: t('立即开始') }).getAttribute('title')).toBe(t('立即开始'));
   await user.click(screen.getByRole('button', { name: t('语言') }));
   await user.click(screen.getByRole('menuitemradio', { name: 'Deutsch' }));
   await user.click(screen.getByRole('button', { name: t('打开导航') }));

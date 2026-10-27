@@ -41,7 +41,7 @@ async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole('textbox', { name: '邮箱地址', exact: true }), 'invited@example.com');
   await user.type(screen.getByLabelText(/^密码/), 'test-password-123');
   await user.type(screen.getByRole('textbox', { name: /图形验证码/ }), '12345');
-  await user.click(screen.getByRole('button', { name: '免费创建账户' }));
+  await user.click(screen.getByRole('button', { name: '创建账户' }));
 }
 
 describe('registration invitations', () => {
@@ -53,7 +53,7 @@ describe('registration invitations', () => {
     expect(screen.getByRole('link', { name: /立即登录/ }).getAttribute('href')).toBe('/login?invite=fedcba9876543210');
     await user.click(screen.getByRole('link', { name: /立即登录/ }));
     expect(screen.getByRole('heading', { name: '登录控制台' })).toBeTruthy();
-    await user.click(screen.getByRole('link', { name: /免费注册/ }));
+    await user.click(screen.getByRole('link', { name: /立即注册/ }));
     expect((screen.getByRole('textbox', { name: '邀请码（选填）' }) as HTMLInputElement).value).toBe('fedcba9876543210');
   });
 
@@ -104,7 +104,7 @@ describe('registration invitations', () => {
     const user = open('/register');
     await user.clear(screen.getByRole('textbox', { name: '邀请码（选填）' }));
     await user.click(screen.getByRole('link', { name: /立即登录/ }));
-    await user.click(screen.getByRole('link', { name: /免费注册/ }));
+    await user.click(screen.getByRole('link', { name: /立即注册/ }));
     expect((screen.getByRole('textbox', { name: '邀请码（选填）' }) as HTMLInputElement).value).toBe('');
   });
 

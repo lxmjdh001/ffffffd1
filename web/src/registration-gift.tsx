@@ -31,6 +31,6 @@ export function RegistrationGift({ registerPath }: { registerPath: string }) {
   <h2>{t('注册赠送用量额度')}</h2>
   <div className="registration-gift-amount"><span>$</span>{usagePrice(amount)}<span className="registration-gift-spark" aria-hidden="true">✳</span></div>
   <p>{t('赠送用量额度')}</p>
-  <Link to={registerPath} onClick={dismiss}>{t('免费创建账户')}<ArrowUpRight size={18}/></Link>
+  <Link to={registerPath} onClick={dismiss}>{t('创建账户')}<ArrowUpRight size={18}/></Link>
  </aside>;
 }
