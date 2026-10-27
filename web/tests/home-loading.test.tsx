@@ -5,7 +5,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { Root } from '../src/root';
 
-const script = readFileSync(resolve('public/assets/home-loading-v2.js'), 'utf8');
+const script = readFileSync(resolve('public/assets/home-loading-v3.js'), 'utf8');
 beforeEach(() => {
  vi.useFakeTimers();
  window.history.replaceState(null, '', '/#/welcome');
@@ -34,11 +34,24 @@ it('starts a blurred overlay and fetches configuration before the main app',asyn
  vi.advanceTimersByTime(1);expect(document.getElementById('home-loading')!.hidden).toBe(true);
  expect(document.documentElement.hasAttribute('data-home-loading')).toBe(false);
 });
-it('never leaves the homepage blocked longer than two seconds if the app fails to load',()=>{
- start();vi.advanceTimersByTime(2000);
+it('never leaves the homepage blocked indefinitely if the app fails to load',()=>{
+ start();vi.advanceTimersByTime(12000);
  expect(document.getElementById('home-loading')!.hidden).toBe(true);
  expect(document.getElementById('root')!.inert).not.toBe(true);
  expect(document.body.textContent).toContain('Homepage preview');
+});
+it('keeps the animation visible during a slow first load instead of hiding at two seconds',()=>{
+ start();vi.advanceTimersByTime(3000);
+ expect(document.getElementById('home-loading')!.hidden).toBe(false);
+ expect(document.getElementById('root')!.inert).toBe(true);
+ window.dispatchEvent(new Event('d1:home-ready'));vi.advanceTimersByTime(0);
+ expect(document.getElementById('home-loading')!.hidden).toBe(true);
+});
+it('uses an independent parser-time bootstrap rather than waiting for deferred app modules',()=>{
+ const html=readFileSync(resolve('index.html'),'utf8');
+ const tag=html.match(/<script\b[^>]*src="\/assets\/home-loading-v3\.js"[^>]*>/)?.[0];
+ expect(tag).toBeTruthy();
+ expect(tag).not.toMatch(/\bdefer\b|type="module"/);
 });
 it('always uses English even when the selected language is Chinese',()=>{
  localStorage.setItem('d1.locale','zh-CN');

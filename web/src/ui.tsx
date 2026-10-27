@@ -1,8 +1,7 @@
 // i18n: static UI literals
 import { getLocale, t, useLocale } from './i18n';
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
-import { AlertCircle, Check, Copy, LoaderCircle, PackageOpen, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNotify } from 'react-admin';
+import { AlertCircle, Check, LoaderCircle, PackageOpen, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Config } from './types';
 
 export const ConfigContext = createContext<{ config: Config; reload: () => void }>(null!);
@@ -23,8 +22,6 @@ export function Empty({ title = t("还没有记录"), detail, action }: { title?
   useLocale(); return <div className="empty"><div className="empty-icon"><PackageOpen size={30} strokeWidth={1.4} /></div><h3>{title}</h3>{detail && <p>{detail}</p>}{action}</div>; }
 export function Badge({ children, tone = 'green' }: { children: ReactNode; tone?: string }) {
   useLocale(); return <span className={`badge ${tone}`}><i />{children}</span>; }
-export function CopyButton({ value, label }: { value: string; label?: string }) {
-  useLocale(); const notify = useNotify(); return <button className="copy-btn" title={label || t("复制")} onClick={async () => { try { await navigator.clipboard.writeText(value); notify(t("已复制"), { type: 'success' }); } catch { notify(t("复制失败，请手动选择复制"), { type: 'warning' }); } }}><Copy size={14} />{label}</button>; }
 export function Modal({ title, children, close, wide = false, side = false, fullscreen = false }: { title: string; children: ReactNode; close: () => void; wide?: boolean; side?: boolean; fullscreen?: boolean }) {
   useLocale();
   const ref = useRef<HTMLDialogElement>(null);

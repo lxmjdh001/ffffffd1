@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Menu, X } from 'lucide-react';
-import { Brand } from './auth';
+import { Brand } from './brand';
 import { t, useLocale } from './i18n';
 import { LanguageSelector } from './language-selector';
 import { useConfig } from './ui';

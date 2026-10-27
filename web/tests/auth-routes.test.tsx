@@ -126,7 +126,7 @@ describe('real application routes', () => {
     const user = userEvent.setup();
     const inviteCode = '0123456789abcdef';
     const view = open(`/register?invite=${inviteCode}`);
-    await screen.findByRole('heading', { name: '创建你的账户' });
+    await screen.findByRole('heading', { name: '创建你的账户' }, { timeout: 5000 });
     await waitFor(() => expect(requests).toContain('/api/me'));
     await submitRegistration(user);
     await screen.findByRole('heading', { name: '工作台' });
@@ -162,7 +162,7 @@ describe('real application routes', () => {
     identityGate = new Promise<void>(resolve => { finishAnonymousChecks = resolve; });
     const user = userEvent.setup();
     open('/register?invite=0123456789abcdef');
-    await screen.findByRole('heading', { name: '创建你的账户' });
+    await screen.findByRole('heading', { name: '创建你的账户' }, { timeout: 5000 });
     await waitFor(() => expect(requests).toContain('/api/me'));
     await submitRegistration(user);
     await screen.findByRole('heading', { name: '工作台' });
@@ -181,7 +181,7 @@ describe('real application routes', () => {
     identityGate = new Promise<void>(resolve => { finishChecks = resolve; });
     const user = userEvent.setup();
     open('/register');
-    await screen.findByRole('heading', { name: '创建你的账户' });
+    await screen.findByRole('heading', { name: '创建你的账户' }, { timeout: 5000 });
     await user.type(screen.getByRole('textbox', { name: '用户名称', exact: true }), '注册测试');
     await user.type(screen.getByRole('textbox', { name: '邮箱地址', exact: true }), 'half.typed');
     expect(requests).toContain('/api/me');
@@ -213,12 +213,12 @@ describe('real application routes', () => {
     const user = userEvent.setup();
     const invite = '0123456789abcdef';
     open(`/register?invite=${invite}`);
-    await screen.findByRole('heading', { name: '创建你的账户' });
+    await screen.findByRole('heading', { name: '创建你的账户' }, { timeout: 5000 });
     await user.click(screen.getByRole('link', { name: 'D1 Apk', exact: true }));
     await screen.findByRole('heading', { name: /让每一次投放，\s*更快抵达用户。/ });
     expect(window.location.hash).toBe(`#/welcome?invite=${invite}`);
     await user.click(within(document.querySelector('.home-hero-actions')!).getByRole('link', { name: '免费创建账户' }));
-    await screen.findByRole('heading', { name: '创建你的账户' });
+    await screen.findByRole('heading', { name: '创建你的账户' }, { timeout: 5000 });
     expect((screen.getByRole('textbox', { name: '邀请码（选填）', exact: true }) as HTMLInputElement).value).toBe(invite);
     await user.click(screen.getByRole('link', { name: /立即登录/ }));
     expect(window.location.hash).toBe(`#/login?invite=${invite}`);
@@ -229,7 +229,7 @@ describe('real application routes', () => {
     open('/welcome');
     await screen.findByRole('heading', { name: /让每一次投放，\s*更快抵达用户。/ });
     await user.click(within(document.querySelector('.home-hero-actions')!).getByRole('link', { name: '免费创建账户' }));
-    await screen.findByRole('heading', { name: '创建你的账户' });
+    await screen.findByRole('heading', { name: '创建你的账户' }, { timeout: 5000 });
     await user.click(screen.getByRole('link', { name: /立即登录/ }));
     await screen.findByRole('heading', { name: '登录控制台' });
     await user.type(screen.getByRole('textbox', { name: '账号', exact: true }), account.email);

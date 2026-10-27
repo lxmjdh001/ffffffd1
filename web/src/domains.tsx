@@ -6,7 +6,8 @@ import { useNotify } from 'react-admin';
 import { Globe2, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { api, send } from './api';
 import type { Domain, Page } from './types';
-import { Badge, CopyButton, date, Empty, ErrorState, errorText, Field, FormError, Modal, PageHeader, Pager, Spinner, useConfig } from './ui';
+import { CopyButton } from './copy-button';
+import { Badge, date, Empty, ErrorState, errorText, Field, FormError, Modal, PageHeader, Pager, Spinner, useConfig } from './ui';
 
 export function DomainsPage() {
   useLocale();

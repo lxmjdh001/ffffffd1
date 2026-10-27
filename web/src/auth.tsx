@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, ShieldCheck, Link2, CloudUpload, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { api, authProvider } from './api';
 import { Field, FormError, useConfig, errorText } from './ui';
+import { Brand } from './brand';
 
 function BotCheck({ action, refresh, onCaptcha }: { action: string; refresh: number; onCaptcha: (id: string, code: string) => void }) {
   useLocale();
@@ -20,9 +21,10 @@ function BotCheck({ action, refresh, onCaptcha }: { action: string; refresh: num
   }, [action, refresh, bump]);
   return <div className="bot-check">{<Field label={t("图形验证码")}><div className="captcha-row"><input required autoComplete="off" inputMode="numeric" maxLength={5} placeholder={t("输入图片中的数字")} value={code} onChange={e => { setCode(e.target.value); onCaptcha(challenge?.id || '', e.target.value); }} />{challenge && <button type="button" className="captcha-image" title={t("换一张验证码")} onClick={() => setBump(bump + 1)}><img src={challenge.image} alt={t("数字验证码，点击刷新")} /></button>}</div></Field>}{error && <><FormError>{error}</FormError><button type="button" className="text-btn" onClick={() => setBump(bump + 1)}><RefreshCw size={13} />{t("重新验证")}</button></>}</div>;
 }
-export function Brand({ dark = false }: { dark?: boolean }) {
-  useLocale(); const { config } = useConfig(); return <span className={`brand ${dark ? 'on-dark' : ''}`}><img src="/favicon.svg" alt="" /><span>{config.site_name}</span></span>; }
+export { Brand } from './brand';
+
 function readInviteCode(search: string) { return new URLSearchParams(search).get('invite') ?? new URLSearchParams(window.location.search).get('invite') ?? ''; }
+
 export function AuthPage({ register = false }: { register?: boolean }) {
   useLocale();
   const location = useLocation();

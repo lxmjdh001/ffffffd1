@@ -7,7 +7,8 @@ import { useNotify } from 'react-admin';
 import { ArrowLeft, ArrowRight, Code2, KeyRound, Radio, RefreshCw, Save, ShieldCheck } from 'lucide-react';
 import { api, send } from './api';
 import type { App, Page } from './types';
-import { AppIcon, Badge, CopyButton, date, Empty, ErrorState, errorText, Field, FormError, Modal, PageHeader, Pager, Spinner, useConfig } from './ui';
+import { CopyButton } from './copy-button';
+import { AppIcon, Badge, date, Empty, ErrorState, errorText, Field, FormError, Modal, PageHeader, Pager, Spinner, useConfig } from './ui';
 
 type AdConfig = { app_id: string; facebook_enabled: boolean; facebook_pixel: string; facebook_test_code: string; tiktok_enabled: boolean; tiktok_pixel: string; tiktok_test_code: string; open_facebook_event: string; register_facebook_event: string; download_facebook_event: string; open_tiktok_event: string; register_tiktok_event: string; download_tiktok_event: string; allowed_origin: string; deep_link: string; allow_client_events: boolean; updated_at: string };
 type AdResponse = { config: AdConfig; facebook_token_set: boolean; tiktok_token_set: boolean; api_secret_set: boolean; api_secret: string };

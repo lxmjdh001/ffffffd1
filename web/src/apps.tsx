@@ -17,7 +17,8 @@ import { AppDownloadSettings } from './app-download-settings';
 import { AppShareDrawer } from './app-share-drawer';
 import { AppDeleteDialog } from './app-delete-dialog';
 import type { App, Domain, Page } from './types';
-import { AppIcon, Badge, bytes, CopyButton, date, Empty, ErrorState, errorText, Field, FormError, Modal, number, PageHeader, Pager, Spinner, useConfig } from './ui';
+import { CopyButton } from './copy-button';
+import { AppIcon, Badge, bytes, date, Empty, ErrorState, errorText, Field, FormError, Modal, number, PageHeader, Pager, Spinner, useConfig } from './ui';
 
 type AppUploadProps = { close: () => void; done: (a: App) => void; app?: App };
 
