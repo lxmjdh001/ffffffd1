@@ -572,7 +572,7 @@ func TestPWAPushWorkerEncryptedPayloadVAPIDSnapshotAndEvents(t *testing.T) {
 		if strings.HasSuffix(r.URL.Path, "receiver-a") {
 			expected = a.VAPIDPublicKey
 			events = decryptPushTestPayload(t, r, private, auth)
-			if events["title"] != task.Title || events["body"] != task.Body || events["url"] != task.URL || events["icon"] != task.Icon {
+			if events["title"] != task.Title || events["body"] != task.Body || events["url"] != task.URL || events["icon"] != s.Config.PublicURL+"/pwa-template-assets/push-google.png" {
 				t.Fatal("payload snapshot changed")
 			}
 		}

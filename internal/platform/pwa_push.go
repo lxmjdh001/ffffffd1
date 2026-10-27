@@ -520,10 +520,7 @@ func normalizedPWATaskInput(in *pwaPushTaskInput, app PWAApp, now time.Time, pub
 	sort.Strings(countries)
 	in.TargetCountries = countries
 	// Reserve room for per-delivery IDs and Web Push encryption overhead.
-	icon := in.Icon
-	if icon == "" {
-		icon = publicURL + "/p/" + app.Slug + "/icon/192.png"
-	}
+	icon := publicURL + pwaPushGoogleIconPath
 	payload, _ := json.Marshal(pwaPushContentPayload(in.Title, in.Body, in.URL, icon, in.Image, in.Actions))
 	if len(payload) > 3400 {
 		return problem(400, "通知内容过长，请缩短正文或链接")
@@ -654,10 +651,7 @@ func (s *Server) createPWAPushTask(w http.ResponseWriter, r *http.Request) {
 		now := s.Now()
 		countries, _ := json.Marshal(in.TargetCountries)
 		actions, _ := json.Marshal(in.Actions)
-		icon := in.Icon
-		if icon == "" {
-			icon = s.Config.PublicURL + "/p/" + app.Slug + "/icon/192.png"
-		}
+		icon := s.Config.PublicURL + pwaPushGoogleIconPath
 		task = PWAPushTask{ID: randomHex(16), UserID: u.ID, RequestKeyHash: hashString(key), RequestFingerprint: fingerprint, PWAID: app.ID, PWAName: app.Name, Title: in.Title, Body: in.Body, URL: in.URL, Icon: icon, Image: in.Image, ActionsJSON: string(actions), ScheduleType: in.ScheduleType, ScheduledAt: in.ScheduledAt, DelayMinutes: in.DelayMinutes, CountriesJSON: string(countries), Status: "queued", CreatedAt: now}
 		if in.TemplateID != "" {
 			task.TemplateID = &in.TemplateID

@@ -417,3 +417,50 @@ describe('PWA subscription renewal follows the reference PWA', () => {
     expect(c.subscribe).not.toHaveBeenCalled();
   });
 });
+
+
+describe('installation and notification consent', () => {
+  const dialog = () => document.getElementById('d1-notification-consent')!;
+  const primary = () => dialog().querySelector<HTMLButtonElement>('.d1-consent-allow')!;
+  const later = () => dialog().querySelector<HTMLButtonElement>('.d1-consent-later')!;
+  it('offers combined consent on opening the download page without requesting permission on load', async () => {
+    const c=start();
+    expect(dialog().hasAttribute('open')).toBe(true);
+    expect(primary().textContent).toBe('Agree to install and enable notifications');
+    await vi.waitFor(()=>expect(primary().disabled).toBe(false));
+    expect(c.notification.requestPermission).not.toHaveBeenCalled();
+    expect(c.calls()).toHaveLength(0);
+    primary().click();
+    expect(c.notification.requestPermission).toHaveBeenCalledOnce();
+    await vi.waitFor(()=>expect(c.calls()).toHaveLength(1));
+    expect(primary().textContent).toBe('Continue installation');
+    expect(c.saved()).toMatchObject(capability);
+  });
+  it('allows installation without notification consent and remembers this choice', async () => {
+    const c=start();await vi.waitFor(()=>expect(later().disabled).toBe(false));
+    later().click();
+    expect(dialog().hasAttribute('open')).toBe(false);
+    expect(c.notification.requestPermission).not.toHaveBeenCalled();expect(c.calls()).toHaveLength(0);
+    const again=start();await vi.waitFor(()=>expect(again.enable.disabled).toBe(false));
+    expect(document.getElementById('d1-notification-consent')).toBeNull();
+  });
+  it('offers notification consent in the installed iOS app and waits for the user click', async () => {
+    const c=start({ios:true,standalone:true});await vi.waitFor(()=>expect(primary().disabled).toBe(false));
+    expect(primary().textContent).toBe('Enable notifications');expect(c.notification.requestPermission).not.toHaveBeenCalled();
+    primary().click();await vi.waitFor(()=>expect(c.calls()).toHaveLength(1));expect(dialog().hasAttribute('open')).toBe(false);
+  });
+  it('does not request notifications from an uninstalled iPhone browser', async () => {
+    const c=start({ios:true});await vi.waitFor(()=>expect(primary().disabled).toBe(false));
+    primary().click();await vi.waitFor(()=>expect(primary().textContent).toBe('Continue installation'));
+    expect(c.notification.requestPermission).not.toHaveBeenCalled();expect(c.calls()).toHaveLength(0);
+  });
+  it('does not automatically prompt someone who explicitly turned notifications off', async () => {
+    const c=start({saved:{...capability,unsubscribed:true},standalone:true});await vi.waitFor(()=>expect(c.enable.disabled).toBe(false));
+    expect(document.getElementById('d1-notification-consent')).toBeNull();expect(c.notification.requestPermission).not.toHaveBeenCalled();
+  });
+  it('keeps installation available when notification permission has already been denied', async () => {
+    const c=start({permission:'denied'});await vi.waitFor(()=>expect(primary().disabled).toBe(false));
+    primary().click();await vi.waitFor(()=>expect(primary().textContent).toBe('Continue installation'));
+    expect(c.notification.requestPermission).not.toHaveBeenCalled();expect(c.calls()).toHaveLength(0);
+  });
+});

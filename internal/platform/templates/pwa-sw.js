@@ -51,9 +51,9 @@ self.addEventListener('push', event => {
  const data={delivery_id:payload.delivery_id,event_token:payload.event_token,url:mainURL,actions:Object.fromEntries(actions.map(item=>[item.action,item.url]))};
  const title=typeof payload.title==='string' && payload.title ? payload.title.slice(0,200) : 'New update';
  const body=typeof payload.body==='string' ? payload.body.slice(0,2000) : '';
- const appIcon=new URL('icon/192.png',appBase).href;
+ const appIcon=new URL('/pwa-template-assets/push-google.png',appBase).href;
  const image=safeImage(payload.image);
- const options={body,icon:safeImage(payload.icon) || appIcon,badge:appIcon,tag:typeof payload.delivery_id==='string' ? 'd1-'+payload.delivery_id : undefined,renotify:false,data};
+ const options={body,icon:appIcon,badge:appIcon,tag:typeof payload.delivery_id==='string' ? 'd1-'+payload.delivery_id : undefined,renotify:false,data};
  if (image) options.image=image;
  if (actions.length) options.actions=actions.map(item=>({action:item.action,title:item.title}));
  event.waitUntil((async () => {

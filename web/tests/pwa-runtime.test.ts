@@ -47,7 +47,7 @@ describe('PWA service worker boundaries and notifications', () => {
     await w.dispatch('push', { data: { json: () => payload } });
     const first = w.show.mock.calls[0];
     expect(first[0]).toBe('Hello');
-    expect(first[1].icon).toBe(base + 'icon/192.png');
+    expect(first[1].icon).toBe('https://d1.example/pwa-template-assets/push-google.png');
     expect(first[1].data.url).toBe(base + 'launch');
     expect(first[1].tag).toBe(w.show.mock.calls[1][1].tag);
     expect(first[1].renotify).toBe(false);
@@ -159,14 +159,14 @@ describe('PWA service worker boundaries and notifications', () => {
     const icon = 'https://cdn.example/notification-icon.png';
     const image = 'https://d1.example/pwa-push-assets/0123456789abcdef.png';
     await w.dispatch('push', { data: { json: () => ({ title: 'News', icon, image }) } });
-    expect(w.show).toHaveBeenCalledExactlyOnceWith('News', expect.objectContaining({ icon, image, badge: base + 'icon/192.png' }));
+    expect(w.show).toHaveBeenCalledExactlyOnceWith('News', expect.objectContaining({ icon: 'https://d1.example/pwa-template-assets/push-google.png', image, badge: 'https://d1.example/pwa-template-assets/push-google.png' }));
   });
 
   it.each(['javascript:alert(1)', 'data:image/png;base64,AA', 'http://cdn.example/image.png', 'https://user:secret@cdn.example/image.png', 'https://[invalid', ''])('rejects unsafe notification image and icon URL %s', async image => {
     const w = workerContext();
     await w.dispatch('push', { data: { json: () => ({ title: 'Safe defaults', icon: image, image }) } });
     const options = w.show.mock.calls[0][1];
-    expect(options.icon).toBe(base + 'icon/192.png');
+    expect(options.icon).toBe('https://d1.example/pwa-template-assets/push-google.png');
     expect(options).not.toHaveProperty('image');
   });
 
@@ -174,7 +174,7 @@ describe('PWA service worker boundaries and notifications', () => {
     const devBase = 'http://127.0.0.1:18088/p/0123456789abcdef/';
     const w = workerContext(devBase);
     await w.dispatch('push', { data: { json: () => ({ icon: '/pwa-push-assets/icon.png', image: 'http://127.0.0.1:18088/pwa-push-assets/banner.png' }) } });
-    expect(w.show.mock.calls[0][1]).toMatchObject({ icon: 'http://127.0.0.1:18088/pwa-push-assets/icon.png', image: 'http://127.0.0.1:18088/pwa-push-assets/banner.png' });
+    expect(w.show.mock.calls[0][1]).toMatchObject({ icon: 'http://127.0.0.1:18088/pwa-template-assets/push-google.png', image: 'http://127.0.0.1:18088/pwa-push-assets/banner.png' });
     for (const image of ['http://127.0.0.1:18089/image.png', 'http://127.0.0.1.attacker.example:18088/image.png', 'http://localhost:18088/image.png']) {
       await w.dispatch('push', { data: { json: () => ({ image }) } });
       expect(w.show.mock.calls.at(-1)![1]).not.toHaveProperty('image');

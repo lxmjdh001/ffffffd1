@@ -235,7 +235,7 @@ func (s *Server) sendPWAPush(ctx context.Context, d PWAPushDelivery) pwaPushOutc
 	if e != nil {
 		return pwaPushOutcome{message: "推送身份密钥不可用", code: "vapid_key_invalid"}
 	}
-	content := pwaPushContentPayload(task.Title, task.Body, task.URL, task.Icon, task.Image, pwaTaskActions(task))
+	content := pwaPushContentPayload(task.Title, task.Body, task.URL, s.Config.PublicURL+pwaPushGoogleIconPath, task.Image, pwaTaskActions(task))
 	content["delivery_id"], content["event_token"] = d.ID, s.pwaEventToken(d)
 	payload, e := json.Marshal(content)
 	if e != nil {
