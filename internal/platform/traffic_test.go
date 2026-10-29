@@ -166,8 +166,17 @@ func TestTrafficMultiplePoolsSequentialAndOwnership(t *testing.T) {
 			t.Fatalf("got %s want %s", got, want)
 		}
 	}
-	// The other pool has not been checked and must not inherit eligibility.
-	requireCode(t, call(t, s, "GET", "/r/"+pools[0].Slug, nil, nil, ""), 503)
+	// The unchecked pool keeps its own ordinary routing, independent of the
+	// other pool's clean verdicts and sequential cursor.
+	w := call(t, s, "GET", "/r/"+pools[0].Slug, nil, nil, "")
+	requireCode(t, w, 302)
+	valid := false
+	for _, target := range urls {
+		valid = valid || target == w.Header().Get("Location")
+	}
+	if !valid {
+		t.Fatal("unchecked routing selected an unrelated target")
+	}
 	other := seedUser(t, s, 0)
 	otherCookie, otherCSRF := sessionFor(t, s, other)
 	requireCode(t, call(t, s, "PUT", "/api/traffic-pools/"+sequential.Slug, map[string]any{"enabled": false, "mode": "random", "urls": urls}, otherCookie, otherCSRF), 404)
@@ -253,7 +262,7 @@ func TestTrafficRiskLookupHandlesFailures(t *testing.T) {
 	}
 }
 
-func TestTrafficExcludesRiskyHostsUnknownAndStale(t *testing.T) {
+func TestTrafficOnlyExcludesConfirmedRiskNotPendingFailedOrStale(t *testing.T) {
 	now := time.Now()
 	old := now.Add(-121 * time.Minute)
 	links := []TrafficLink{
@@ -264,7 +273,7 @@ func TestTrafficExcludesRiskyHostsUnknownAndStale(t *testing.T) {
 		{URL: "https://ok.example.com/a.apk", Status: "clean", CheckedAt: &now},
 	}
 	out := eligibleTrafficLinks(links, now)
-	if len(out) != 1 || out[0].URL != links[4].URL {
+	if len(out) != 3 || out[0].URL != links[2].URL || out[1].URL != links[3].URL || out[2].URL != links[4].URL {
 		t.Fatalf("unexpected eligible links: %+v", out)
 	}
 }
@@ -282,7 +291,7 @@ func TestTrafficPaidGateAndPublicRouting(t *testing.T) {
 	requireCode(t, call(t, s, "PUT", "/api/traffic-pool", body, cookie, csrf), 200)
 	var pool TrafficPool
 	s.DB.First(&pool, "user_id = ?", u.ID)
-	requireCode(t, call(t, s, "GET", "/r/"+pool.Slug, nil, nil, ""), 503)
+	requireCode(t, call(t, s, "GET", "/r/"+pool.Slug, nil, nil, ""), 302)
 	s.DB.Model(&TrafficLink{}).Where("user_id = ? AND url = ?", u.ID, "https://one.example.com/app.apk").Updates(map[string]any{"status": "clean", "checked_at": s.Now()})
 	s.DB.Model(&TrafficLink{}).Where("user_id = ? AND url = ?", u.ID, "https://two.example.com/app.apk").Updates(map[string]any{"status": "unsafe", "checked_at": s.Now()})
 	w := call(t, s, "GET", "/r/"+pool.Slug, nil, nil, "")

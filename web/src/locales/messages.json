@@ -2605,7 +2605,12 @@
     "所选应用分流不存在或无权使用，请重新选择": "The selected routing does not exist or is unavailable to your account. Select another.",
     "绑定的应用分流不可用，请联系应用发布者": "The linked app routing is unavailable. Contact the app publisher.",
     "使用应用分流时，不启用自定义外部浏览器跳转。": "Custom external-browser redirects are disabled while using app routing.",
-    "使用应用分流时，请关闭自定义外部浏览器跳转": "Disable custom external-browser redirects when using app routing"
+    "使用应用分流时，请关闭自定义外部浏览器跳转": "Disable custom external-browser redirects when using app routing",
+    "兜底保留": "Fallback retained",
+    "自动检测链接风险，检测不会阻塞分流访问。": "Link risks are checked automatically in the background without blocking routing.",
+    "当前保留 1 条兜底链接；兜底不代表通过安全检测。": "One fallback link is retained. This does not mean it has passed the safety check.",
+    "分流暂无下载链接，请联系应用发布者": "No download links are configured. Contact the app publisher.",
+    "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "Only exclude domains with confirmed risks. If all are flagged, retain one fallback link."
   },
   "pt": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Você pode solicitar reembolso da parte não utilizada, pelo valor nominal e pelo método de pagamento original. Contate o suporte ou a equipe comercial; verificaremos o saldo de uso restante antes de processar.",
@@ -5213,7 +5218,12 @@
     "所选应用分流不存在或无权使用，请重新选择": "O roteamento selecionado não existe ou não está disponível para sua conta. Selecione outro.",
     "绑定的应用分流不可用，请联系应用发布者": "O roteamento de aplicativos vinculado está indisponível. Contate o publicador do aplicativo.",
     "使用应用分流时，不启用自定义外部浏览器跳转。": "O redirecionamento personalizado para navegador externo fica desativado ao usar o roteamento de aplicativos.",
-    "使用应用分流时，请关闭自定义外部浏览器跳转": "Desative o redirecionamento personalizado para navegador externo ao usar o roteamento de aplicativos"
+    "使用应用分流时，请关闭自定义外部浏览器跳转": "Desative o redirecionamento personalizado para navegador externo ao usar o roteamento de aplicativos",
+    "兜底保留": "Alternativa mantida",
+    "自动检测链接风险，检测不会阻塞分流访问。": "Os riscos dos links são verificados automaticamente em segundo plano, sem bloquear o encaminhamento.",
+    "当前保留 1 条兜底链接；兜底不代表通过安全检测。": "Um link alternativo é mantido. Isto não significa que tenha passado na verificação de segurança.",
+    "分流暂无下载链接，请联系应用发布者": "Não há links de transferência configurados. Contacte o editor da aplicação.",
+    "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "Exclua apenas domínios com riscos confirmados. Se todos forem sinalizados, mantenha um link alternativo."
   },
   "de": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Für den ungenutzten Anteil können Sie eine Erstattung zum Nennwert über den ursprünglichen Zahlungsweg beantragen. Kontaktieren Sie Support oder Vertrieb; wir prüfen die verbleibende Nutzung vor der Bearbeitung.",
@@ -7821,7 +7831,12 @@
     "所选应用分流不存在或无权使用，请重新选择": "Die gewählte Verteilung existiert nicht oder ist für Ihr Konto nicht verfügbar. Wählen Sie eine andere.",
     "绑定的应用分流不可用，请联系应用发布者": "Die verknüpfte App-Verteilung ist nicht verfügbar. Wenden Sie sich an den App-Anbieter.",
     "使用应用分流时，不启用自定义外部浏览器跳转。": "Bei App-Verteilung sind benutzerdefinierte Weiterleitungen in externe Browser deaktiviert.",
-    "使用应用分流时，请关闭自定义外部浏览器跳转": "Deaktivieren Sie benutzerdefinierte Weiterleitungen in externe Browser bei App-Verteilung"
+    "使用应用分流时，请关闭自定义外部浏览器跳转": "Deaktivieren Sie benutzerdefinierte Weiterleitungen in externe Browser bei App-Verteilung",
+    "兜底保留": "Fallback beibehalten",
+    "自动检测链接风险，检测不会阻塞分流访问。": "Linkrisiken werden automatisch im Hintergrund geprüft, ohne die Weiterleitung zu blockieren.",
+    "当前保留 1 条兜底链接；兜底不代表通过安全检测。": "Ein Fallback-Link bleibt erhalten. Das bedeutet nicht, dass er die Sicherheitsprüfung bestanden hat.",
+    "分流暂无下载链接，请联系应用发布者": "Keine Downloadlinks konfiguriert. Kontaktieren Sie den App-Anbieter.",
+    "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "Nur Domains mit bestätigten Risiken werden ausgeschlossen. Sind alle markiert, bleibt ein Fallback-Link erhalten."
   },
   "fr": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Vous pouvez demander le remboursement de la partie non utilisée, à sa valeur nominale et via le moyen de paiement d’origine. Contactez l’assistance ou le service commercial ; nous vérifierons l’utilisation restante avant traitement.",
@@ -10429,7 +10444,12 @@
     "所选应用分流不存在或无权使用，请重新选择": "Le routage sélectionné n’existe pas ou n’est pas accessible à votre compte. Sélectionnez-en un autre.",
     "绑定的应用分流不可用，请联系应用发布者": "Le routage d’applications associé est indisponible. Contactez l’éditeur de l’application.",
     "使用应用分流时，不启用自定义外部浏览器跳转。": "Les redirections personnalisées vers un navigateur externe sont désactivées avec le routage d’applications.",
-    "使用应用分流时，请关闭自定义外部浏览器跳转": "Désactivez les redirections personnalisées vers un navigateur externe avec le routage d’applications"
+    "使用应用分流时，请关闭自定义外部浏览器跳转": "Désactivez les redirections personnalisées vers un navigateur externe avec le routage d’applications",
+    "兜底保留": "Lien de secours conservé",
+    "自动检测链接风险，检测不会阻塞分流访问。": "Les risques des liens sont vérifiés automatiquement en arrière-plan sans bloquer la redirection.",
+    "当前保留 1 条兜底链接；兜底不代表通过安全检测。": "Un lien de secours est conservé. Cela ne signifie pas qu’il a réussi le contrôle de sécurité.",
+    "分流暂无下载链接，请联系应用发布者": "Aucun lien de téléchargement configuré. Contactez l’éditeur de l’application.",
+    "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "Seuls les domaines présentant des risques confirmés sont exclus. S’ils sont tous signalés, un lien de secours est conservé."
   },
   "ko": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "미사용 부분은 액면 금액 기준으로 원래 결제 수단을 통해 환불을 신청할 수 있습니다. 고객 지원 또는 영업팀에 문의하세요. 남은 사용량을 확인한 후 처리합니다.",
@@ -13037,7 +13057,12 @@
     "所选应用分流不存在或无权使用，请重新选择": "선택한 트래픽 분산이 없거나 사용할 권한이 없습니다. 다시 선택하세요.",
     "绑定的应用分流不可用，请联系应用发布者": "연결된 앱 트래픽 분산을 사용할 수 없습니다. 앱 게시자에게 문의하세요.",
     "使用应用分流时，不启用自定义外部浏览器跳转。": "앱 트래픽 분산을 사용하는 동안 사용자 지정 외부 브라우저 이동은 비활성화됩니다.",
-    "使用应用分流时，请关闭自定义外部浏览器跳转": "앱 트래픽 분산 사용 시 사용자 지정 외부 브라우저 이동을 꺼 주세요"
+    "使用应用分流时，请关闭自定义外部浏览器跳转": "앱 트래픽 분산 사용 시 사용자 지정 외부 브라우저 이동을 꺼 주세요",
+    "兜底保留": "대체 링크 유지",
+    "自动检测链接风险，检测不会阻塞分流访问。": "링크 위험을 백그라운드에서 자동 검사하며 분산 접속을 차단하지 않습니다.",
+    "当前保留 1 条兜底链接；兜底不代表通过安全检测。": "대체 링크 1개를 유지합니다. 안전 검사를 통과했다는 의미는 아닙니다.",
+    "分流暂无下载链接，请联系应用发布者": "다운로드 링크가 없습니다. 앱 게시자에게 문의하세요.",
+    "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "위험이 확인된 도메인만 제외합니다. 모두 위험으로 표시되면 대체 링크 하나를 유지합니다."
   },
   "ja": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用分は額面金額で元のお支払い方法への返金を申請できます。サポートまたは営業担当にご連絡ください。残りの利用量を確認してから手続きします。",
@@ -15645,7 +15670,12 @@
     "所选应用分流不存在或无权使用，请重新选择": "選択した振り分けが存在しないか、利用権限がありません。選び直してください。",
     "绑定的应用分流不可用，请联系应用发布者": "連携したアプリ振り分けは利用できません。アプリの公開者にお問い合わせください。",
     "使用应用分流时，不启用自定义外部浏览器跳转。": "アプリ振り分けの使用中は、外部ブラウザーへのカスタム転送は無効になります。",
-    "使用应用分流时，请关闭自定义外部浏览器跳转": "アプリ振り分けの使用時は、外部ブラウザーへのカスタム転送を無効にしてください"
+    "使用应用分流时，请关闭自定义外部浏览器跳转": "アプリ振り分けの使用時は、外部ブラウザーへのカスタム転送を無効にしてください",
+    "兜底保留": "代替リンクを保持",
+    "自动检测链接风险，检测不会阻塞分流访问。": "リンクのリスクをバックグラウンドで自動検査し、振り分けアクセスを妨げません。",
+    "当前保留 1 条兜底链接；兜底不代表通过安全检测。": "代替リンクを1件保持しています。安全検査に合格したことを意味するものではありません。",
+    "分流暂无下载链接，请联系应用发布者": "ダウンロードリンクがありません。アプリの公開者にお問い合わせください。",
+    "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "リスクが確認されたドメインのみ除外します。すべて該当する場合は代替リンクを1件保持します。"
   },
   "zh-TW": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用的部分可申請退款，按面額循原付款管道退回。請聯絡客服或商務處理，我們會核對剩餘用量後辦理。",
@@ -18253,7 +18283,12 @@
     "所选应用分流不存在或无权使用，请重新选择": "所選應用分流不存在或無權使用，請重新選擇",
     "绑定的应用分流不可用，请联系应用发布者": "綁定的應用分流無法使用，請聯絡應用發布者",
     "使用应用分流时，不启用自定义外部浏览器跳转。": "使用應用分流時，不啟用自訂外部瀏覽器跳轉。",
-    "使用应用分流时，请关闭自定义外部浏览器跳转": "使用應用分流時，請關閉自訂外部瀏覽器跳轉"
+    "使用应用分流时，请关闭自定义外部浏览器跳转": "使用應用分流時，請關閉自訂外部瀏覽器跳轉",
+    "兜底保留": "保留備援連結",
+    "自动检测链接风险，检测不会阻塞分流访问。": "自動檢測連結風險，檢測不會阻塞分流存取。",
+    "当前保留 1 条兜底链接；兜底不代表通过安全检测。": "目前保留 1 條備援連結；備援不代表通過安全檢測。",
+    "分流暂无下载链接，请联系应用发布者": "分流暫無下載連結，請聯絡應用程式發布者",
+    "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "僅剔除明確命中風險的網域；全部命中風險時保留一條備援連結。"
   },
   "ru": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Можно запросить возврат неиспользованной части по номинальной стоимости исходным способом оплаты. Обратитесь в поддержку или отдел продаж; перед обработкой мы проверим оставшийся объём использования.",
@@ -20861,6 +20896,11 @@
     "所选应用分流不存在或无权使用，请重新选择": "Выбранное распределение не существует или недоступно вашей учётной записи. Выберите другое.",
     "绑定的应用分流不可用，请联系应用发布者": "Привязанное распределение трафика недоступно. Свяжитесь с издателем приложения.",
     "使用应用分流时，不启用自定义外部浏览器跳转。": "При распределении трафика пользовательское перенаправление во внешний браузер отключено.",
-    "使用应用分流时，请关闭自定义外部浏览器跳转": "Отключите пользовательское перенаправление во внешний браузер при распределении трафика"
+    "使用应用分流时，请关闭自定义外部浏览器跳转": "Отключите пользовательское перенаправление во внешний браузер при распределении трафика",
+    "兜底保留": "Резервная ссылка сохранена",
+    "自动检测链接风险，检测不会阻塞分流访问。": "Риски ссылок проверяются автоматически в фоне, не блокируя переходы.",
+    "当前保留 1 条兜底链接；兜底不代表通过安全检测。": "Сохранена одна резервная ссылка. Это не означает, что она прошла проверку безопасности.",
+    "分流暂无下载链接，请联系应用发布者": "Ссылки для скачивания не настроены. Обратитесь к издателю приложения.",
+    "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "Исключаются только домены с подтверждённым риском. Если отмечены все, сохраняется одна резервная ссылка."
   }
 }

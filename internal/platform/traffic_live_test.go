@@ -56,6 +56,10 @@ func TestTrafficLiveWebRisk(t *testing.T) {
 	if err := s.DB.Model(&TrafficLink{}).Where("pool_slug = ?", pool.Slug).Update("status", "unsafe").Error; err != nil {
 		t.Fatal(err)
 	}
-	requireCode(t, call(t, s, "GET", "/r/"+pool.Slug, nil, nil, ""), 503)
-	t.Log("real Google lookup passed; unsafe target excluded; all-unsafe pool blocked")
+	w = call(t, s, "GET", "/r/"+pool.Slug, nil, nil, "")
+	requireCode(t, w, 302)
+	if w.Header().Get("Location") != urls[0] {
+		t.Fatal("all-unsafe pool did not retain first fallback")
+	}
+	t.Log("real Google lookup passed; unsafe target excluded normally; all-unsafe pool retains one fallback")
 }
