@@ -61,6 +61,12 @@ func (s *Server) persistCompletion(t Ticket, start, end int64) {
 		slog.Error("download completion queued for recovery", "ticket", t.Hash, "journaled", path != "", "error", e)
 		return
 	}
+	if t.AttributionID != "" {
+		// Keep the durable range receipt until background ad preparation succeeds.
+		// Advertising errors must never roll back this accounting transaction.
+		s.wakeDownloadAds()
+		return
+	}
 	if path != "" {
 		_ = os.Remove(path)
 	}
@@ -94,6 +100,14 @@ func (s *Server) replayCompletions(ctx context.Context) {
 			slog.Error("completion recovery deferred", "file", entry.Name(), "error", e)
 			continue
 		}
+		var ticket Ticket
+		if e = s.DB.WithContext(ctx).Select("attribution_id").First(&ticket, "hash = ? AND user_id = ?", receipt.TicketHash, receipt.UserID).Error; e != nil {
+			continue
+		}
+		if ticket.AttributionID != "" {
+			s.wakeDownloadAds()
+			continue
+		}
 		_ = os.Remove(path)
 	}
 }
@@ -107,6 +121,8 @@ func (s *Server) RunCompletionWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			s.replayCompletions(ctx)
+		case <-s.completionWake:
 			s.replayCompletions(ctx)
 		}
 	}

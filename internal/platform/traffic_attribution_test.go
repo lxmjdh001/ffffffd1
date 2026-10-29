@@ -25,6 +25,26 @@ type routedAdFixture struct {
 }
 
 func routedAdRequest(s *Server, method, raw string, cookies []*http.Cookie, form url.Values, byteRange string) *httptest.ResponseRecorder {
+	w := routedAdRequestOnly(s, method, raw, cookies, form, byteRange)
+	// Production uses the independent preparation worker. Advance that worker
+	// explicitly here so attribution assertions do not race its poll interval.
+	drainDownloadAds(s)
+	return w
+}
+
+func drainDownloadAds(s *Server) {
+	for {
+		select {
+		case event := <-s.downloadAdStarts:
+			s.spoolDownloadAdStart(context.Background(), event)
+		default:
+			s.replayDownloadAds(context.Background())
+			return
+		}
+	}
+}
+
+func routedAdRequestOnly(s *Server, method, raw string, cookies []*http.Cookie, form url.Values, byteRange string) *httptest.ResponseRecorder {
 	var body io.Reader
 	if form != nil {
 		body = strings.NewReader(form.Encode())

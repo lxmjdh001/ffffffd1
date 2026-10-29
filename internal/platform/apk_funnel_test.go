@@ -187,6 +187,7 @@ func TestAPKLandingPaidFunnelDeduplicatesHTTPAndRecovery(t *testing.T) {
 			}
 			s.replayCompletions(context.Background())
 			s.replayCompletions(context.Background())
+			drainDownloadAds(s)
 			assertBilling(1, 3000, 0)
 			journal, e := os.ReadDir(filepath.Join(s.Config.DataDir, "completions"))
 			if e != nil || len(journal) != 0 {

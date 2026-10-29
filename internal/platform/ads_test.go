@@ -137,6 +137,7 @@ func TestSDKAuthorizationDedupAndConsent(t *testing.T) {
 	ticket, raw, visitor := seedTicket(t, s, a)
 	s.DB.Model(&ticket).Update("attribution_id", attr.ID)
 	requireCode(t, download(t, s, raw, visitor, "GET", ""), 200)
+	drainDownloadAds(s)
 	requireCode(t, sendSDK(t, s, a, "wrong", event, ""), 401)
 	requireCode(t, sendSDK(t, s, a, "", event, ""), 401)
 	requireCode(t, sendSDK(t, s, a, secret, event, "https://evil.example.com"), 403)

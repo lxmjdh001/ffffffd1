@@ -114,6 +114,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	server := &http.Server{Addr: c.Addr, Handler: app.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 20 * time.Minute, WriteTimeout: 30 * time.Minute, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32768}
+	adPrepareCtx, stopAdPrepare := context.WithCancel(context.Background())
+	adPrepareDone := make(chan struct{})
+	go func() { app.RunDownloadAdWorker(adPrepareCtx); close(adPrepareDone) }()
 	go app.RunCompletionWorker(ctx)
 	if c.Role != "download" {
 		go app.RunWorker(ctx)
@@ -133,4 +136,9 @@ func main() {
 	shutdown, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	_ = server.Shutdown(shutdown)
+	stopAdPrepare()
+	select {
+	case <-adPrepareDone:
+	case <-shutdown.Done():
+	}
 }

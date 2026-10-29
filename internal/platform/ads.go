@@ -270,7 +270,7 @@ func deepLinkWithToken(c AdConfig, token string) template.URL {
 	u.RawQuery = q.Encode()
 	return template.URL(u.String())
 }
-func (s *Server) queueDownloadConversion(tx *gorm.DB, t Ticket) error {
+func (s *Server) queueDownloadConversionAt(tx *gorm.DB, t Ticket, occurred time.Time) error {
 	if t.AttributionID == "" {
 		return nil
 	}
@@ -305,7 +305,7 @@ func (s *Server) queueDownloadConversion(tx *gorm.DB, t Ticket) error {
 	}
 	// Keep the existing canonical ID so start, completion, retries, and a route
 	// back to the source APK cannot produce two download advertising events.
-	event := Conversion{ID: randomHex(16), AppID: attr.AppID, DownloadedAppID: t.AppID, UserID: t.UserID, AttributionID: attr.ID, Event: eventName, EventID: hashString(attr.AppID + ":" + attr.ID + ":download_complete"), IP: t.IP, UserAgent: t.UserAgent, SourceURL: attr.PageURL, Consent: true, VerifiedBy: verified, EventTime: s.Now(), CreatedAt: s.Now()}
+	event := Conversion{ID: randomHex(16), AppID: attr.AppID, DownloadedAppID: t.AppID, UserID: t.UserID, AttributionID: attr.ID, Event: eventName, EventID: hashString(attr.AppID + ":" + attr.ID + ":download_complete"), IP: t.IP, UserAgent: t.UserAgent, SourceURL: attr.PageURL, Consent: true, VerifiedBy: verified, EventTime: occurred, CreatedAt: s.Now()}
 	return s.createConversion(tx, &event, attr)
 }
 func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attribution) error {

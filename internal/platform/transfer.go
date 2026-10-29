@@ -223,9 +223,6 @@ func (s *Server) finishRange(t Ticket, start, end int64) error {
 		}
 		raw, _ := json.Marshal(ranges)
 		ticket.Ranges = string(raw)
-		if e = s.queueRoutedDownloadStart(tx, ticket); e != nil {
-			return e
-		}
 		if len(ranges) != 1 || ranges[0].Start != 0 || ranges[0].End != ticket.Size-1 {
 			return tx.Save(&ticket).Error
 		}
@@ -276,7 +273,7 @@ func (s *Server) finishRange(t Ticket, start, end int64) error {
 		if e = tx.Create(&record).Error; e != nil {
 			return e
 		}
-		return s.queueDownloadConversion(tx, ticket)
+		return nil
 	})
 }
 func (s *Server) releaseTicket(pre Ticket) error {

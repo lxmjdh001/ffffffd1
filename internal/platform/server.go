@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gorm.io/gorm"
@@ -25,18 +26,22 @@ import (
 )
 
 type Server struct {
-	LandingScripts  *LandingScriptRelease
-	Media           *R2MediaStore
-	PageImages      *R2PageImageStore
-	Blobs           BlobStore
-	DB              *gorm.DB
-	Config          Config
-	HTTP            *http.Client
-	DNS             *net.Resolver
-	Now             func() time.Time
-	uploadSlots     chan struct{}
-	trafficRiskWake chan struct{}
-	trafficRiskHTTP *http.Client
+	LandingScripts      *LandingScriptRelease
+	Media               *R2MediaStore
+	PageImages          *R2PageImageStore
+	Blobs               BlobStore
+	DB                  *gorm.DB
+	Config              Config
+	HTTP                *http.Client
+	DNS                 *net.Resolver
+	Now                 func() time.Time
+	uploadSlots         chan struct{}
+	trafficRiskWake     chan struct{}
+	trafficRiskHTTP     *http.Client
+	downloadAdStarts    chan downloadAdStart
+	downloadAdWake      chan struct{}
+	completionWake      chan struct{}
+	downloadAdOverflows atomic.Uint64
 	// Push delivery uses a separate restricted client; tests may replace its
 	// transport without changing payment, DNS, or advertisement HTTP traffic.
 	pwaPushHTTP *http.Client
@@ -45,7 +50,7 @@ type Server struct {
 }
 
 func NewServer(db *gorm.DB, c Config) *Server {
-	return &Server{Blobs: LocalStore{Root: filepath.Join(c.DataDir, "files")}, DB: db, Config: c, HTTP: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, DNS: net.DefaultResolver, Now: func() time.Time { return time.Now().UTC() }, uploadSlots: make(chan struct{}, 4), trafficRiskWake: make(chan struct{}, 1)}
+	return &Server{Blobs: LocalStore{Root: filepath.Join(c.DataDir, "files")}, DB: db, Config: c, HTTP: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, DNS: net.DefaultResolver, Now: func() time.Time { return time.Now().UTC() }, uploadSlots: make(chan struct{}, 4), trafficRiskWake: make(chan struct{}, 1), downloadAdStarts: make(chan downloadAdStart, 2048), downloadAdWake: make(chan struct{}, 1), completionWake: make(chan struct{}, 1)}
 }
 
 type apiError struct {

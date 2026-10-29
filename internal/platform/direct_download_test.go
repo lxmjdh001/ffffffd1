@@ -205,6 +205,7 @@ func TestDirectDownloadOptionalInfoPreservesDeepLinkAndConsent(t *testing.T) {
 	requireCode(t, w, http.StatusTemporaryRedirect)
 	w = directRequest(t, s, "GET", w.Header().Get("Location"), cookies)
 	requireCode(t, w, 200)
+	drainDownloadAds(s)
 	if countRows(t, s, &Conversion{}) != 1 || countRows(t, s, &Delivery{}) != 1 {
 		t.Fatal("authorized direct download should still enqueue its advertising conversion")
 	}

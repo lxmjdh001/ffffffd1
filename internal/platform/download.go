@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log/slog"
 	"mime"
 	"net/http"
 	"regexp"
@@ -414,9 +413,7 @@ func (s *Server) serveDownloadFile(w http.ResponseWriter, r *http.Request, a App
 		}
 		return s.reserveDownload(t)
 	}, onStart: func() {
-		if err := s.recordRoutedDownloadStart(t); err != nil {
-			slog.Warn("routed download start queued for recovery", "ticket", t.Hash, "error", err)
-		}
+		s.noticeDownloadAdStart(t)
 	}}
 	http.ServeContent(bw, r, a.FileName, a.UpdatedAt, f)
 	if r.Method == "HEAD" || bw.denied || (bw.status != 200 && bw.status != 206) {
