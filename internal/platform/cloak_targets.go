@@ -56,7 +56,7 @@ func (s *Server) cloakTargetChoices(w http.ResponseWriter, r *http.Request) {
 
 // Resolve by owned entity on every visit. Deleted, paused or moderated targets
 // fall back to the cloak's safe page instead of a stale saved destination.
-func (s *Server) renderCloakApp(w http.ResponseWriter, r *http.Request, c Cloak, owner User) bool {
+func (s *Server) renderCloakApp(w http.ResponseWriter, r *http.Request, c Cloak, owner User, root Attribution) bool {
 	if c.TargetType == "pwa" {
 		var app PWAApp
 		if err := s.DB.Select("id", "slug").First(&app, "id = ? AND user_id = ? AND enabled = ?", c.TargetID, owner.ID, true).Error; err != nil {
@@ -70,6 +70,7 @@ func (s *Server) renderCloakApp(w http.ResponseWriter, r *http.Request, c Cloak,
 	if err := s.DB.Select("id", "slug").First(&app, "id = ? AND user_id = ? AND enabled = ? AND blocked = ?", c.TargetID, owner.ID, true, false).Error; err != nil {
 		return false
 	}
+	r = s.cloakAppAttributionRequest(r, root, app)
 	r.SetPathValue("slug", app.Slug)
 	if c.AppTargetMode == "info" {
 		s.downloadPage(w, r)

@@ -45,6 +45,17 @@ func (s *Server) routedAPKTarget(r *http.Request, source Application, raw string
 	if err != nil {
 		return Application{}, nil, err
 	}
+	trusted, err := s.trustedRoutedHost(r, source.UserID, u)
+	if err != nil {
+		return Application{}, nil, err
+	}
+	if !trusted {
+		return Application{}, nil, nil
+	}
+	return target, u, nil
+}
+
+func (s *Server) trustedRoutedHost(r *http.Request, owner string, u *url.URL) (bool, error) {
 	host := strings.ToLower(u.Hostname())
 	trusted := strings.EqualFold(u.Host, r.Host)
 	if public, e := url.Parse(s.Config.PublicURL); e == nil && strings.EqualFold(public.Host, u.Host) {
@@ -53,28 +64,26 @@ func (s *Server) routedAPKTarget(r *http.Request, source Application, raw string
 	if !trusted && (u.Port() == "" || u.Scheme == "https" && u.Port() == "443" || u.Scheme == "http" && u.Port() == "80") {
 		settings, e := getSettings(s.DB)
 		if e != nil {
-			return Application{}, nil, e
+			return false, e
 		}
 		_, trusted = settings.managedDownloadHosts(true)[host]
 		if !trusted {
 			var count int64
-			if e = s.DB.Model(&Domain{}).Where("hostname = ? AND user_id = ? AND verified_at > ?", host, source.UserID, s.Now().Add(-48*time.Hour)).Count(&count).Error; e != nil {
-				return Application{}, nil, e
+			if e = s.DB.Model(&Domain{}).Where("hostname = ? AND user_id = ? AND verified_at > ?", host, owner, s.Now().Add(-48*time.Hour)).Count(&count).Error; e != nil {
+				return false, e
 			}
 			trusted = count > 0
 		}
 	}
-	if !trusted {
-		return Application{}, nil, nil
-	}
-	return target, u, nil
+	return trusted, nil
 }
 
 func (s *Server) routedAttributionURL(r *http.Request, source Application, attr Attribution, raw string) (string, error) {
 	if attr.ID == "" {
 		return raw, nil
 	}
-	if attr.SourceAttributionID != "" {
+	inherited := attr.SourceAttributionID != ""
+	if inherited {
 		var root Attribution
 		err := s.DB.First(&root, "id = ? AND source_attribution_id = ? AND expires_at > ?", attr.SourceAttributionID, "", s.Now()).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -85,19 +94,6 @@ func (s *Server) routedAttributionURL(r *http.Request, source Application, attr 
 		}
 		attr = root
 	}
-	if !attr.Consent {
-		return raw, nil
-	}
-	var config AdConfig
-	if err := s.DB.First(&config, "app_id = ? AND user_id = ?", attr.AppID, source.UserID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return raw, nil
-		}
-		return "", err
-	}
-	if !(config.FacebookEnabled && attr.FBC != "" || config.TikTokEnabled && attr.TTClid != "") {
-		return raw, nil
-	}
 	var origin Application
 	if err := s.DB.First(&origin, "id = ? AND user_id = ?", attr.AppID, source.UserID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -105,21 +101,72 @@ func (s *Server) routedAttributionURL(r *http.Request, source Application, attr 
 		}
 		return "", err
 	}
-	target, u, err := s.routedAPKTarget(r, source, raw)
+	// Click parameters are also functional inputs to the cloak's platform
+	// rules. They may follow an owned entry without permission to send an ad
+	// conversion; the private source capability still requires consent below.
+	if _, u, err := s.routedCloakTarget(r, source.UserID, raw); err != nil {
+		return "", err
+	} else if u != nil {
+		q := u.Query()
+		for key, value := range routedClickParams(attr) {
+			if value != "" {
+				q.Set(key, value)
+			}
+		}
+		u.RawQuery = q.Encode()
+		raw = u.String()
+	}
+	if !attr.Consent {
+		return raw, nil
+	}
+	if !inherited {
+		var config AdConfig
+		if err := s.DB.First(&config, "app_id = ? AND user_id = ?", attr.AppID, source.UserID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return raw, nil
+			}
+			return "", err
+		}
+		if !(config.FacebookEnabled && attr.FBC != "" || config.TikTokEnabled && attr.TTClid != "") {
+			return raw, nil
+		}
+	}
+	return s.routedAttributionDestination(r, source.UserID, attr, raw)
+}
+
+// The caller has already authenticated the root campaign and its owner. In a
+// verified cloak chain its identity must survive later configuration changes;
+// the outbox independently checks which source channels are still enabled.
+func (s *Server) routedAttributionDestination(r *http.Request, owner string, attr Attribution, raw string) (string, error) {
+	target, u, err := s.routedAPKTarget(r, Application{UserID: owner}, raw)
 	if err != nil {
 		return "", err
 	}
+	namespace, targetID := "routed-attribution", target.ID
 	if u == nil {
+		var cloak Cloak
+		cloak, u, err = s.routedCloakTarget(r, owner, raw)
+		if err != nil {
+			return "", err
+		}
+		if u == nil {
+			return raw, nil
+		}
+		namespace, targetID = routedCloakNamespace, cloak.ID
+	}
+	token := s.routedCapability(attr, namespace, targetID, u.Host, 15*time.Minute)
+	if token == "" {
 		return raw, nil
 	}
-	expires := min(s.Now().Add(15*time.Minute).Unix(), attr.ExpiresAt.Unix())
-	if expires <= s.Now().Unix() {
-		return raw, nil
-	}
-	stamp := strconv.FormatInt(expires, 10)
-	mac := s.mac("routed-attribution:" + attr.ID + ":" + target.ID + ":" + strings.ToLower(u.Host) + ":" + stamp)
 	q := u.Query()
-	q.Set(routedAttributionParam, attr.ID+"."+stamp+"."+mac)
+	q.Set(routedAttributionParam, token)
+	if namespace == routedCloakNamespace {
+		for key, value := range routedClickParams(attr) {
+			if value != "" {
+				q.Set(key, value)
+			}
+		}
+	}
 	u.RawQuery = q.Encode()
 	return u.String(), nil
 }
