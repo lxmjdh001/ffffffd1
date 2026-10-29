@@ -145,8 +145,10 @@ func TestDownloadAdFailureCannotRollBackAccountingAndReplaysAfterRestart(t *test
 	}
 	var saved Conversion
 	s.DB.First(&saved)
-	if !saved.EventTime.Equal(event.OccurredAt) || saved.AppID != f.apps[0].ID || saved.DownloadedAppID != f.apps[1].ID {
-		t.Fatal("replay changed original time or attribution")
+	// PostgreSQL stores timestamps to microseconds, while the local journal
+	// preserves nanoseconds. The event must retain its original occurrence.
+	if saved.EventTime.Sub(event.OccurredAt).Abs() >= time.Microsecond || saved.AppID != f.apps[0].ID || saved.DownloadedAppID != f.apps[1].ID {
+		t.Fatalf("replay changed original time or attribution: time drift=%s source=%v destination=%v", saved.EventTime.Sub(event.OccurredAt), saved.AppID == f.apps[0].ID, saved.DownloadedAppID == f.apps[1].ID)
 	}
 	for _, dir := range []string{"download-ad-starts", "completions"} {
 		entries, err := os.ReadDir(filepath.Join(s.Config.DataDir, dir))
