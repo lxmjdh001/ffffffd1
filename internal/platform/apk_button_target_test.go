@@ -173,13 +173,17 @@ func TestAPKTrafficButtonRiskFilterAndGlobalLanguage(t *testing.T) {
 	w := apkButtonClick(s, a, "application/json")
 	requireCode(t, w, 200)
 	if !strings.Contains(w.Body.String(), "https://good.example/pwa") {
-		t.Fatal("unsafe, unknown, or stale target entered routing")
+		t.Fatal("confirmed unsafe host entered routing")
 	}
 	if err := s.DB.Model(&TrafficLink{}).Where("pool_slug = ? AND position = ?", p.Slug, 2).Update("status", "unsafe").Error; err != nil {
 		t.Fatal(err)
 	}
-	requireCode(t, apkButtonClick(s, a, "application/json"), 503)
+	w = apkButtonClick(s, a, "application/json")
+	requireCode(t, w, 200)
+	if !strings.Contains(w.Body.String(), "https://unknown.example/") {
+		t.Fatal("unchecked target was blocked by the detector")
+	}
 	if countRows(t, s, &Ticket{}) != 0 {
-		t.Fatal("blocked routing created a source ticket")
+		t.Fatal("external routing created a source ticket")
 	}
 }

@@ -17,8 +17,8 @@ func (s *Server) RunWorker(ctx context.Context) {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 	go s.RunLandingCoverWorker(ctx)
-	s.maintenance(ctx)
 	go s.runTrafficRiskChecks(ctx)
+	s.maintenance(ctx)
 	for {
 		select {
 		case <-ctx.Done():

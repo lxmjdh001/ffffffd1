@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"gorm.io/gorm"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -62,6 +63,12 @@ func (s *Server) getTrafficPool(w http.ResponseWriter, r *http.Request) {
 	if len(domains) > 0 {
 		base = domains[0].URL
 	}
+	eligible, e := s.riskEligible(s.DB, userOf(r))
+	if e != nil {
+		fail(w, e)
+		return
+	}
+	metered := meteredEnabled(s.DB)
 	data := []map[string]any{}
 	for _, p := range pools {
 		links := []TrafficLink{}
@@ -73,12 +80,20 @@ func (s *Server) getTrafficPool(w http.ResponseWriter, r *http.Request) {
 		if base != "" {
 			entryURL = base + "/r/" + p.Slug
 		}
-		data = append(data, map[string]any{"pool": p, "binding_id": p.StatisticsID, "links": links, "entry_url": entryURL})
-	}
-	eligible, e := s.riskEligible(s.DB, userOf(r))
-	if e != nil {
-		fail(w, e)
-		return
+		candidates := links
+		fallback := ""
+		if p.RiskEnabled && (eligible || metered) {
+			candidates, fallback = trafficCandidates(links, s.Now())
+		}
+		ids := []string{}
+		if p.Enabled {
+			for _, link := range candidates {
+				ids = append(ids, link.ID)
+			}
+		} else {
+			fallback = ""
+		}
+		data = append(data, map[string]any{"pool": p, "binding_id": p.StatisticsID, "links": links, "entry_url": entryURL, "eligible_link_ids": ids, "fallback_link_id": fallback})
 	}
 	jsonOut(w, 200, map[string]any{"data": data, "paid": eligible, "risk_eligible": eligible, "configured": os.Getenv("GOOGLE_WEB_RISK_API_KEY") != ""})
 }
@@ -256,10 +271,13 @@ func (s *Server) saveTrafficPool(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
+	if in.Enabled && in.RiskEnabled {
+		s.wakeTrafficRiskChecks()
+	}
 	s.getTrafficPool(w, r)
 }
 
-func eligibleTrafficLinks(links []TrafficLink, now time.Time) []TrafficLink {
+func eligibleTrafficLinks(links []TrafficLink, _ time.Time) []TrafficLink {
 	out := []TrafficLink{}
 	blocked := map[string]bool{}
 	for _, l := range links {
@@ -272,7 +290,9 @@ func eligibleTrafficLinks(links []TrafficLink, now time.Time) []TrafficLink {
 	}
 	for _, l := range links {
 		u, err := url.Parse(l.URL)
-		if err == nil && !blocked[strings.ToLower(u.Hostname())] && l.Status == "clean" && l.CheckedAt != nil && l.CheckedAt.After(now.Add(-120*time.Minute)) {
+		// Only a confirmed unsafe verdict changes routing. Unchecked, failed,
+		// and stale checks are not blocking conditions for an otherwise valid URL.
+		if err == nil && u.Hostname() != "" && u.User == nil && (u.Scheme == "https" || u.Scheme == "http") && !blocked[strings.ToLower(u.Hostname())] {
 			out = append(out, l)
 		}
 	}
@@ -348,13 +368,13 @@ func (s *Server) selectTrafficTarget(r *http.Request, slug, bindingID, ownerID s
 		if e != nil {
 			return e
 		}
-		// Running out of credit pauses fresh lookups, never restores a URL that
-		// has already been flagged as unsafe.
+		// Lookups are asynchronous. Only confirmed risk excludes a host. Keep
+		// one explicit fallback if every host is flagged, without clearing risk.
 		if p.RiskEnabled && (eligible || meteredEnabled(tx)) {
-			candidates = eligibleTrafficLinks(links, s.Now())
+			candidates, _ = trafficCandidates(links, s.Now())
 		}
 		if len(candidates) == 0 {
-			return problem(503, "暂无通过风险检测的可用下载链接，请联系应用发布者")
+			return problem(503, "分流暂无下载链接，请联系应用发布者")
 		}
 		index := 0
 		if p.Mode == "sequential" {
@@ -424,71 +444,25 @@ func (s *Server) runTrafficRiskChecks(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+		case <-s.trafficRiskWake:
 		}
 	}
 }
 func (s *Server) checkTrafficRisk(ctx context.Context) {
 	key := os.Getenv("GOOGLE_WEB_RISK_API_KEY")
-	if key == "" || s.rate("traffic-risk-lease", 1, 120*time.Minute) != nil {
+	if key == "" {
 		return
 	}
 	var pools []TrafficPool
 	if s.DB.WithContext(ctx).Where("enabled = ? AND risk_enabled = ?", true, true).Find(&pools).Error != nil {
 		return
 	}
-	client := &http.Client{Timeout: 10 * time.Second}
 	for _, p := range pools {
-		var owner User
-		if s.DB.First(&owner, "id = ?", p.UserID).Error != nil || owner.Disabled {
-			continue
+		if ctx.Err() != nil {
+			return
 		}
-		eligible, e := s.riskEligible(s.DB, owner)
-		if e != nil || !eligible {
-			continue
+		if err := s.checkTrafficRiskPool(ctx, p, key); err != nil {
+			slog.Warn("traffic risk check deferred", "pool", p.Slug, "error", err)
 		}
-		var links []TrafficLink
-		if s.DB.Where("user_id = ? AND pool_slug = ?", p.UserID, p.Slug).Find(&links).Error != nil {
-			continue
-		}
-		results := map[string]string{}
-		messages := map[string]string{}
-		for i := range links {
-			l := &links[i]
-			u, err := url.Parse(l.URL)
-			if err != nil {
-				continue
-			}
-			host := strings.ToLower(u.Hostname())
-			status := "clean"
-			message := ""
-			// Only inspect the customer-configured traffic target. Do not probe the
-			// host root: the customer's main site is outside this feature's scope.
-			unsafe, err := s.lookupTrackedWebRisk(ctx, client, "https://webrisk.googleapis.com/v1/uris:search", key, l.URL)
-			if err != nil {
-				status = "unknown"
-				message = err.Error()
-			} else if unsafe {
-				status = "unsafe"
-			}
-			l.Status = status
-			l.Error = message
-			if results[host] != "unsafe" && (status == "unsafe" || results[host] == "" || status == "unknown") {
-				results[host] = status
-				messages[host] = message
-			}
-		}
-		s.DB.Transaction(func(tx *gorm.DB) error {
-			for _, l := range links {
-				u, err := url.Parse(l.URL)
-				if err != nil {
-					continue
-				}
-				host := strings.ToLower(u.Hostname())
-				if err := tx.Model(&TrafficLink{}).Where("id = ? AND user_id = ? AND url = ?", l.ID, p.UserID, l.URL).Updates(map[string]any{"status": results[host], "error": messages[host], "checked_at": s.Now()}).Error; err != nil {
-					return err
-				}
-			}
-			return nil
-		})
 	}
 }

@@ -575,13 +575,13 @@ func TestCloakTrafficSharesCursorRiskAndSafeFallback(t *testing.T) {
 			t.Fatal("random cloaked traffic bypassed risk filter")
 		}
 	}
-	if err := s.DB.Model(&TrafficLink{}).Where("pool_slug = ?", pool.Slug).Update("status", "unknown").Error; err != nil {
+	if err := s.DB.Model(&TrafficLink{}).Where("pool_slug = ?", pool.Slug).Update("status", "unsafe").Error; err != nil {
 		t.Fatal(err)
 	}
 	w := call(t, s, "GET", "/c/"+c.Slug+"?fbclid=not-forwarded", nil, nil, "")
 	requireCode(t, w, 302)
-	if w.Header().Get("Location") != c.SafeURL {
-		t.Fatal("no safe traffic candidates did not use safe page")
+	if w.Header().Get("Location") != "https://targeta.example/download?fbclid=not-forwarded" {
+		t.Fatal("cloaked traffic did not retain the configured first fallback")
 	}
 	if err := s.DB.Model(&pool).Update("enabled", false).Error; err != nil {
 		t.Fatal(err)

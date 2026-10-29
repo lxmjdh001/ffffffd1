@@ -425,7 +425,7 @@ func TestMeteredMigrationPreservesMoneyGrantsOrdersAndAdminPrices(t *testing.T) 
 	}
 }
 
-func TestMeteredRiskDoesNotRestoreUnsafeTargetsWhenCreditRunsOut(t *testing.T) {
+func TestMeteredRiskKeepsOneFallbackWithoutChangingVerdictOrCredit(t *testing.T) {
 	s := meteredServer(t, 0)
 	u := seedUser(t, s, 0)
 	p := TrafficPool{Slug: randomHex(4), UserID: u.ID, Enabled: true, RiskEnabled: true, Mode: "sequential"}
@@ -437,7 +437,12 @@ func TestMeteredRiskDoesNotRestoreUnsafeTargetsWhenCreditRunsOut(t *testing.T) {
 	if e := s.DB.Create(&link).Error; e != nil {
 		t.Fatal(e)
 	}
-	if target, e := s.trafficTarget(usageRequest(s, "/r/"+p.Slug, "203.0.113.81"), p.Slug, u.ID); e == nil || target != "" {
-		t.Fatal("no-credit owner regained unsafe traffic target")
+	if target, e := s.trafficTarget(usageRequest(s, "/r/"+p.Slug, "203.0.113.81"), p.Slug, u.ID); e != nil || target != link.URL {
+		t.Fatal("single configured link was not preserved as fallback")
+	}
+	var after TrafficLink
+	s.DB.First(&after, "id = ?", link.ID)
+	if after.Status != "unsafe" || usageOwner(t, s, u.ID).BalanceMicros != 0 {
+		t.Fatal("fallback altered risk verdict or billed free traffic")
 	}
 }
