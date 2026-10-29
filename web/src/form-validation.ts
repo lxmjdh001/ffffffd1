@@ -41,6 +41,7 @@ export function firstInvalid(root: HTMLElement | null): boolean {
 // when possible; otherwise bring the actionable error beside Save into view.
 export function focusSaveError(root: HTMLElement | null, message: string) {
  const rules: [RegExp,string][] = [
+  [/分流/, '[data-field="traffic_pool_id"]'],
   [/外部浏览器/, '[data-field="external-browser-url"]'],
   [/分享标识/, '[data-field="slug"]'], [/网页|HTTPS 网页|URL 必须|嵌入当前平台/, '[data-field="target_url"]'],
   [/应用名称/, '[data-field="name"]'], [/图标/, '[data-field="icon"]'],

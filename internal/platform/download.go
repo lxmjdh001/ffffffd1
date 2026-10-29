@@ -151,7 +151,7 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 		if strings.TrimSpace(label) == "" {
 			label = "下载应用"
 		}
-		err := s.renderDIYShell(w, r, diyShellData{Kind: "apk", Name: a.Name, Description: a.Description, Base: "/a/" + a.Slug + "/", ResourceID: a.ID, Chinese: strings.HasPrefix(strings.ToLower(r.Header.Get("Accept-Language")), "zh"), ExternalBrowser: external, ReturnFlow: design.ReturnFlowJSON(), ReturnFlowToken: viewToken, Attribution: token, Nonce: randomHex(16), DeepLink: deepLinkWithToken(ads, token), AdsEnabled: ads.FacebookEnabled || ads.TikTokEnabled, Label: label, ClientJS: s.landingScriptURL("apk-client.js", "/a/"+a.Slug+"/client.js")}, design.DIYLanding, a.UserID)
+		err := s.renderDIYShell(w, r, diyShellData{TrafficButton: design.UsesTraffic(), Kind: "apk", Name: a.Name, Description: a.Description, Base: "/a/" + a.Slug + "/", ResourceID: a.ID, Chinese: strings.HasPrefix(strings.ToLower(r.Header.Get("Accept-Language")), "zh"), ExternalBrowser: external, ReturnFlow: design.ReturnFlowJSON(), ReturnFlowToken: viewToken, Attribution: token, Nonce: randomHex(16), DeepLink: deepLinkWithToken(ads, token), AdsEnabled: ads.FacebookEnabled || ads.TikTokEnabled, Label: label, ClientJS: s.landingScriptURL("apk-client.js", "/a/"+a.Slug+"/client.js")}, design.DIYLanding, a.UserID)
 		if err != nil {
 			fail(w, err)
 		}
@@ -271,6 +271,12 @@ form.addEventListener('submit',async function(event){
   const response=await fetch(form.action,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json'},body});
   const data=await response.json();
   if(!response.ok)throw new Error(data.error||copy.download_failed);
+  if(data.redirect_url!==undefined){
+   if(!form.hasAttribute('data-traffic-button')||typeof data.redirect_url!=='string'||!/^https?:\/\/[^\s]+$/.test(data.redirect_url))throw new Error(copy.invalid_url);
+   status.textContent=copy.ready;
+   window.dispatchEvent(new CustomEvent('d1-apk-download-start',{detail:{source:fromReturnFlow?'return_flow':'page'}}));
+   window.location.assign(data.redirect_url);return;
+  }
   if(!/^\/d\/[a-f0-9]{64}$/.test(data.download_url))throw new Error(copy.invalid_url);
   status.textContent=copy.ready;
   window.dispatchEvent(new CustomEvent('d1-apk-download-start',{detail:{source:fromReturnFlow?'return_flow':'page'}}));

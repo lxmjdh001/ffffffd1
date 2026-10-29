@@ -92,12 +92,13 @@ it('switches back to the language whose hidden title is invalid on Save',async()
  expect(state.published).toBeUndefined();
 });
 
-function renderDesigner(overrides: Partial<PageDesign> = {}) {
+function renderDesigner(overrides: Partial<PageDesign> = {}, traffic: {items?:{binding_id:string;pool:{name:string;slug:string;enabled:boolean}}[];fail?:boolean} = {}) {
  const design: PageDesign = { layout: 'google_play', title: '测试应用', developer: '', summary: '', description: '', icon: '', screenshots: [], tags: [], button_text: '下载应用', theme_color: '#01875f', background_color: '#ffffff', show_description: true, show_screenshots: true, show_file_info: true, show_downloads: true, ...overrides };
  const state: { published?: PageDesign; previews: PageDesign[]; uploads: FormData[] } = { previews: [], uploads: [] };
  vi.stubGlobal('fetch', vi.fn(async (input: string, options?: RequestInit) => {
   let body: unknown;
-  if (String(input).endsWith('/page-images')) { state.uploads.push(options?.body as FormData); body = { url: `https://images.okpwa.cc/d1apk/page-images/test/${state.uploads.length}.jpg` }; }
+  if (String(input).endsWith('/traffic-pools')) { if(traffic.fail)return new Response(JSON.stringify({error:'分流加载失败'}),{status:503,headers:{'Content-Type':'application/json'}});body={data:traffic.items||[]}; }
+  else if (String(input).endsWith('/page-images')) { state.uploads.push(options?.body as FormData); body = { url: `https://images.okpwa.cc/d1apk/page-images/test/${state.uploads.length}.jpg` }; }
   else if (String(input).endsWith('/preview')) { state.previews.push(JSON.parse(String(options?.body))); body = { html: '<html><body>预览</body></html>' }; }
   else if (options?.method === 'PUT') { state.published = JSON.parse(String(options.body)); body = { design: state.published }; }
   else body = { app: { id: 'app1', slug: 'abc123', name: '测试应用', downloads: 37 }, design, defaults: design };
@@ -235,4 +236,32 @@ it('saves external browser behavior globally and focuses an invalid destination'
  expect((screen.getByLabelText('外部浏览器目标网址') as HTMLInputElement).value).toBe('https://shop.example/?campaign=1#/checkout');
  await user.click(screen.getByRole('button',{name:'保存并发布'}));await screen.findByRole('heading',{name:'应用列表'});
  expect(state.published?.external_browser).toEqual({enabled:true,url:'https://shop.example/?campaign=1#/checkout'});
+});
+
+
+it('binds an owned routing globally and keeps it across language changes',async()=>{
+ const binding='a'.repeat(32),state=renderDesigner({external_browser:{enabled:true,url:'https://legacy.example'}}, {items:[{binding_id:binding,pool:{name:'主分流',slug:'route123',enabled:true}}]}),user=userEvent.setup();
+ await screen.findByLabelText('按钮目标');expect(screen.queryByLabelText('绑定应用分流')).toBeNull();
+ await user.selectOptions(screen.getByLabelText('按钮目标'),'traffic');
+ await screen.findByRole('option',{name:'主分流 · route123'});
+ await user.selectOptions(screen.getByLabelText('绑定应用分流'),binding);
+ await user.click(screen.getByRole('checkbox',{name:'English',exact:true}));
+ expect((screen.getByLabelText('绑定应用分流') as HTMLSelectElement).value).toBe(binding);
+ await user.click(screen.getByRole('button',{name:'保存并发布'}));await screen.findByRole('heading',{name:'应用列表'});
+ expect(state.published).toMatchObject({button_action:'traffic',traffic_pool_id:binding,external_browser:{enabled:false,url:'https://legacy.example'}});
+ expect(state.published?.localizations?.every(locale=>locale.button_action==='traffic'&&locale.traffic_pool_id===binding)).toBe(true);
+});
+it('requires a routing selection and restores native download when unbound',async()=>{
+ const binding='b'.repeat(32),state=renderDesigner({}, {items:[{binding_id:binding,pool:{name:'备用分流',slug:'backup12',enabled:false}}]}),user=userEvent.setup();
+ await screen.findByLabelText('按钮目标');await user.selectOptions(screen.getByLabelText('按钮目标'),'traffic');await screen.findByRole('option',{name:'备用分流 · backup12 · 已暂停'});
+ await user.click(screen.getByRole('button',{name:'保存并发布'}));expect(state.published).toBeUndefined();expect(document.activeElement).toBe(screen.getByLabelText('绑定应用分流'));
+ await user.selectOptions(screen.getByLabelText('绑定应用分流'),binding);await user.selectOptions(screen.getByLabelText('按钮目标'),'download');expect(screen.queryByLabelText('绑定应用分流')).toBeNull();
+ await user.click(screen.getByRole('button',{name:'保存并发布'}));await screen.findByRole('heading',{name:'应用列表'});expect(state.published?.button_action).toBe('download');expect(state.published?.traffic_pool_id).toBeUndefined();
+});
+it('shows missing bindings and lets a failed routing list retry beside the selector',async()=>{
+ const binding='c'.repeat(32),traffic={fail:true,items:[{binding_id:binding,pool:{name:'恢复分流',slug:'restore1',enabled:true}}]};renderDesigner({button_action:'traffic',traffic_pool_id:binding},traffic);const user=userEvent.setup();
+ await screen.findByText('分流加载失败');expect(screen.getByRole('button',{name:'重新加载分流'})).toBeTruthy();traffic.fail=false;await user.click(screen.getByRole('button',{name:'重新加载分流'}));await screen.findByRole('option',{name:'恢复分流 · restore1'});expect((screen.getByLabelText('绑定应用分流') as HTMLSelectElement).value).toBe(binding);
+});
+it('keeps deleted routing visible for replacement instead of silently reverting to downloads',async()=>{
+ renderDesigner({button_action:'traffic',traffic_pool_id:'d'.repeat(32)});await screen.findByText('暂无应用分流，请先创建。');expect(screen.getAllByText('已绑定的分流不可用，请重新选择').length).toBeGreaterThan(0);expect((screen.getByLabelText('按钮目标') as HTMLSelectElement).value).toBe('traffic');expect(screen.getByRole('link',{name:'前往应用分流'}).getAttribute('href')).toBe('/traffic');
 });
