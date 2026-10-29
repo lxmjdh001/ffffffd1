@@ -26,38 +26,40 @@ type AdConfig struct {
 	UpdatedAt             time.Time `json:"updated_at"`
 }
 type Attribution struct {
-	ID          string `gorm:"primaryKey;size:32"`
-	AppID       string `gorm:"index;size:32"`
-	VisitorHash string
-	FBClid      string
-	FBC         string
-	FBP         string
-	TTClid      string
-	TTP         string
-	IP          string
-	UserAgent   string
-	Source      string
-	PageURL     string
-	Consent     bool
-	CreatedAt   time.Time
-	ExpiresAt   time.Time `gorm:"index"`
+	SourceAttributionID string `gorm:"size:32;index;not null;default:''"`
+	ID                  string `gorm:"primaryKey;size:32"`
+	AppID               string `gorm:"index;size:32"`
+	VisitorHash         string
+	FBClid              string
+	FBC                 string
+	FBP                 string
+	TTClid              string
+	TTP                 string
+	IP                  string
+	UserAgent           string
+	Source              string
+	PageURL             string
+	Consent             bool
+	CreatedAt           time.Time
+	ExpiresAt           time.Time `gorm:"index"`
 }
 type Conversion struct {
-	ID             string     `json:"id" gorm:"primaryKey;size:32"`
-	AppID          string     `json:"app_id" gorm:"index;size:32"`
-	UserID         string     `json:"-" gorm:"index;size:32"`
-	AttributionID  string     `json:"attribution_id" gorm:"uniqueIndex:idx_conversion_once,priority:1;size:32"`
-	Event          string     `json:"event" gorm:"uniqueIndex:idx_conversion_once,priority:2;size:30"`
-	EventID        string     `json:"event_id" gorm:"uniqueIndex;size:64"`
-	ExternalIDHash string     `json:"-"`
-	IP             string     `json:"ip"`
-	UserAgent      string     `json:"user_agent"`
-	SourceURL      string     `json:"source_url"`
-	Consent        bool       `json:"consent"`
-	VerifiedBy     string     `json:"verified_by"`
-	EventTime      time.Time  `json:"event_time"`
-	CreatedAt      time.Time  `json:"created_at"`
-	Deliveries     []Delivery `json:"deliveries" gorm:"foreignKey:ConversionID"`
+	DownloadedAppID string     `json:"downloaded_app_id,omitempty" gorm:"size:32;index"`
+	ID              string     `json:"id" gorm:"primaryKey;size:32"`
+	AppID           string     `json:"app_id" gorm:"index;size:32"`
+	UserID          string     `json:"-" gorm:"index;size:32"`
+	AttributionID   string     `json:"attribution_id" gorm:"uniqueIndex:idx_conversion_once,priority:1;size:32"`
+	Event           string     `json:"event" gorm:"uniqueIndex:idx_conversion_once,priority:2;size:30"`
+	EventID         string     `json:"event_id" gorm:"uniqueIndex;size:64"`
+	ExternalIDHash  string     `json:"-"`
+	IP              string     `json:"ip"`
+	UserAgent       string     `json:"user_agent"`
+	SourceURL       string     `json:"source_url"`
+	Consent         bool       `json:"consent"`
+	VerifiedBy      string     `json:"verified_by"`
+	EventTime       time.Time  `json:"event_time"`
+	CreatedAt       time.Time  `json:"created_at"`
+	Deliveries      []Delivery `json:"deliveries" gorm:"foreignKey:ConversionID"`
 }
 type Delivery struct {
 	ID                string     `json:"id" gorm:"primaryKey;size:32"`

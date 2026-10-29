@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log/slog"
 	"mime"
 	"net/http"
 	"regexp"
@@ -288,13 +289,15 @@ form.addEventListener('submit',async function(event){
 
 type billingWriter struct {
 	http.ResponseWriter
-	bill      func() error
-	wrote     bool
-	denied    bool
-	status    int
-	written   int64
-	confirmed int64
-	writeErr  error
+	bill          func() error
+	wrote         bool
+	denied        bool
+	status        int
+	written       int64
+	confirmed     int64
+	writeErr      error
+	onStart       func()
+	startRecorded bool
 }
 
 func (b *billingWriter) WriteHeader(status int) {
@@ -324,6 +327,12 @@ func (b *billingWriter) Write(p []byte) (int, error) {
 	}
 	n, err := b.ResponseWriter.Write(p)
 	b.written += int64(n)
+	if n > 0 && (b.status == 200 || b.status == 206) && !b.startRecorded {
+		b.startRecorded = true
+		if b.onStart != nil {
+			b.onStart()
+		}
+	}
 	if err == nil {
 		b.confirmed += int64(n)
 	}
@@ -404,6 +413,10 @@ func (s *Server) serveDownloadFile(w http.ResponseWriter, r *http.Request, a App
 			return nil
 		}
 		return s.reserveDownload(t)
+	}, onStart: func() {
+		if err := s.recordRoutedDownloadStart(t); err != nil {
+			slog.Warn("routed download start queued for recovery", "ticket", t.Hash, "error", err)
+		}
 	}}
 	http.ServeContent(bw, r, a.FileName, a.UpdatedAt, f)
 	if r.Method == "HEAD" || bw.denied || (bw.status != 200 && bw.status != 206) {

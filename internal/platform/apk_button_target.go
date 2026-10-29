@@ -79,6 +79,7 @@ func (s *Server) apkPageButton(w http.ResponseWriter, r *http.Request) {
 	}
 	// Validate the same optional attribution capability as a normal page click.
 	// The source APK must not create a download ticket when routing elsewhere.
+	var sourceAttr Attribution
 	if raw := r.PostForm.Get("attribution_token"); raw != "" {
 		attr, e := s.readAttribution(raw, a.ID)
 		if e != nil || attr.VisitorHash != s.mac(s.visitor(w, r)) {
@@ -90,12 +91,19 @@ func (s *Server) apkPageButton(w http.ResponseWriter, r *http.Request) {
 				fail(w, e)
 				return
 			}
+			attr.Consent = true
 		}
+		sourceAttr = attr
 	}
 	target, err := s.selectTrafficTarget(r, "", d.TrafficPoolID, a.UserID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		err = problem(503, "绑定的应用分流不可用，请联系应用发布者")
 	}
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	target, err = s.routedAttributionURL(r, a, sourceAttr, target)
 	if err != nil {
 		fail(w, err)
 		return

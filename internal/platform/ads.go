@@ -223,6 +223,9 @@ func (s *Server) readAttribution(token, appID string) (Attribution, error) {
 	return a, e
 }
 func (s *Server) prepareAttribution(w http.ResponseWriter, r *http.Request, app Application, visitor string) (Attribution, string, error) {
+	if routed, ok, err := s.prepareRoutedAttribution(w, r, app, visitor); ok || err != nil {
+		return routed, s.attributionToken(routed), err
+	}
 	fb := cleanText(r.URL.Query().Get("fbclid"), 512)
 	tt := cleanText(r.URL.Query().Get("ttclid"), 1024)
 	cookieName := "d1_attr_" + app.Slug
@@ -278,7 +281,31 @@ func (s *Server) queueDownloadConversion(tx *gorm.DB, t Ticket) error {
 	if !attr.Consent {
 		return nil
 	}
-	event := Conversion{ID: randomHex(16), AppID: t.AppID, UserID: t.UserID, AttributionID: attr.ID, Event: "download_complete", EventID: hashString(t.AppID + ":" + attr.ID + ":download_complete"), IP: t.IP, UserAgent: t.UserAgent, SourceURL: attr.PageURL, Consent: true, VerifiedBy: "download_server", EventTime: s.Now(), CreatedAt: s.Now()}
+	eventName, verified := "download_complete", "download_server"
+	if attr.SourceAttributionID != "" {
+		var root Attribution
+		if err := tx.First(&root, "id = ? AND source_attribution_id = ?", attr.SourceAttributionID, "").Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+		var source Application
+		if err := tx.Unscoped().First(&source, "id = ? AND user_id = ?", root.AppID, t.UserID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+		if !root.Consent {
+			return nil
+		}
+		attr = root
+		eventName, verified = "download_start", "download_server_start"
+	}
+	// Keep the existing canonical ID so start, completion, retries, and a route
+	// back to the source APK cannot produce two download advertising events.
+	event := Conversion{ID: randomHex(16), AppID: attr.AppID, DownloadedAppID: t.AppID, UserID: t.UserID, AttributionID: attr.ID, Event: eventName, EventID: hashString(attr.AppID + ":" + attr.ID + ":download_complete"), IP: t.IP, UserAgent: t.UserAgent, SourceURL: attr.PageURL, Consent: true, VerifiedBy: verified, EventTime: s.Now(), CreatedAt: s.Now()}
 	return s.createConversion(tx, &event, attr)
 }
 func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attribution) error {
@@ -288,7 +315,13 @@ func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attributi
 	}
 	if res.RowsAffected == 0 {
 		var found Conversion
-		e := tx.Preload("Deliveries").First(&found, "attribution_id = ? AND event = ?", attr.ID, event.Event).Error
+		q := tx.Preload("Deliveries").Where("attribution_id = ?", attr.ID)
+		if event.Event == "download_start" || event.Event == "download_complete" {
+			q = q.Where("event IN ?", []string{"download_start", "download_complete"})
+		} else {
+			q = q.Where("event = ?", event.Event)
+		}
+		e := q.First(&found).Error
 		if e != nil {
 			return problem(409, "event_id 已用于另一归因事件")
 		}
@@ -318,7 +351,7 @@ func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attributi
 			if event.Event == "register" {
 				name = c.RegisterFacebookEvent
 			}
-			if event.Event == "download_complete" {
+			if event.Event == "download_complete" || event.Event == "download_start" {
 				name = c.DownloadFacebookEvent
 			}
 		} else {
@@ -327,7 +360,7 @@ func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attributi
 			if event.Event == "register" {
 				name = c.RegisterTikTokEvent
 			}
-			if event.Event == "download_complete" {
+			if event.Event == "download_complete" || event.Event == "download_start" {
 				name = c.DownloadTikTokEvent
 			}
 		}
