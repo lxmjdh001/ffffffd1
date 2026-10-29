@@ -37,6 +37,8 @@ var ratingStarsHTML string
 var ratingStarsCSS string
 
 type PageDesign struct {
+	ButtonAction         string                 `json:"button_action,omitempty"`
+	TrafficPoolID        string                 `json:"traffic_pool_id,omitempty"`
 	DIYLanding           *DIYLandingReference   `json:"diy_landing,omitempty"`
 	SystemLayout         string                 `json:"system_layout,omitempty"`
 	ExternalBrowser      *ExternalBrowserConfig `json:"external_browser,omitempty"`
@@ -127,6 +129,9 @@ func validPageImage(raw string) bool {
 	return err == nil && u.Scheme == "https" && u.Hostname() != "" && u.User == nil && len(raw) <= 2048
 }
 func validatePageDesign(d PageDesign, publicURL ...string) error {
+	if err := validateAPKButtonTarget(d); err != nil {
+		return err
+	}
 	if err := normalizeExternalBrowser(d.ExternalBrowser); err != nil {
 		return err
 	}
@@ -210,6 +215,9 @@ func (s *Server) savePageDesign(w http.ResponseWriter, r *http.Request) {
 		}
 		var a Application
 		if err := tx.First(&a, "id = ? AND user_id = ?", r.PathValue("id"), userOf(r).ID).Error; err != nil {
+			return err
+		}
+		if err := validateAPKTrafficBinding(tx, a.UserID, d); err != nil {
 			return err
 		}
 		if d.Layout == "diy" {
@@ -303,6 +311,10 @@ func (s *Server) previewPageDesign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validatePageDesign(d, s.Config.PublicURL); err != nil {
+		fail(w, err)
+		return
+	}
+	if err := validateAPKTrafficBinding(s.DB, a.UserID, d); err != nil {
 		fail(w, err)
 		return
 	}

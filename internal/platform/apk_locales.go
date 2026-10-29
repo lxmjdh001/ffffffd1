@@ -46,6 +46,7 @@ func validateAPKLocales(d PageDesign, origin string) error {
 		}
 		seen[code] = true
 		locale.ExternalBrowser = d.ExternalBrowser
+		locale.ButtonAction, locale.TrafficPoolID = d.ButtonAction, d.TrafficPoolID
 		if err := validatePageDesign(locale, origin); err != nil {
 			return err
 		}
@@ -80,11 +81,13 @@ func (d PageDesign) localized(requested string) PageDesign {
 			// Keep the rendered switch consistent with its existing billing gate.
 			v.ReturnFlowConfig = d.ReturnFlowConfig
 			v.ExternalBrowser = d.ExternalBrowser
+			v.ButtonAction, v.TrafficPoolID = d.ButtonAction, d.TrafficPoolID
 			return v
 		}
 	}
 	fallback := d.Localizations[0]
 	fallback.ReturnFlowConfig = d.ReturnFlowConfig
 	fallback.ExternalBrowser = d.ExternalBrowser
+	fallback.ButtonAction, fallback.TrafficPoolID = d.ButtonAction, d.TrafficPoolID
 	return fallback
 }

@@ -274,6 +274,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /a/{slug}/landing-config.js", s.apkLandingConfig)
 	m.HandleFunc("GET /a/{slug}/api/promotion-links/by-domain", s.apkLandingCustomConfig)
 	m.HandleFunc("POST /a/{slug}/download", s.startDownload)
+	m.HandleFunc("POST /a/{slug}/button", s.apkPageButton)
 	m.HandleFunc("GET /d/{token}", s.serveDownload)
 	m.HandleFunc("/", s.frontend)
 	return s.middleware(m)

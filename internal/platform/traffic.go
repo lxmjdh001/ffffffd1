@@ -73,7 +73,7 @@ func (s *Server) getTrafficPool(w http.ResponseWriter, r *http.Request) {
 		if base != "" {
 			entryURL = base + "/r/" + p.Slug
 		}
-		data = append(data, map[string]any{"pool": p, "links": links, "entry_url": entryURL})
+		data = append(data, map[string]any{"pool": p, "binding_id": p.StatisticsID, "links": links, "entry_url": entryURL})
 	}
 	eligible, e := s.riskEligible(s.DB, userOf(r))
 	if e != nil {
@@ -309,6 +309,10 @@ func (s *Server) routeTraffic(w http.ResponseWriter, r *http.Request) {
 
 // Traffic and cloaks share eligibility and cursor updates under the owner lock.
 func (s *Server) trafficTarget(r *http.Request, slug, ownerID string) (string, error) {
+	return s.selectTrafficTarget(r, slug, "", ownerID)
+}
+
+func (s *Server) selectTrafficTarget(r *http.Request, slug, bindingID, ownerID string) (string, error) {
 	target := ""
 	visited := false
 	statisticsID := ""
@@ -324,7 +328,13 @@ func (s *Server) trafficTarget(r *http.Request, slug, ownerID string) (string, e
 			return problem(404, "分流未启用")
 		}
 		var p TrafficPool
-		if err := tx.First(&p, "slug = ? AND user_id = ? AND enabled = ?", slug, owner.ID, true).Error; err != nil {
+		query := tx.Where("user_id = ? AND enabled = ?", owner.ID, true)
+		if bindingID != "" {
+			query = query.Where("statistics_id = ?", bindingID)
+		} else {
+			query = query.Where("slug = ?", slug)
+		}
+		if err := query.First(&p).Error; err != nil {
 			return err
 		}
 		visited = true
