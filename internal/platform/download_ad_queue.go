@@ -160,7 +160,8 @@ func (s *Server) replayDownloadAdStarts(ctx context.Context) {
 		return
 	}
 	defer f.Close()
-	// Bound work per pass; a failed database pass yields until the next wake.
+	// Bound work per pass. The caller also caps its time budget, while one bad
+	// receipt must not prevent other downloads from preparing their callbacks.
 	entries, _ := f.ReadDir(256)
 	for _, entry := range entries {
 		if ctx.Err() != nil {
@@ -183,7 +184,7 @@ func (s *Server) replayDownloadAdStarts(ctx context.Context) {
 			if ctx.Err() == nil {
 				slog.Warn("download advertising receipt deferred", "error", err)
 			}
-			return
+			continue
 		}
 		_ = os.Remove(path)
 	}
@@ -224,7 +225,7 @@ func (s *Server) replayDownloadAdCompletions(ctx context.Context) {
 		err = s.DB.WithContext(readCtx).Select("attribution_id", "charged", "ranges").First(&ticket, "hash = ? AND user_id = ?", receipt.TicketHash, receipt.UserID).Error
 		cancel()
 		if err != nil {
-			return
+			continue
 		}
 		accounted := ticket.Charged
 		if !accounted {
@@ -247,7 +248,7 @@ func (s *Server) replayDownloadAdCompletions(ctx context.Context) {
 				if ctx.Err() == nil {
 					slog.Warn("download advertising recovery deferred", "error", err)
 				}
-				return
+				continue
 			}
 		}
 		_ = os.Remove(path)
@@ -255,6 +256,8 @@ func (s *Server) replayDownloadAdCompletions(ctx context.Context) {
 }
 
 func (s *Server) replayDownloadAds(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
 	s.replayDownloadAdStarts(ctx)
 	if ctx.Err() == nil {
 		s.replayDownloadAdCompletions(ctx)

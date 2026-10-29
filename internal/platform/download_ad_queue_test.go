@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -223,5 +224,45 @@ func TestDownloadAdPreparationDoesNotLockBalance(t *testing.T) {
 	<-done
 	if err != nil {
 		t.Fatal("advertising transaction held the balance lock", err)
+	}
+}
+
+func TestDownloadAdOneFailedReceiptDoesNotStarveOtherDownloads(t *testing.T) {
+	f := routedAdFixtureFor(t, true)
+	s := f.s
+	s.DB.Model(&f.pool).Update("cursor", 1)
+	file, cookies := f.targetTicket(t, f.click(t, true), f.apps[1])
+	requireCode(t, routedAdRequestOnly(s, "GET", file, cookies, nil, "bytes=0-0"), 206)
+	// A retry has the same conversion identity but a separate stream signal.
+	requireCode(t, routedAdRequestOnly(s, "GET", file, cookies, nil, "bytes=0-0"), 206)
+	first := <-s.downloadAdStarts
+	second := <-s.downloadAdStarts
+	// Model a second valid ticket for this attribution without changing files.
+	var ticket Ticket
+	s.DB.First(&ticket, "hash = ?", first.TicketHash)
+	ticket.Hash = hashString(randomHex(32))
+	if err := s.DB.Create(&ticket).Error; err != nil {
+		t.Fatal(err)
+	}
+	second.TicketHash = ticket.Hash
+	for _, event := range []downloadAdStart{first, second} {
+		if _, err := s.writeDownloadAdStart(event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var failed atomic.Bool
+	s.DB.Callback().Create().Before("gorm:create").Register("test:one-failed-receipt", func(tx *gorm.DB) {
+		if tx.Statement.Table == "conversions" && failed.CompareAndSwap(false, true) {
+			tx.AddError(errors.New("one broken advertising receipt"))
+		}
+	})
+	defer s.DB.Callback().Create().Remove("test:one-failed-receipt")
+	s.replayDownloadAdStarts(context.Background())
+	if !failed.Load() || countRows(t, s, &Conversion{}) != 1 || countRows(t, s, &Delivery{}) != 2 {
+		t.Fatal("one failed receipt stopped the rest of the outbox")
+	}
+	s.replayDownloadAdStarts(context.Background())
+	if countRows(t, s, &Conversion{}) != 1 {
+		t.Fatal("retry duplicated the advertising event")
 	}
 }
