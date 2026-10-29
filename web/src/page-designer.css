@@ -1,0 +1,181 @@
+/* Align editor actions independently of global button and label styles. */
+.page-designer .designer-form .btn,
+.page-designer .designer-preview-toolbar .btn {
+  min-height: 44px;
+  padding: 10px 14px;
+  gap: 8px;
+  line-height: 22px;
+  vertical-align: middle;
+}
+
+.page-designer .btn > svg {
+  flex-shrink: 0;
+}
+
+.page-designer .designer-form .form-grid {
+  align-items: start;
+}
+
+.page-designer .designer-color {
+  min-height: 44px;
+}
+
+.page-designer .designer-icon-row {
+  gap: 16px;
+}
+
+.page-designer .designer-icon-row > img,
+.page-designer .designer-icon-placeholder {
+  flex-shrink: 0;
+}
+
+.page-designer .designer-icon-actions,
+.page-designer .designer-upload-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.page-designer .designer-icon-actions {
+  min-width: 0;
+}
+
+.page-designer .designer-icon-actions .text-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px;
+}
+
+.page-designer .designer-screenshots {
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.page-designer .designer-screenshots:empty {
+  display: none;
+}
+
+.page-designer .designer-upload-actions {
+  align-items: stretch;
+  margin-bottom: 20px;
+}
+
+.page-designer .designer-upload-actions > .btn {
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+
+.page-designer .designer-media-section > .field:last-child {
+  margin-bottom: 0;
+}
+
+.page-designer .designer-shot {
+  width: 136px;
+  padding: 6px;
+}
+
+.page-designer .designer-shot > img,
+.page-designer .designer-shot > video {
+  display: block;
+  width: 122px;
+  height: 180px;
+  border-radius: 5px;
+}
+
+.page-designer .designer-shot > div {
+  gap: 6px;
+  padding-top: 6px;
+}
+
+.page-designer .designer-shot button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 5px;
+}
+
+.page-designer .designer-shot button:hover:not(:disabled) {
+  background: #edf6f9;
+}
+
+.page-designer .designer-save .row-actions {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.page-designer .designer-save .row-actions > .text-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-inline-start: auto;
+}
+
+.page-designer .designer-preview-toolbar {
+  gap: 12px;
+}
+
+.page-designer .designer-preview-toolbar > strong {
+  margin-inline-end: auto;
+}
+
+.page-designer .designer-preview-toolbar > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Account for the console sidebar when the two editor columns no longer fit. */
+@media (max-width: 960px) {
+  .page-designer .designer-grid,
+  .page-designer .designer-grid.desktop-preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page-designer .designer-preview {
+    position: static;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 650px) {
+  .page-designer .designer-save .row-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .page-designer .designer-save .row-actions > .btn {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .page-designer .designer-save .row-actions > .text-btn {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  .page-designer .designer-preview-toolbar > div {
+    width: 100%;
+  }
+
+  .page-designer .designer-preview-toolbar .btn {
+    flex: 1;
+  }
+}
+
+@media (max-height: 600px) {
+  .page-designer .designer-save {
+    position: static;
+    box-shadow: none;
+  }
+}
