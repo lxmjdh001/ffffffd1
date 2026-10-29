@@ -135,7 +135,8 @@ func (s *Server) writeDIYContent(w http.ResponseWriter, r *http.Request, body, a
 	w.Header().Set("Content-Security-Policy", diyContentCSP(assetBase))
 	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
-	w.Header().Set("Cache-Control", "no-store")
+	// Prevent CDN analytics injection into isolated customer HTML.
+	w.Header().Set("Cache-Control", "no-store, no-transform")
 	if r.Method != http.MethodHead {
 		io.WriteString(w, body)
 	}

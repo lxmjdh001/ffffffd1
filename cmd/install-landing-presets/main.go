@@ -14,6 +14,7 @@ import (
 
 func main() {
 	account := flag.String("admin-account", "", "existing enabled administrator login; required")
+	upgrade := flag.Bool("upgrade", false, "upgrade only unchanged original preset versions")
 	flag.Parse()
 	if *account == "" || flag.NArg() != 0 {
 		flag.Usage()
@@ -33,7 +34,12 @@ func main() {
 	defer connection.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	result, err := platform.InstallLandingPresets(ctx, db, *account)
+	var result []platform.LandingPresetInstallResult
+	if *upgrade {
+		result, err = platform.UpgradeLandingPresets(ctx, db, *account)
+	} else {
+		result, err = platform.InstallLandingPresets(ctx, db, *account)
+	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Template installation failed:", err)
 		os.Exit(1)

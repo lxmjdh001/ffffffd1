@@ -189,7 +189,7 @@ func TestDIYPreviewUsesOwnedOpaqueContentWithoutBusinessEvents(t *testing.T) {
 			t.Errorf("missing content isolation policy: %s", expected)
 		}
 	}
-	if strings.Contains(policy, "allow-same-origin") || strings.Contains(policy, "allow-top-navigation") || strings.Contains(policy, "script-src 'self'") || w.Header().Get("Cache-Control") != "no-store" {
+	if strings.Contains(policy, "allow-same-origin") || strings.Contains(policy, "allow-top-navigation") || strings.Contains(policy, "script-src 'self'") || w.Header().Get("Cache-Control") != "no-store, no-transform" {
 		t.Fatal("preview granted ambient platform authority or cache persistence")
 	}
 	if !strings.Contains(w.Body.String(), `"preview":true`) || !strings.Contains(w.Body.String(), "window.previewOnly=true") {

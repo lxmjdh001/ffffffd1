@@ -78,7 +78,7 @@ function child(preview: boolean, body = '<button data-d1-action="primary"><span 
   documents.push(dom);
   const win = dom.window, document = win.document, host = { postMessage: vi.fn() }, facade = { addEventListener: win.addEventListener.bind(win), history: win.history } as Record<string, any>;
   const config = { preview, channel: 'preview-channel', mode: 'pwa', label: 'Install', name: 'Example app', selector: '' };
-  runInNewContext(childSource.replace('/*CONFIG*/', JSON.stringify(config)), { window: facade, document, parent: host, Object, String });
+  runInNewContext(childSource.replace('/*CONFIG*/', JSON.stringify(config)), { window: facade, document, parent: host, Object, String, URL });
   const message = (data: Record<string, unknown>, source: unknown = host) => win.dispatchEvent(new win.MessageEvent('message', { source: source as Window, data }));
   return { win, document, host, facade, message };
 }
@@ -121,4 +121,28 @@ it('keeps customized button icons and input labels in sync with the bound PWA in
   expect(input.value).toBe('立即体验'); expect(input.disabled).toBe(true);
   expect(client.document.querySelector('button svg')).toBeTruthy();
   expect(client.host.postMessage.mock.calls.some(call => ['primary', 'complete'].includes(call[0].action))).toBe(false);
+});
+
+
+it('ignores only optional Cloudflare beacon load failures while retaining real template diagnostics', () => {
+  const client = child(true);
+  const failure = (tag: string, src: string) => {
+    const node = client.document.createElement(tag);
+    node.setAttribute('src', src); client.document.body.append(node);
+    node.dispatchEvent(new client.win.Event('error'));
+  };
+  for (const src of ['https://static.cloudflareinsights.com/beacon.min.js', 'https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d8730']) failure('script', src);
+  expect(client.host.postMessage.mock.calls.some(call => call[0].action === 'diagnostic')).toBe(false);
+  for (const [tag, src] of [
+    ['script', 'https://static.cloudflareinsights.com.evil.example/beacon.min.js'],
+    ['script', 'https://static.cloudflareinsights.com/customer-app.js'],
+    ['script', 'https://static.cloudflareinsights.com/beacon.min.js-not-a-beacon'],
+    ['script', 'https://cdn.example/required.js'],
+    ['img', 'https://static.cloudflareinsights.com/beacon.min.js'],
+  ]) failure(tag, src);
+  const diagnostics = () => client.host.postMessage.mock.calls.filter(call => call[0].action === 'diagnostic');
+  expect(diagnostics()).toHaveLength(5);
+  client.win.dispatchEvent(new client.win.ErrorEvent('error', { message: 'Customer script failed' }));
+  expect(diagnostics()).toHaveLength(6);
+  expect(diagnostics().at(-1)?.[0].message).toBe('Customer script failed');
 });
