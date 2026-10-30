@@ -4,6 +4,7 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -103,6 +104,14 @@ func (s *Server) apkPageButton(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
+	// This is a download action, not another landing-page visit. Native APK
+	// targets bypass their own detail/routing button, preventing recursive pools.
+	// Keep a verified customer entry's hostname, then sign the final handoff.
+	target, err = s.apkButtonNativeTarget(r, a, target)
+	if err != nil {
+		fail(w, err)
+		return
+	}
 	target, err = s.routedAttributionURL(r, a, sourceAttr, target)
 	if err != nil {
 		fail(w, err)
@@ -119,6 +128,23 @@ func (s *Server) apkPageButton(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 	_ = apkTrafficHandoff.Execute(w, map[string]string{"URL": target, "Label": d.localized(r.Header.Get("Accept-Language")).DownloadButtonText()})
+}
+
+func (s *Server) apkButtonNativeTarget(r *http.Request, source Application, raw string) (string, error) {
+	app, target, err := s.routedAPKTarget(r, source, raw)
+	if err != nil || app.ID == "" || target == nil {
+		return raw, err
+	}
+	if owner, ok := r.Context().Value(domainOwnerKey).(string); ok && owner == source.UserID {
+		// Domain middleware has authenticated this customer's incoming binding.
+		origin, err := url.Parse(s.pwaRequestOrigin(r))
+		if err != nil {
+			return "", err
+		}
+		target.Scheme, target.Host = origin.Scheme, origin.Host
+	}
+	target.Path, target.RawPath = "/a/"+app.Slug+"/direct", ""
+	return target.String(), nil
 }
 
 var apkTrafficHandoff = template.Must(template.New("apk-traffic-handoff").Parse(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url={{.URL}}"><title>Continue</title></head><body><a href="{{.URL}}">{{.Label}}</a></body></html>`))

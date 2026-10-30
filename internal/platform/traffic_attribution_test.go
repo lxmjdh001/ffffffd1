@@ -357,6 +357,11 @@ func TestRoutedAdsDestinationConfigReloadAndAlternateTargets(t *testing.T) {
 	}
 	s.DB.Model(&f.pool).Update("cursor", 2)
 	raw := f.click(t, true)
+	// The routing button now downloads directly. An explicit detail-page visit
+	// with the same capability must still retain the original campaign.
+	info, _ := url.Parse(raw)
+	info.Path = "/a/" + f.apps[2].Slug + "/info"
+	raw = info.String()
 	w := routedAdRequest(s, "GET", raw, nil, nil, "")
 	requireCode(t, w, 200)
 	// Reload without the query handoff: the signed destination cookie must keep
