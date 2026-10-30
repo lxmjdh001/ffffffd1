@@ -10,8 +10,61 @@ const config={mode:'quick',disabled:false,facebook_enabled:true,tiktok_enabled:f
 function Location(){return <output aria-label="route">{useLocation().pathname}</output>}
 beforeEach(()=>{Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function(this:HTMLDialogElement){this.setAttribute('open','');}});Object.defineProperty(HTMLDialogElement.prototype,'close',{configurable:true,value:function(this:HTMLDialogElement){this.removeAttribute('open');}});});
 afterEach(()=>{cleanup();client?.clear();vi.unstubAllGlobals();});
-function start(rows:any[]=[]){const requests:{path:string;method?:string;body:any}[]=[];vi.stubGlobal('fetch',vi.fn(async(path:string,init?:RequestInit)=>{const body=init?.body?JSON.parse(String(init.body)):undefined;requests.push({path,method:init?.method,body});let value:any={};if(path==='/api/ad-configurations'&&!init?.method)value={data:rows};else if(path==='/api/ad-app-options')value={data:[{...binding,configured:rows.length>0},{...binding,resource_kind:'pwas',resource_id:'pwa1',name:'Test PWA',configured:false}]};else if(path==='/api/apps/apk1/ads')value={config,facebook_token_set:true,tiktok_token_set:false};return new Response(JSON.stringify(value),{headers:{'Content-Type':'application/json'}});}));client=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={client}><MemoryRouter><AdConfigurationsPage/><Location/></MemoryRouter></QueryClientProvider>);return {requests,user:userEvent.setup()};}
+function start(rows:any[]=[], deleteResponse?:()=>Promise<Response>){const requests:{path:string;method?:string;body:any}[]=[];vi.stubGlobal('fetch',vi.fn(async(path:string,init?:RequestInit)=>{const body=init?.body?JSON.parse(String(init.body)):undefined;requests.push({path,method:init?.method,body});let value:any={};if(init?.method==='DELETE'){if(deleteResponse)return deleteResponse();rows=rows.filter(row=>path!==`/api/ad-configurations/${row.resource_kind}/${row.resource_id}`);value={ok:true};}else if(path==='/api/ad-configurations'&&!init?.method)value={data:rows};else if(path==='/api/ad-app-options')value={data:[{...binding,configured:rows.length>0},{...binding,resource_kind:'pwas',resource_id:'pwa1',name:'Test PWA',configured:false}]};else if(path==='/api/apps/apk1/ads')value={config,facebook_token_set:true,tiktok_token_set:false};return new Response(JSON.stringify(value),{headers:{'Content-Type':'application/json'}});}));client=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={client}><MemoryRouter><AdConfigurationsPage/><Location/></MemoryRouter></QueryClientProvider>);return {requests,user:userEvent.setup()};}
 it('starts with saved configurations only and creates a quick PWA binding',async()=>{const{requests,user}=start();await screen.findByText('还没有回传配置');expect(requests.some(r=>r.path==='/api/apps'||r.path==='/api/pwas')).toBe(false);await user.click(screen.getAllByRole('button',{name:'创建'})[0]);const dialog=screen.getByRole('dialog');expect(within(dialog).getByRole('tab',{name:'快速创建'}).getAttribute('aria-selected')).toBe('true');await user.selectOptions(within(dialog).getByLabelText('应用类型'),'pwas');await user.selectOptions(within(dialog).getByLabelText('关联应用'),'pwa1');await user.type(within(dialog).getByLabelText('Pixel ID'),'123456789');await user.type(within(dialog).getByLabelText('Access Token'),'fixture-token');expect(within(dialog).queryByLabelText(/App Link/)).toBeNull();await user.click(within(dialog).getByRole('button',{name:'保存配置'}));await waitFor(()=>expect(requests.find(r=>r.method==='POST')).toBeTruthy());expect(requests.find(r=>r.method==='POST')?.body).toMatchObject({resource_kind:'pwas',resource_id:'pwa1',config:{mode:'quick',download_facebook_event:'Lead'},facebook_token:'fixture-token'});});
 it('shows both platform Pixel IDs and preserves masked tokens when editing',async()=>{const{requests,user}=start([{...binding,tiktok_enabled:true,tiktok_pixel:'TIKTOKPIXEL'}]);await screen.findByText('123456789');expect(screen.getByRole('columnheader',{name:'Pixel ID'})).toBeTruthy();expect(screen.getByText('TIKTOKPIXEL')).toBeTruthy();await user.click(screen.getByRole('button',{name:'编辑'}));const dialog=screen.getByRole('dialog');await within(dialog).findByDisplayValue('123456789');expect((within(dialog).getByLabelText('Access Token') as HTMLInputElement).value).toBe('');await user.click(within(dialog).getByRole('button',{name:'保存配置'}));await waitFor(()=>expect(requests.find(r=>r.method==='PUT')).toBeTruthy());expect(requests.find(r=>r.method==='PUT')?.body.facebook_token).toBe('');});
 it('supports keyboard tabs and continues to the original deep configuration page',async()=>{const{requests,user}=start();await screen.findByText('还没有回传配置');await user.click(screen.getAllByRole('button',{name:'创建'})[0]);const dialog=screen.getByRole('dialog');const quick=within(dialog).getByRole('tab',{name:'快速创建'});quick.focus();await user.keyboard('{ArrowRight}');expect(within(dialog).getByRole('tab',{name:'深度创建'}).getAttribute('aria-selected')).toBe('true');await user.selectOptions(within(dialog).getByLabelText('关联应用'),'apk1');await user.click(within(dialog).getByRole('button',{name:'继续配置'}));expect(screen.getByLabelText('route').textContent).toBe('/apps/apk1/ads');expect(requests.some(r=>r.method==='POST')).toBe(false);});
 it('disables a configuration through its owned resource without clearing channels',async()=>{const{requests,user}=start([binding]);await screen.findByText('123456789');await user.click(screen.getByRole('button',{name:'关闭'}));await waitFor(()=>expect(requests.find(r=>r.path.endsWith('/enabled'))).toBeTruthy());expect(requests.find(r=>r.path.endsWith('/enabled'))?.body).toEqual({enabled:false});});
+
+it('requires confirmation and leaves the configuration untouched when cancelled',async()=>{
+ const {requests,user}=start([binding]);await screen.findByText('123456789');
+ await user.click(screen.getByRole('button',{name:'删除',exact:true}));
+ const dialog=screen.getByRole('dialog',{name:'删除回传配置？'});
+ expect(within(dialog).getByText('确认删除「Test APK」的回传配置？')).toBeTruthy();
+ expect(within(dialog).getByText('删除后将停止该应用的广告回传，关联应用和历史事件日志会保留。')).toBeTruthy();
+ expect(requests.some(r=>r.method==='DELETE')).toBe(false);
+ await user.click(within(dialog).getByRole('button',{name:'取消'}));
+ expect(screen.queryByRole('dialog')).toBeNull();
+ expect(screen.getByText('123456789')).toBeTruthy();
+ expect(requests.some(r=>r.method==='DELETE')).toBe(false);
+});
+
+it.each(['apps','pwas'])('deletes a %s configuration and makes its app selectable again',async kind=>{
+ const row={...binding,resource_kind:kind,resource_id:kind==='apps'?'apk1':'pwa1'};
+ const {requests,user}=start([row]);await screen.findByText('123456789');
+ client.setQueryData(['ad-configuration-edit',kind,row.resource_id],{config});
+ client.setQueryData(['ads',kind,row.resource_id],{api_secret:'cached-fixture-secret'});
+ await user.click(screen.getByRole('button',{name:'删除',exact:true}));
+ await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'删除配置'}));
+ await screen.findByText('回传配置已删除');
+ expect(requests.filter(r=>r.method==='DELETE').map(r=>r.path)).toEqual([`/api/ad-configurations/${kind}/${row.resource_id}`]);
+ expect(requests.some(r=>r.path===`/api/${kind}/${row.resource_id}`&&r.method==='DELETE')).toBe(false);
+ await screen.findByText('还没有回传配置');
+ expect(client.getQueryData(['ad-configuration-edit',kind,row.resource_id])).toBeUndefined();
+ expect(client.getQueryData(['ads',kind,row.resource_id])).toBeUndefined();
+ await user.click(screen.getAllByRole('button',{name:'创建'})[0]);
+ const dialog=screen.getByRole('dialog');
+ await user.selectOptions(within(dialog).getByLabelText('应用类型'),kind);
+ await waitFor(()=>expect((within(dialog).getByRole('option',{name:kind==='apps'?'Test APK':'Test PWA'}) as HTMLOptionElement).disabled).toBe(false));
+});
+
+it('keeps the confirmation open and preserves the row on a failed deletion',async()=>{
+ const {requests,user}=start([binding],async()=>new Response(JSON.stringify({error:'删除失败，请重试'}),{status:500,headers:{'Content-Type':'application/json'}}));
+ await screen.findByText('123456789');await user.click(screen.getByRole('button',{name:'删除',exact:true}));
+ await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'删除配置'}));
+ await within(screen.getByRole('dialog')).findByRole('alert');
+ expect(screen.getByText('123456789')).toBeTruthy();
+ expect(requests.filter(r=>r.method==='DELETE')).toHaveLength(1);
+ expect(screen.queryByText('回传配置已删除')).toBeNull();
+});
+
+it('returns to the preceding page when deleting the final row on a page',async()=>{
+ const rows=Array.from({length:21},(_,i)=>({...binding,resource_id:`apk${i}`,name:`APK ${i}`}));
+ const {user}=start(rows);await screen.findByText('APK 0');
+ await user.click(screen.getByRole('button',{name:'下一页'}));await screen.findByText('APK 20');
+ await user.click(screen.getByRole('button',{name:'删除',exact:true}));
+ await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'删除配置'}));
+ await screen.findByText('回传配置已删除');await screen.findByText('APK 0');
+ expect(screen.queryByText('APK 20')).toBeNull();
+ expect(screen.getByText('1 / 1')).toBeTruthy();
+});
