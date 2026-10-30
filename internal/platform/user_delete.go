@@ -9,7 +9,9 @@ import (
 	"gorm.io/gorm"
 )
 
-const userDeletionMigrationVersion = 30
+// Version 30 was also used by the production attribution release. Use a new
+// version so either upgrade history installs the account tombstone safely.
+const userDeletionMigrationVersion = 32
 
 func migrateUserDeletion(tx *gorm.DB) error {
 	var count int64

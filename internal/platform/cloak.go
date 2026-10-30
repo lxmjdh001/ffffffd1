@@ -3,6 +3,7 @@ package platform
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"net"
 	"net/http"
@@ -505,6 +506,14 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 	target := c.SafeURL
 	if !blocked && (status == "off" || ipAllowed || !cloakBlocked(c, r, s.cloakRequestCountry(r))) {
 		outcome = "allowed"
+		root, attributionErr := s.readCloakRoutedAttribution(w, r, c)
+		if attributionErr != nil {
+			slog.Warn("cloak attribution handoff unavailable", "error", attributionErr)
+		}
+		r = withoutRoutedAttribution(r)
+		if root.ID != "" {
+			s.rememberCloakAttribution(w, r, c, root)
+		}
 		candidate := c.TargetURL
 		if c.TargetType == "traffic_pool" {
 			// Execute the existing pool here; do not redirect to its /r/ entry
@@ -516,7 +525,7 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if c.TargetType == "app" || c.TargetType == "pwa" {
-			if s.renderCloakApp(w, r, c, owner) {
+			if s.renderCloakApp(w, r, c, owner, root) {
 				return
 			}
 			candidate = ""
@@ -526,6 +535,14 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 			if err == nil && !loop {
 				if merged, err := mergeCloakQuery(candidate, r.URL.RawQuery); err == nil {
 					target = merged
+					if root.ID != "" {
+						decorated, err := s.routedAttributionDestination(r, owner.ID, root, merged)
+						if err == nil {
+							target = decorated
+						} else {
+							slog.Warn("cloak routed attribution unavailable", "error", err)
+						}
+					}
 				}
 			}
 		}

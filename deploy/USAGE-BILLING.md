@@ -1,4 +1,4 @@
-# Usage billing (migrations 20–21)
+# Usage billing (migrations 20–21, 31)
 
 No production deployment is implied by committing this change. Back up D1's
 database before the separately authorized rollout. Apply migrations with the
@@ -16,7 +16,7 @@ in Billing settings; the other three features stay free:
 
 | Event | Rate | Registration credits |
 | --- | ---: | --- |
-| APK visit UV | 0.05 | Yes |
+| APK started-download UV | 0.05 | Yes |
 | PWA confirmed install | 0.05 | Yes |
 | Cloak | Free | Not consumed |
 | Return-page display | Free | Not consumed |
@@ -36,8 +36,18 @@ operator-edited prices or reissue gifts. Test accounts were confirmed disposable
 by the operator; no conversion of old counts into cash is performed.
 
 UV is normalized IP plus user agent per owner/resource, rolling 24 hours,
-independent of download hostname. Viewing details and downloading the same app
-do not charge twice. APK charges on visit, not transfer completion.
+independent of download hostname. Migration 31 moves native APK billing to the
+first positive file write. Details, cloak/routing entry visits, button clicks,
+ticket creation, HEAD, invalid ranges and unavailable files never debit credit.
+An APK detail page that routes to another APK bills only the APK whose file is
+actually transmitted. Retries/ranges/completion share the same 24-hour UV.
+
+Before sending file data, concurrent tickets for one APK/visitor share a single
+credit reservation. The first successful writer settles it, promotional credit
+first; zero-byte failures do not spend money, and unused holds expire. Start-only
+receipts in the existing completion journal recover settlement independently of
+advertising. They never claim a completed download. Migration 31 only adds ticket
+linkage; existing prices, historical charges, balances and valid UVs are retained.
 
 PWA uses a reserved credit, completed only on the browser `appinstalled` event;
 cancel releases it. Prompt acceptance alone is not an installation. Unsupported

@@ -161,8 +161,22 @@ func TestExternalClickConcurrentRetriesAndReturnProof(t *testing.T) {
 	if !s.paidExternalReturn("apk", app.ID, target, r.URL.Query().Get(externalReturnParam)) {
 		t.Fatal("paid return proof missing")
 	}
-	if e := s.chargeAPKAccess(r, app); e != nil {
-		t.Fatal(e)
+	raw, err := s.createDownloadTicket(r, app, randomHex(32), randomHex(16), Attribution{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ticket Ticket
+	if err := s.DB.First(&ticket, "hash = ?", hashString(raw)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if !ticket.BillingPrepaid {
+		t.Fatal("prepaid return lost its billing proof")
+	}
+	if err := s.reserveDownload(ticket); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.confirmAPKDownloadStart(ticket, s.Now()); err != nil {
+		t.Fatal(err)
 	}
 	if countRows(t, s, &MeteredEvent{}) != 1 {
 		t.Fatal("returning to the landing page charged a second time")

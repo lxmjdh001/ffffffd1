@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gorm.io/gorm"
@@ -25,18 +26,22 @@ import (
 )
 
 type Server struct {
-	LandingScripts  *LandingScriptRelease
-	Media           *R2MediaStore
-	PageImages      *R2PageImageStore
-	Blobs           BlobStore
-	DB              *gorm.DB
-	Config          Config
-	HTTP            *http.Client
-	DNS             *net.Resolver
-	Now             func() time.Time
-	uploadSlots     chan struct{}
-	trafficRiskWake chan struct{}
-	trafficRiskHTTP *http.Client
+	LandingScripts      *LandingScriptRelease
+	Media               *R2MediaStore
+	PageImages          *R2PageImageStore
+	Blobs               BlobStore
+	DB                  *gorm.DB
+	Config              Config
+	HTTP                *http.Client
+	DNS                 *net.Resolver
+	Now                 func() time.Time
+	uploadSlots         chan struct{}
+	trafficRiskWake     chan struct{}
+	trafficRiskHTTP     *http.Client
+	downloadAdStarts    chan downloadAdStart
+	downloadAdWake      chan struct{}
+	completionWake      chan struct{}
+	downloadAdOverflows atomic.Uint64
 	// Push delivery uses a separate restricted client; tests may replace its
 	// transport without changing payment, DNS, or advertisement HTTP traffic.
 	pwaPushHTTP *http.Client
@@ -45,7 +50,7 @@ type Server struct {
 }
 
 func NewServer(db *gorm.DB, c Config) *Server {
-	return &Server{Blobs: LocalStore{Root: filepath.Join(c.DataDir, "files")}, DB: db, Config: c, HTTP: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, DNS: net.DefaultResolver, Now: func() time.Time { return time.Now().UTC() }, uploadSlots: make(chan struct{}, 4), trafficRiskWake: make(chan struct{}, 1)}
+	return &Server{Blobs: LocalStore{Root: filepath.Join(c.DataDir, "files")}, DB: db, Config: c, HTTP: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, DNS: net.DefaultResolver, Now: func() time.Time { return time.Now().UTC() }, uploadSlots: make(chan struct{}, 4), trafficRiskWake: make(chan struct{}, 1), downloadAdStarts: make(chan downloadAdStart, 2048), downloadAdWake: make(chan struct{}, 1), completionWake: make(chan struct{}, 1)}
 }
 
 type apiError struct {
@@ -107,12 +112,29 @@ const domainOwnerKey contextKey = "domain-owner"
 const downloadAudienceKey contextKey = "download-audience"
 
 func userOf(r *http.Request) User { return r.Context().Value(userKey).(User) }
+
+// Use only Cloudflare's published networks, independently of operator-defined
+// country-header proxies. Rechecked against https://www.cloudflare.com/ips-v4
+// and /ips-v6 on 2026-10-30. Never trust a browser's bare CF/XFF headers.
+var clientCloudflareNetworks, _ = parseCloakCountryNetworks(defaultCloakCountryCIDRs)
+
 func (s *Server) clientIP(r *http.Request) string {
 	host, _, e := net.SplitHostPort(r.RemoteAddr)
 	if e != nil {
 		host = r.RemoteAddr
 	}
 	ip := net.ParseIP(host)
+	cloudflareVisitor := func(peer net.IP) string {
+		if ipInCloakNetworks(peer, clientCloudflareNetworks) {
+			if visitor := net.ParseIP(strings.TrimSpace(r.Header.Get("CF-Connecting-IP"))); visitor != nil {
+				return visitor.String()
+			}
+		}
+		return ""
+	}
+	if visitor := cloudflareVisitor(ip); visitor != "" {
+		return visitor
+	}
 	trusted := func(ip net.IP) bool {
 		for _, n := range s.Config.TrustedProxies {
 			if n.Contains(ip) {
@@ -129,6 +151,9 @@ func (s *Server) clientIP(r *http.Request) string {
 				return host
 			}
 			host = p.String()
+			if visitor := cloudflareVisitor(p); visitor != "" {
+				return visitor
+			}
 			if !trusted(p) {
 				break
 			}

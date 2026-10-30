@@ -2622,7 +2622,11 @@
     "清除原国家拦截规则": "Clear previous country block rules",
     "地区识别暂未配置，访问将按“未知地区”判断。": "Region detection is not configured. Visits are treated as Unknown region.",
     "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "Blocked visits, visits failing country or ad-platform allow rules, and unavailable destinations use the custom safe page. Leave empty for the default English 404 page.",
-    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Invalid allowed countries. Use two-letter region codes, XX or T1."
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Invalid allowed countries. Use two-letter region codes, XX or T1.",
+    "下载回传": "Download conversion",
+    "查看实际下载应用": "View downloaded app",
+    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Routed downloads report using the advertised source app’s settings when file transfer starts. Ordinary downloads still report after completion. Each attribution is reported once.",
+    "下载": "Download"
   },
   "pt": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Você pode solicitar reembolso da parte não utilizada, pelo valor nominal e pelo método de pagamento original. Contate o suporte ou a equipe comercial; verificaremos o saldo de uso restante antes de processar.",
@@ -5247,7 +5251,11 @@
     "清除原国家拦截规则": "Limpar regras anteriores de bloqueio por país",
     "地区识别暂未配置，访问将按“未知地区”判断。": "A detecção de região não está configurada. Os acessos são tratados como Região desconhecida.",
     "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "Acessos bloqueados, que não atendam às regras de países ou plataformas de anúncios permitidos, ou com destino indisponível usam a página segura personalizada. Deixe vazio para a página 404 padrão em inglês.",
-    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Países permitidos inválidos. Use códigos de região de duas letras, XX ou T1."
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Países permitidos inválidos. Use códigos de região de duas letras, XX ou T1.",
+    "下载回传": "Conversão de download",
+    "查看实际下载应用": "Ver aplicativo baixado",
+    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Os downloads roteados usam as configurações do aplicativo de origem anunciado quando a transferência começa. Os downloads comuns continuam sendo informados após a conclusão. Cada atribuição é informada uma única vez.",
+    "下载": "Download"
   },
   "de": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Für den ungenutzten Anteil können Sie eine Erstattung zum Nennwert über den ursprünglichen Zahlungsweg beantragen. Kontaktieren Sie Support oder Vertrieb; wir prüfen die verbleibende Nutzung vor der Bearbeitung.",
@@ -7872,7 +7880,11 @@
     "清除原国家拦截规则": "Bisherige Ländersperren löschen",
     "地区识别暂未配置，访问将按“未知地区”判断。": "Die Regionserkennung ist nicht konfiguriert. Zugriffe gelten als Unbekannte Region.",
     "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "Gesperrte Zugriffe, Zugriffe ohne Länder- oder Werbeplattform-Freigabe sowie nicht verfügbare Ziele führen zur eigenen Sicherheitsseite. Ohne Angabe erscheint die englische Standard-404-Seite.",
-    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Ungültige erlaubte Länder. Verwenden Sie zweistellige Regionscodes, XX oder T1."
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Ungültige erlaubte Länder. Verwenden Sie zweistellige Regionscodes, XX oder T1.",
+    "下载回传": "Download-Conversion",
+    "查看实际下载应用": "Heruntergeladene App ansehen",
+    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Bei verteilten Downloads wird beim Beginn der Dateiübertragung die Konfiguration der beworbenen Quell-App verwendet. Normale Downloads werden weiterhin nach Abschluss gemeldet. Jede Zuordnung wird nur einmal gemeldet.",
+    "下载": "Download"
   },
   "fr": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Vous pouvez demander le remboursement de la partie non utilisée, à sa valeur nominale et via le moyen de paiement d’origine. Contactez l’assistance ou le service commercial ; nous vérifierons l’utilisation restante avant traitement.",
@@ -10497,7 +10509,11 @@
     "清除原国家拦截规则": "Effacer les anciennes règles de blocage par pays",
     "地区识别暂未配置，访问将按“未知地区”判断。": "La détection de région n’est pas configurée. Les visites sont traitées comme Région inconnue.",
     "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "Les visites bloquées, non autorisées par les règles de pays ou de plateforme publicitaire, ou sans destination disponible utilisent la page de sécurité personnalisée. Laissez vide pour la page 404 anglaise par défaut.",
-    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Pays autorisés invalides. Utilisez des codes de région à deux lettres, XX ou T1."
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Pays autorisés invalides. Utilisez des codes de région à deux lettres, XX ou T1.",
+    "下载回传": "Conversion de téléchargement",
+    "查看实际下载应用": "Voir l’application téléchargée",
+    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Les téléchargements répartis utilisent la configuration de l’application source annoncée dès le début du transfert. Les téléchargements ordinaires sont toujours signalés après leur achèvement. Chaque attribution est signalée une seule fois.",
+    "下载": "Téléchargement"
   },
   "ko": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "미사용 부분은 액면 금액 기준으로 원래 결제 수단을 통해 환불을 신청할 수 있습니다. 고객 지원 또는 영업팀에 문의하세요. 남은 사용량을 확인한 후 처리합니다.",
@@ -13122,7 +13138,11 @@
     "清除原国家拦截规则": "기존 국가 차단 규칙 지우기",
     "地区识别暂未配置，访问将按“未知地区”判断。": "지역 감지가 설정되지 않았습니다. 방문은 알 수 없는 지역으로 처리됩니다.",
     "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "차단되거나 국가 또는 광고 플랫폼 허용 조건을 충족하지 못하거나 대상을 사용할 수 없으면 사용자 지정 안전 페이지로 이동합니다. 비워 두면 기본 영어 404 페이지가 표시됩니다.",
-    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "허용 국가 설정이 잘못되었습니다. 두 자리 지역 코드, XX 또는 T1을 사용하세요."
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "허용 국가 설정이 잘못되었습니다. 두 자리 지역 코드, XX 또는 T1을 사용하세요.",
+    "下载回传": "다운로드 전환",
+    "查看实际下载应用": "다운로드한 앱 보기",
+    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "분산 다운로드는 파일 전송이 시작되면 광고한 원본 앱의 설정으로 전환을 전송합니다. 일반 다운로드는 완료 후 전송하며, 동일한 기여에 대해 한 번만 전송합니다.",
+    "下载": "다운로드"
   },
   "ja": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用分は額面金額で元のお支払い方法への返金を申請できます。サポートまたは営業担当にご連絡ください。残りの利用量を確認してから手続きします。",
@@ -15747,7 +15767,11 @@
     "清除原国家拦截规则": "以前の国別ブロックルールを解除",
     "地区识别暂未配置，访问将按“未知地区”判断。": "地域検出が設定されていません。アクセスは「不明な地域」として判定されます。",
     "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "ブロック条件に一致する場合、国・広告プラットフォームの許可条件を満たさない場合、または対象が利用できない場合は、カスタム安全ページへ移動します。空欄の場合は標準の英語404ページを表示します。",
-    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "許可する国の設定が無効です。2文字の地域コード、XX、またはT1を使用してください。"
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "許可する国の設定が無効です。2文字の地域コード、XX、またはT1を使用してください。",
+    "下载回传": "ダウンロードのコンバージョン",
+    "查看实际下载应用": "ダウンロードしたアプリを見る",
+    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "振り分けダウンロードはファイル転送開始時に広告元アプリの設定で通知します。通常のダウンロードは引き続き完了後に通知し、同じアトリビューションは一度だけ通知します。",
+    "下载": "ダウンロード"
   },
   "zh-TW": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用的部分可申請退款，按面額循原付款管道退回。請聯絡客服或商務處理，我們會核對剩餘用量後辦理。",
@@ -18372,7 +18396,11 @@
     "清除原国家拦截规则": "清除原國家攔截規則",
     "地区识别暂未配置，访问将按“未知地区”判断。": "地區識別暫未設定，存取將按「未知地區」判斷。",
     "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "命中攔截條件、未滿足國家或廣告允許條件或目標無法使用時，進入自訂安全頁；留空則顯示預設英文 404 頁面。",
-    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "允許國家設定無效，請使用兩位地區代碼、XX 或 T1"
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "允許國家設定無效，請使用兩位地區代碼、XX 或 T1",
+    "下载回传": "下載回傳",
+    "查看实际下载应用": "查看實際下載應用",
+    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "分流下載開始傳輸檔案時，按投放來源應用設定回傳；一般下載仍在完整下載後回傳。同一次歸因不重複回傳。",
+    "下载": "下載"
   },
   "ru": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Можно запросить возврат неиспользованной части по номинальной стоимости исходным способом оплаты. Обратитесь в поддержку или отдел продаж; перед обработкой мы проверим оставшийся объём использования.",
@@ -20997,6 +21025,10 @@
     "清除原国家拦截规则": "Очистить прежние правила блокировки стран",
     "地区识别暂未配置，访问将按“未知地区”判断。": "Определение региона не настроено. Посещения считаются посещениями из неизвестного региона.",
     "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "При блокировке, несоответствии разрешённым странам или рекламным платформам либо недоступности цели используется заданная безопасная страница. Пустое поле означает стандартную страницу 404 на английском.",
-    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Недопустимые разрешённые страны. Используйте двухбуквенные коды регионов, XX или T1."
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Недопустимые разрешённые страны. Используйте двухбуквенные коды регионов, XX или T1.",
+    "下载回传": "Конверсия скачивания",
+    "查看实际下载应用": "Посмотреть скачанное приложение",
+    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "При распределённых загрузках событие отправляется по настройкам рекламируемого исходного приложения в начале передачи файла. Обычные загрузки по-прежнему отправляют событие после завершения. Каждая атрибуция учитывается один раз.",
+    "下载": "Скачивание"
   }
 }

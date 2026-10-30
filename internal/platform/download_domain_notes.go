@@ -127,8 +127,7 @@ func (s *Server) saveDownloadDomainNote(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			return err
 		}
-		scoped := *s
-		scoped.DB = tx
+		scoped := &Server{DB: tx, Config: s.Config, Now: s.Now}
 		ds, err := scoped.downloadDomainsForUsage(u, "traffic")
 		if err != nil {
 			return err

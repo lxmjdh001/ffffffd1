@@ -150,6 +150,12 @@ func Migrate(db *gorm.DB) error {
 			if err := migrateHomeContact(tx); err != nil {
 				return err
 			}
+			if err := migrateTrafficAttribution(tx); err != nil {
+				return err
+			}
+			if err := migrateAPKDownloadBilling(tx); err != nil {
+				return err
+			}
 			return migrateUserDeletion(tx)
 		}
 		if err := tx.AutoMigrate(&Settings{}); err != nil {
@@ -200,6 +206,12 @@ func Migrate(db *gorm.DB) error {
 			return err
 		}
 		if err := migrateHomeContact(tx); err != nil {
+			return err
+		}
+		if err := migrateTrafficAttribution(tx); err != nil {
+			return err
+		}
+		if err := migrateAPKDownloadBilling(tx); err != nil {
 			return err
 		}
 		return migrateUserDeletion(tx)

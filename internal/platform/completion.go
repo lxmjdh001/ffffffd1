@@ -15,10 +15,11 @@ import (
 // before the accounting transaction; replay is safe because ranges and billing
 // are idempotent under the owner lock. Keep this volume across node restarts.
 type completionReceipt struct {
-	TicketHash string `json:"ticket_hash"`
-	UserID     string `json:"user_id"`
-	Start      int64  `json:"start"`
-	End        int64  `json:"end"`
+	TicketHash string    `json:"ticket_hash"`
+	UserID     string    `json:"user_id"`
+	Start      int64     `json:"start"`
+	End        int64     `json:"end"`
+	OccurredAt time.Time `json:"occurred_at,omitempty"`
 }
 
 func (s *Server) writeReceipt(t Ticket, start, end int64) (string, error) {
@@ -32,7 +33,7 @@ func (s *Server) writeReceipt(t Ticket, start, end int64) (string, error) {
 	}
 	defer os.Remove(f.Name())
 	defer f.Close()
-	if e = json.NewEncoder(f).Encode(completionReceipt{t.Hash, t.UserID, start, end}); e != nil {
+	if e = json.NewEncoder(f).Encode(completionReceipt{TicketHash: t.Hash, UserID: t.UserID, Start: start, End: end, OccurredAt: s.Now()}); e != nil {
 		return "", e
 	}
 	if e = f.Sync(); e != nil {
@@ -52,6 +53,22 @@ func (s *Server) writeReceipt(t Ticket, start, end int64) (string, error) {
 	return path, nil
 }
 
+// A start-only receipt never certifies file completion. It is independent of
+// advertising and lets the financial worker recover a failed DB settlement.
+func (s *Server) persistAPKDownloadStart(t Ticket) {
+	path, journalErr := s.writeReceipt(t, -1, -1)
+	if journalErr != nil {
+		slog.Error("download start journal unavailable", "ticket", t.Hash, "error", journalErr)
+	}
+	if err := s.confirmAPKDownloadStart(t, s.Now()); err != nil {
+		slog.Error("download start billing queued for recovery", "ticket", t.Hash, "journaled", path != "", "error", err)
+		return
+	}
+	if path != "" {
+		_ = os.Remove(path)
+	}
+}
+
 func (s *Server) persistCompletion(t Ticket, start, end int64) {
 	path, journalErr := s.writeReceipt(t, start, end)
 	if journalErr != nil {
@@ -59,6 +76,12 @@ func (s *Server) persistCompletion(t Ticket, start, end int64) {
 	}
 	if e := s.finishRange(t, start, end); e != nil {
 		slog.Error("download completion queued for recovery", "ticket", t.Hash, "journaled", path != "", "error", e)
+		return
+	}
+	if t.AttributionID != "" {
+		// Keep the durable range receipt until background ad preparation succeeds.
+		// Advertising errors must never roll back this accounting transaction.
+		s.wakeDownloadAds()
 		return
 	}
 	if path != "" {
@@ -90,8 +113,24 @@ func (s *Server) replayCompletions(ctx context.Context) {
 			slog.Error("invalid completion receipt", "file", entry.Name())
 			continue
 		}
+		if receipt.Start == -1 && receipt.End == -1 {
+			if e = s.confirmAPKDownloadStart(Ticket{Hash: receipt.TicketHash, UserID: receipt.UserID}, receipt.OccurredAt); e != nil {
+				slog.Error("download start billing recovery deferred", "file", entry.Name(), "error", e)
+				continue
+			}
+			_ = os.Remove(path)
+			continue
+		}
 		if e = s.finishRange(Ticket{Hash: receipt.TicketHash, UserID: receipt.UserID}, receipt.Start, receipt.End); e != nil {
 			slog.Error("completion recovery deferred", "file", entry.Name(), "error", e)
+			continue
+		}
+		var ticket Ticket
+		if e = s.DB.WithContext(ctx).Select("attribution_id").First(&ticket, "hash = ? AND user_id = ?", receipt.TicketHash, receipt.UserID).Error; e != nil {
+			continue
+		}
+		if ticket.AttributionID != "" {
+			s.wakeDownloadAds()
 			continue
 		}
 		_ = os.Remove(path)
@@ -107,6 +146,8 @@ func (s *Server) RunCompletionWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			s.replayCompletions(ctx)
+		case <-s.completionWake:
 			s.replayCompletions(ctx)
 		}
 	}

@@ -250,8 +250,8 @@ func TestDIYAPKOriginalTicketRangeAndUVChain(t *testing.T) {
 			if !strings.Contains(child.Body.String(), "Original source") || strings.Contains(child.Body.String(), "attribution_token") {
 				t.Fatal("isolated content did not separate source and capabilities")
 			}
-			if metered && (beforeEvents != 1 || usageOwner(t, s, owner.ID).BalanceMicros != Dollar-50000) {
-				t.Fatal("APK visit UV not charged by original chain")
+			if metered && (beforeEvents != 0 || usageOwner(t, s, owner.ID).BalanceMicros != Dollar) {
+				t.Fatal("APK page view charged before download")
 			}
 			fields := diyAPKForm(t, body)
 			fields.Set("ad_consent", "yes")

@@ -72,12 +72,6 @@ func (s *Server) appDownload(w http.ResponseWriter, r *http.Request, forceDirect
 		s.recordAccess(r, a.UserID, "apps", a.ID, "blocked")
 		return
 	}
-	if a.DownloadMode != "info" || forceDirect {
-		if e = s.chargeAPKAccess(r, a); e != nil {
-			fail(w, e)
-			return
-		}
-	}
 	if a.DownloadMode == "info" && !forceDirect {
 		target := "/a/" + a.Slug + "/info"
 		if r.URL.RawQuery != "" {
@@ -125,12 +119,6 @@ func (s *Server) downloadPage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fail(w, err)
 		return
-	}
-	if design.ExternalBrowser == nil || !design.ExternalBrowser.Enabled {
-		if e = s.chargeAPKAccess(r, a); e != nil {
-			fail(w, e)
-			return
-		}
 	}
 	s.recordAccess(r, a.UserID, "apps", a.ID, "allowed")
 	visitor := s.visitor(w, r)
@@ -237,13 +225,21 @@ func (s *Server) startDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createDownloadTicket(r *http.Request, a Application, visitor, key string, attr Attribution) (string, error) {
-	if err := s.chargeAPKAccess(r, a); err != nil {
-		return "", err
-	}
 	token := s.mac("download:" + a.ID + ":" + a.FileKey + ":" + visitor + ":" + key)
 	device, system, browser := classifyDevice(r.UserAgent())
 	t := Ticket{IP: s.clientIP(r), UserAgent: cleanText(r.UserAgent(), 2048), Source: attr.Source, Device: device, OS: system, Browser: browser, AttributionID: attr.ID, Hash: hashString(token), AppID: a.ID, UserID: a.UserID, FileKey: a.FileKey, VisitorHash: s.mac(visitor), Host: requestHost(r), ExpiresAt: s.Now().Add(24 * time.Hour)}
 	t.Metered = meteredEnabled(s.DB)
+	rawReturn := r.URL.Query().Get(externalReturnParam)
+	if rawReturn == "" {
+		rawReturn = r.FormValue("external_return")
+	}
+	if raw := rawReturn; raw != "" {
+		d, err := s.pageDesign(a)
+		if err != nil {
+			return "", err
+		}
+		t.BillingPrepaid = d.ExternalBrowser != nil && s.paidExternalReturn("apk", a.ID, d.ExternalBrowser.URL, raw)
+	}
 	e := s.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&t).Error
 	return token, e
 }
@@ -288,13 +284,15 @@ form.addEventListener('submit',async function(event){
 
 type billingWriter struct {
 	http.ResponseWriter
-	bill      func() error
-	wrote     bool
-	denied    bool
-	status    int
-	written   int64
-	confirmed int64
-	writeErr  error
+	bill          func() error
+	wrote         bool
+	denied        bool
+	status        int
+	written       int64
+	confirmed     int64
+	writeErr      error
+	onStart       func()
+	startRecorded bool
 }
 
 func (b *billingWriter) WriteHeader(status int) {
@@ -324,6 +322,12 @@ func (b *billingWriter) Write(p []byte) (int, error) {
 	}
 	n, err := b.ResponseWriter.Write(p)
 	b.written += int64(n)
+	if n > 0 && (b.status == 200 || b.status == 206) && !b.startRecorded {
+		b.startRecorded = true
+		if b.onStart != nil {
+			b.onStart()
+		}
+	}
 	if err == nil {
 		b.confirmed += int64(n)
 	}
@@ -404,6 +408,11 @@ func (s *Server) serveDownloadFile(w http.ResponseWriter, r *http.Request, a App
 			return nil
 		}
 		return s.reserveDownload(t)
+	}, onStart: func() {
+		if t.Metered {
+			s.persistAPKDownloadStart(t)
+		}
+		s.noticeDownloadAdStart(t)
 	}}
 	http.ServeContent(bw, r, a.FileName, a.UpdatedAt, f)
 	if r.Method == "HEAD" || bw.denied || (bw.status != 200 && bw.status != 206) {
