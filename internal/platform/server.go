@@ -219,6 +219,7 @@ func (s *Server) Handler() http.Handler {
 	m.Handle("GET /api/apps", s.auth(s.listApps))
 	m.Handle("POST /api/apps", s.auth(s.uploadApp))
 	m.Handle("GET /api/apps/{id}", s.auth(s.getApp))
+	s.registerAdConfigurations(m)
 	m.Handle("GET /api/apps/{id}/ads", s.auth(s.getAds))
 	m.Handle("PUT /api/apps/{id}/ads", s.auth(s.saveAds))
 	m.Handle("POST /api/apps/{id}/ads/rotate-key", s.auth(s.rotateAPISecret))

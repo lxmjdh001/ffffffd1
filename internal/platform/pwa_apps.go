@@ -68,6 +68,7 @@ var pwaSlugPattern = regexp.MustCompile(`^[a-f0-9]{16}$`)
 var pwaColorPattern = regexp.MustCompile(`^#[a-fA-F0-9]{6}$`)
 
 func (s *Server) registerPWARoutes(m *http.ServeMux) {
+	s.registerPWAAds(m)
 	m.Handle("GET /api/pwas", s.auth(s.listPWAs))
 	s.registerPWALandingRoutes(m)
 	m.Handle("POST /api/pwas", s.auth(s.createPWA))

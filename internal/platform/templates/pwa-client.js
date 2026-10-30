@@ -174,6 +174,7 @@
  }
  if(document.body.hasAttribute('data-d1-pwa-reference'))window.downloadInCurrentPage=downloadInCurrentPage;
  async function installApp(options = {}) {
+  if(!(installed&&usesPWAInstall()))window.D1PWAQuickAdClick?.();
   if (window.D1ExternalBrowser?.open()) return {outcome:"external_requested"};
   const settings=pwaSettings();
   if (window.showBrowserGuide && window.showBrowserGuide()) return;
@@ -424,4 +425,50 @@
  const preparing=setup();
  showConsent();
  preparing.finally(()=>{busy=false;refreshConsent();});
+})();
+
+// Advertising has its own consent and outbox. It never blocks installation,
+// notification permission, file delivery, or installation billing.
+(function(){
+ 'use strict';
+ const root=document.getElementById('d1-pwa-ads');if(!root)return;
+ const box=document.getElementById('d1-pwa-ad-consent');if(!box)return;
+ const data=root.dataset,base=data.base;
+ if(data.mode==='quick'){
+  let pending;
+  window.D1PWAQuickAdClick=()=>{
+   if(pending)return pending;
+   pending=fetch(base+'ad-event',{method:'POST',credentials:'same-origin',cache:'no-store',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({event:'install_click',attribution_token:data.token,proof:data.proof})}).catch(()=>{}).finally(()=>{pending=undefined;});return pending;
+  };return;
+ }
+
+ const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+ const seenKey='d1-pwa-ad-installed:'+base;
+ let observed=false,chain=Promise.resolve(),installSent=false,openSent=false;
+ const stored=()=>{try{return localStorage.getItem(seenKey)==='true';}catch(_){return false;}};
+ const remember=()=>{try{localStorage.setItem(seenKey,'true');}catch(_){}};
+ const pwaOnly=()=> (window.__APP_CONFIG__?.app?.settings||window.__APP_CONFIG__?.customApp?.otherSettings)?.packagePriority!=='w2a_only';
+ async function post(event){
+  if(event!=='consent'&&!box.checked)return false;
+  const response=await fetch(base+'ad-event',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,consent:box.checked,attribution_token:data.token,proof:data.proof})});
+  if(!response.ok)throw new Error('Advertising receipt deferred');return true;
+ }
+ function enqueue(event){const work=chain.then(()=>post(event));chain=work.catch(()=>{});return work;}
+ async function report(){
+  if(!box.checked||!pwaOnly())return;
+  try{
+   if(observed&&!installSent){if(await enqueue('pwa_install')){installSent=true;remember();}}
+   if(standalone&&!openSent){if(await enqueue('app_open'))openSent=true;}
+  }catch(_){} // A later online event retries with the same conversion identity.
+ }
+ box.addEventListener('change',()=>{root.dataset.consented=String(box.checked);void enqueue('consent').then(report).catch(()=>{});});
+ window.addEventListener('appinstalled',()=>{if(!pwaOnly())return;observed=true;void report();});
+ window.addEventListener('online',()=>{void report();});
+ if(standalone){observed=!stored();void report();}
+ // H5 receives only the scoped attribution capability, never API/ad secrets.
+ window.addEventListener('message',event=>{
+  const frame=document.querySelector('iframe');
+  if(!box.checked||!data.origin||event.origin!==data.origin||event.source!==frame?.contentWindow||event.data?.type!=='d1-pwa-attribution-request')return;
+  event.source.postMessage({type:'d1-pwa-attribution',attribution_token:data.token,app_id:data.app,endpoint:data.sdk},data.origin);
+ });
 })();

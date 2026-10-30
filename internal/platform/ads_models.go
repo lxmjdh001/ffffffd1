@@ -3,7 +3,9 @@ package platform
 import "time"
 
 type AdConfig struct {
-	AppID                 string    `json:"app_id" gorm:"primaryKey;size:32"`
+	Disabled              bool      `json:"disabled" gorm:"not null;default:false"`
+	Mode                  string    `json:"mode" gorm:"size:8;not null;default:deep"`
+	AppID                 string    `json:"app_id" gorm:"primaryKey;size:40"`
 	UserID                string    `json:"-" gorm:"index;size:32"`
 	FacebookEnabled       bool      `json:"facebook_enabled"`
 	FacebookPixel         string    `json:"facebook_pixel"`
@@ -28,7 +30,7 @@ type AdConfig struct {
 type Attribution struct {
 	SourceAttributionID string `gorm:"size:32;index;not null;default:''"`
 	ID                  string `gorm:"primaryKey;size:32"`
-	AppID               string `gorm:"index;size:32"`
+	AppID               string `gorm:"index;size:40"`
 	VisitorHash         string
 	FBClid              string
 	FBC                 string
@@ -46,7 +48,7 @@ type Attribution struct {
 type Conversion struct {
 	DownloadedAppID string     `json:"downloaded_app_id,omitempty" gorm:"size:32;index"`
 	ID              string     `json:"id" gorm:"primaryKey;size:32"`
-	AppID           string     `json:"app_id" gorm:"index;size:32"`
+	AppID           string     `json:"app_id" gorm:"index;size:40"`
 	UserID          string     `json:"-" gorm:"index;size:32"`
 	AttributionID   string     `json:"attribution_id" gorm:"uniqueIndex:idx_conversion_once,priority:1;size:32"`
 	Event           string     `json:"event" gorm:"uniqueIndex:idx_conversion_once,priority:2;size:30"`

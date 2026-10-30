@@ -60,13 +60,13 @@ func (s *Server) decryptSecret(value string) (string, error) {
 	return string(out), e
 }
 func defaultAds(a Application) AdConfig {
-	return AdConfig{AppID: a.ID, UserID: a.UserID, OpenFacebookEvent: "ViewContent", RegisterFacebookEvent: "CompleteRegistration", DownloadFacebookEvent: "D1DownloadComplete", OpenTikTokEvent: "ViewContent", RegisterTikTokEvent: "CompleteRegistration", DownloadTikTokEvent: "Download"}
+	return AdConfig{Mode: "deep", AppID: a.ID, UserID: a.UserID, OpenFacebookEvent: "ViewContent", RegisterFacebookEvent: "CompleteRegistration", DownloadFacebookEvent: "D1DownloadComplete", OpenTikTokEvent: "ViewContent", RegisterTikTokEvent: "CompleteRegistration", DownloadTikTokEvent: "Download"}
 }
 
 // Called only after ownedApp has verified the application's owner.
 func (s *Server) writeAdConfig(w http.ResponseWriter, c AdConfig) {
 	secret := ""
-	if c.APISecret != "" {
+	if c.APISecret != "" && adMode(c) != "quick" {
 		var err error
 		secret, err = s.decryptSecret(c.APISecret)
 		if err != nil {
@@ -77,16 +77,29 @@ func (s *Server) writeAdConfig(w http.ResponseWriter, c AdConfig) {
 	jsonOut(w, 200, map[string]any{"config": c, "facebook_token_set": c.FacebookToken != "", "tiktok_token_set": c.TikTokToken != "", "api_secret_set": c.APISecret != "", "api_secret": secret})
 }
 func (s *Server) getAds(w http.ResponseWriter, r *http.Request) {
-	a, e := s.ownedApp(r)
+	a, e := s.ownedAdvertisingApp(r)
 	if e != nil {
 		fail(w, e)
 		return
 	}
 	c := defaultAds(a)
+	if isPWAAdvertising(r) {
+		var p PWAApp
+		if s.DB.First(&p, "id = ?", r.PathValue("id")).Error == nil {
+			c.AllowedOrigin = pwaAdOrigin(p)
+			c.DownloadFacebookEvent = "D1PWAInstall"
+		}
+	}
 	e = s.DB.First(&c, "app_id = ?", a.ID).Error
 	if e != nil && !errors.Is(e, gorm.ErrRecordNotFound) {
 		fail(w, e)
 		return
+	}
+	if isPWAAdvertising(r) && c.AllowedOrigin == "" {
+		var p PWAApp
+		if s.DB.First(&p, "id = ?", r.PathValue("id")).Error == nil {
+			c.AllowedOrigin = pwaAdOrigin(p)
+		}
 	}
 	s.writeAdConfig(w, c)
 }
@@ -107,7 +120,7 @@ func validDeepLink(raw string) bool {
 	return regexp.MustCompile(`^[a-z][a-z0-9]{1,25}$`).MatchString(u.Scheme) && u.Host != "" && u.Scheme != "http" && u.Scheme != "javascript" && u.Scheme != "data" && u.Scheme != "file"
 }
 func (s *Server) saveAds(w http.ResponseWriter, r *http.Request) {
-	a, e := s.ownedApp(r)
+	a, e := s.ownedAdvertisingApp(r)
 	if e != nil {
 		fail(w, e)
 		return
@@ -122,6 +135,14 @@ func (s *Server) saveAds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := in.Config
+	if c.Mode != "" && c.Mode != "quick" && c.Mode != "deep" {
+		fail(w, problem(400, "请选择有效的创建方式"))
+		return
+	}
+	if c.Mode == "quick" && !c.FacebookEnabled && !c.TikTokEnabled && r.PathValue("ad_create_only") == "1" {
+		fail(w, problem(400, "请选择至少一个广告平台"))
+		return
+	}
 	c.AppID = a.ID
 	c.UserID = a.UserID
 	for _, name := range []string{c.OpenFacebookEvent, c.RegisterFacebookEvent, c.DownloadFacebookEvent, c.OpenTikTokEvent, c.RegisterTikTokEvent, c.DownloadTikTokEvent} {
@@ -149,6 +170,12 @@ func (s *Server) saveAds(w http.ResponseWriter, r *http.Request) {
 		e := tx.First(&old, "app_id = ?", a.ID).Error
 		if e != nil && !errors.Is(e, gorm.ErrRecordNotFound) {
 			return e
+		}
+		if e == nil && r.PathValue("ad_create_only") == "1" {
+			return problem(409, "该应用已配置回传，请编辑现有配置")
+		}
+		if c.Mode == "" {
+			c.Mode = adMode(old)
 		}
 		c.APISecret = old.APISecret
 		c.FacebookToken = old.FacebookToken
@@ -180,7 +207,7 @@ func (s *Server) saveAds(w http.ResponseWriter, r *http.Request) {
 	s.writeAdConfig(w, c)
 }
 func (s *Server) rotateAPISecret(w http.ResponseWriter, r *http.Request) {
-	a, e := s.ownedApp(r)
+	a, e := s.ownedAdvertisingApp(r)
 	if e != nil {
 		fail(w, e)
 		return
@@ -229,6 +256,11 @@ func (s *Server) prepareAttribution(w http.ResponseWriter, r *http.Request, app 
 	fb := cleanText(r.URL.Query().Get("fbclid"), 512)
 	tt := cleanText(r.URL.Query().Get("ttclid"), 1024)
 	cookieName := "d1_attr_" + app.Slug
+	cookiePath := "/a/" + app.Slug
+	if strings.HasPrefix(app.ID, "pwa:") {
+		cookieName = "d1_pwa_attr_" + app.Slug
+		cookiePath = "/p/" + app.Slug + "/"
+	}
 	if cookie, e := r.Cookie(cookieName); e == nil {
 		if a, e := s.readAttribution(cookie.Value, app.ID); e == nil && a.VisitorHash == s.mac(visitor) && ((fb == "" && tt == "") || (a.FBClid == fb && a.TTClid == tt)) {
 			return a, cookie.Value, nil
@@ -254,7 +286,7 @@ func (s *Server) prepareAttribution(w http.ResponseWriter, r *http.Request, app 
 		return a, "", e
 	}
 	token := s.attributionToken(a)
-	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: token, Path: "/a/" + app.Slug, HttpOnly: true, Secure: s.Config.Production(), SameSite: http.SameSiteLaxMode, MaxAge: 7 * 86400})
+	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: token, Path: cookiePath, HttpOnly: true, Secure: s.Config.Production(), SameSite: http.SameSiteLaxMode, MaxAge: 7 * 86400})
 	return a, token, nil
 }
 func deepLinkWithToken(c AdConfig, token string) template.URL {
@@ -278,9 +310,6 @@ func (s *Server) queueDownloadConversionAt(tx *gorm.DB, t Ticket, occurred time.
 	if e := tx.First(&attr, "id = ?", t.AttributionID).Error; e != nil {
 		return e
 	}
-	if !attr.Consent {
-		return nil
-	}
 	eventName, verified := "download_complete", "download_server"
 	if attr.SourceAttributionID != "" {
 		var root Attribution
@@ -297,15 +326,29 @@ func (s *Server) queueDownloadConversionAt(tx *gorm.DB, t Ticket, occurred time.
 			}
 			return err
 		}
-		if !root.Consent {
-			return nil
-		}
 		attr = root
 		eventName, verified = "download_start", "download_server_start"
 	}
+	var config AdConfig
+	if e := tx.First(&config, "app_id = ? AND user_id = ?", attr.AppID, t.UserID).Error; e != nil {
+		if errors.Is(e, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return e
+	}
+	if config.Disabled {
+		return nil
+	}
+	quick := adMode(config) == "quick"
+	if !attr.Consent && !quick {
+		return nil
+	}
+	if quick {
+		eventName, verified = "download_start", "quick_download_server"
+	}
 	// Keep the existing canonical ID so start, completion, retries, and a route
 	// back to the source APK cannot produce two download advertising events.
-	event := Conversion{ID: randomHex(16), AppID: attr.AppID, DownloadedAppID: t.AppID, UserID: t.UserID, AttributionID: attr.ID, Event: eventName, EventID: hashString(attr.AppID + ":" + attr.ID + ":download_complete"), IP: t.IP, UserAgent: t.UserAgent, SourceURL: attr.PageURL, Consent: true, VerifiedBy: verified, EventTime: occurred, CreatedAt: s.Now()}
+	event := Conversion{ID: randomHex(16), AppID: attr.AppID, DownloadedAppID: t.AppID, UserID: t.UserID, AttributionID: attr.ID, Event: eventName, EventID: hashString(attr.AppID + ":" + attr.ID + ":download_complete"), IP: t.IP, UserAgent: t.UserAgent, SourceURL: attr.PageURL, Consent: attr.Consent, VerifiedBy: verified, EventTime: occurred, CreatedAt: s.Now()}
 	return s.createConversion(tx, &event, attr)
 }
 func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attribution) error {
@@ -328,7 +371,7 @@ func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attributi
 		*event = found
 		return nil
 	}
-	if !event.Consent {
+	if !event.Consent && !quickAdConversion(*event) {
 		return nil
 	}
 	var c AdConfig
@@ -337,6 +380,12 @@ func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attributi
 			return nil
 		}
 		return e
+	}
+	if c.Disabled {
+		return nil
+	}
+	if quickAdConversion(*event) && adMode(c) != "quick" {
+		return nil
 	}
 	platforms := []string{}
 	if c.FacebookEnabled && attr.FBC != "" {
@@ -351,7 +400,7 @@ func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attributi
 			if event.Event == "register" {
 				name = c.RegisterFacebookEvent
 			}
-			if event.Event == "download_complete" || event.Event == "download_start" {
+			if event.Event == "download_complete" || event.Event == "download_start" || event.Event == "pwa_install" || event.Event == "pwa_click" {
 				name = c.DownloadFacebookEvent
 			}
 		} else {
@@ -360,7 +409,7 @@ func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attributi
 			if event.Event == "register" {
 				name = c.RegisterTikTokEvent
 			}
-			if event.Event == "download_complete" || event.Event == "download_start" {
+			if event.Event == "download_complete" || event.Event == "download_start" || event.Event == "pwa_install" || event.Event == "pwa_click" {
 				name = c.DownloadTikTokEvent
 			}
 		}
@@ -392,9 +441,9 @@ func sdkSignature(secret, timestamp string, body []byte) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 func (s *Server) sdkEvent(w http.ResponseWriter, r *http.Request) {
-	appID := r.PathValue("app")
-	var app Application
-	if e := s.DB.First(&app, "id = ? AND blocked = ? AND enabled = ?", appID, false, true).Error; e != nil {
+	app, appError := s.advertisingSDKApp(r)
+	appID := app.ID
+	if appError != nil {
 		http.NotFound(w, r)
 		return
 	}
@@ -406,6 +455,14 @@ func (s *Server) sdkEvent(w http.ResponseWriter, r *http.Request) {
 	var cfg AdConfig
 	if e := s.DB.First(&cfg, "app_id = ?", appID).Error; e != nil {
 		http.NotFound(w, r)
+		return
+	}
+	if cfg.Disabled {
+		fail(w, problem(400, "广告回传已停用"))
+		return
+	}
+	if adMode(cfg) == "quick" {
+		fail(w, problem(400, "快速模式仅回传下载或安装点击事件"))
 		return
 	}
 	origin := r.Header.Get("Origin")
@@ -474,8 +531,22 @@ func (s *Server) sdkEvent(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
+	if isPWAAdvertising(r) {
+		ready, err := s.pwaAdvertisingSDKReady(appID, attr.ID)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		if ready {
+			downloaded = 1
+		}
+	}
 	if downloaded == 0 {
-		fail(w, problem(409, "尚未确认本次点击的完整下载，请稍后重试"))
+		message := "尚未确认本次点击的完整下载，请稍后重试"
+		if isPWAAdvertising(r) {
+			message = "尚未确认本次点击的 PWA 安装"
+		}
+		fail(w, problem(409, message))
 		return
 	}
 	eventTime := s.Now()
@@ -508,11 +579,12 @@ func (s *Server) sdkEvent(w http.ResponseWriter, r *http.Request) {
 	jsonOut(w, 202, map[string]any{"event_id": event.EventID, "id": event.ID, "queued_platforms": len(event.Deliveries), "message": "事件已接收，广告平台回传结果请查看日志"})
 }
 func (s *Server) listConversions(w http.ResponseWriter, r *http.Request) {
-	if _, e := s.ownedApp(r); e != nil {
+	app, e := s.ownedAdvertisingApp(r)
+	if e != nil {
 		fail(w, e)
 		return
 	}
-	listOut[Conversion](w, r, s.DB.Model(&Conversion{}).Preload("Deliveries").Where("app_id = ?", r.PathValue("id")))
+	listOut[Conversion](w, r, s.DB.Model(&Conversion{}).Preload("Deliveries").Where("app_id = ?", app.ID))
 }
 func (s *Server) retryDelivery(w http.ResponseWriter, r *http.Request) {
 	var d Delivery

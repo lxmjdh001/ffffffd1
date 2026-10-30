@@ -93,7 +93,7 @@ func (s *Server) sendDelivery(ctx context.Context, d Delivery) (string, error) {
 	if e := s.DB.First(&event, "id = ?", d.ConversionID).Error; e != nil {
 		return "", e
 	}
-	if !event.Consent {
+	if !event.Consent && !quickAdConversion(event) {
 		return "", errors.New("用户未同意广告效果统计")
 	}
 	if event.EventTime.Before(s.Now().Add(-7 * 24 * time.Hour)) {
@@ -103,9 +103,18 @@ func (s *Server) sendDelivery(ctx context.Context, d Delivery) (string, error) {
 	if e := s.DB.First(&owner, "id = ? AND disabled = ?", event.UserID, false).Error; e != nil {
 		return "", errors.New("发布者账户已停用")
 	}
+	if strings.HasPrefix(event.AppID, "pwa:") && !s.pwaAdvertisingActive(event.AppID, event.UserID) {
+		return "", errors.New("PWA 已停用或删除")
+	}
 	var cfg AdConfig
 	if e := s.DB.First(&cfg, "app_id = ?", event.AppID).Error; e != nil {
 		return "", e
+	}
+	if cfg.Disabled {
+		return "", errors.New("广告回传已停用")
+	}
+	if quickAdConversion(event) && adMode(cfg) != "quick" {
+		return "", errors.New("回传模式已变更")
 	}
 	var attr Attribution
 	if e := s.DB.First(&attr, "id = ?", event.AttributionID).Error; e != nil {

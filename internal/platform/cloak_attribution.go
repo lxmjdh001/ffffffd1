@@ -115,11 +115,17 @@ func (s *Server) readCloakRoutedAttribution(w http.ResponseWriter, r *http.Reque
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	var root Attribution
-	if err := s.DB.WithContext(ctx).First(&root, "id = ? AND source_attribution_id = ? AND consent = ? AND expires_at > ?", parts[0], "", true, s.Now()).Error; err != nil {
+	if err := s.DB.WithContext(ctx).First(&root, "id = ? AND source_attribution_id = ? AND expires_at > ?", parts[0], "", s.Now()).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return Attribution{}, nil
 		}
 		return Attribution{}, err
+	}
+	if !root.Consent {
+		var cfg AdConfig
+		if e := s.DB.WithContext(ctx).First(&cfg, "app_id = ? AND user_id = ?", root.AppID, c.UserID).Error; e != nil || adMode(cfg) != "quick" {
+			return Attribution{}, nil
+		}
 	}
 	var source Application
 	if err := s.DB.WithContext(ctx).Select("id").First(&source, "id = ? AND user_id = ?", root.AppID, c.UserID).Error; err != nil {

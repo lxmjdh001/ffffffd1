@@ -116,8 +116,11 @@ func (s *Server) routedAttributionURL(r *http.Request, source Application, attr 
 		u.RawQuery = q.Encode()
 		raw = u.String()
 	}
+	var sourceConfig AdConfig
 	if !attr.Consent {
-		return raw, nil
+		if e := s.DB.First(&sourceConfig, "app_id = ? AND user_id = ?", attr.AppID, source.UserID).Error; e != nil || adMode(sourceConfig) != "quick" {
+			return raw, nil
+		}
 	}
 	if !inherited {
 		var config AdConfig

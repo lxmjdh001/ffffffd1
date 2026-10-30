@@ -119,7 +119,23 @@ func (s *Server) recordDownloadAd(ctx context.Context, event downloadAdStart) er
 		if at.IsZero() {
 			at = *ticket.StartedAt
 		}
-		if attr.SourceAttributionID == "" {
+		configID := attr.AppID
+		if attr.SourceAttributionID != "" {
+			var root Attribution
+			if e := tx.First(&root, "id = ?", attr.SourceAttributionID).Error; e != nil {
+				return e
+			}
+			configID = root.AppID
+		}
+		var config AdConfig
+		if e := tx.First(&config, "app_id = ? AND user_id = ?", configID, ticket.UserID).Error; e != nil {
+			if errors.Is(e, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return e
+		}
+		quick := adMode(config) == "quick"
+		if attr.SourceAttributionID == "" && !quick {
 			// Preserve ordinary downloads' completed-file trigger.
 			if !ticket.Charged {
 				return nil

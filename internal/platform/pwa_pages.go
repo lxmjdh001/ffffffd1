@@ -67,6 +67,7 @@ func (s *Server) renderPWAPage(w http.ResponseWriter, r *http.Request, launch bo
 		pwaPublicFailure(w, r, err)
 		return
 	}
+	w = s.pwaAdvertisingWriter(w, r, *a, launch)
 	target, _ := url.Parse(a.TargetURL)
 	frameSources := "https:"
 	if !s.Config.Production() && target.Scheme == "http" {
