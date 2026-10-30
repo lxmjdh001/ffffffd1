@@ -2602,7 +2602,8 @@
     "下载回传": "Download conversion",
     "查看实际下载应用": "View downloaded app",
     "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Routed downloads report using the advertised source app’s settings when file transfer starts. Ordinary downloads still report after completion. Each attribution is reported once.",
-    "下载": "Download"
+    "下载": "Download",
+    "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Enable safety risk checks. Links flagged as unsafe will be taken offline and excluded from routing."
   },
   "pt": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Você pode solicitar reembolso da parte não utilizada, pelo valor nominal e pelo método de pagamento original. Contate o suporte ou a equipe comercial; verificaremos o saldo de uso restante antes de processar.",
@@ -5207,7 +5208,8 @@
     "下载回传": "Conversão de download",
     "查看实际下载应用": "Ver aplicativo baixado",
     "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Os downloads roteados usam as configurações do aplicativo de origem anunciado quando a transferência começa. Os downloads comuns continuam sendo informados após a conclusão. Cada atribuição é informada uma única vez.",
-    "下载": "Download"
+    "下载": "Download",
+    "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Ative a verificação de riscos de segurança. Links sinalizados como perigosos serão removidos e excluídos do roteamento."
   },
   "de": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Für den ungenutzten Anteil können Sie eine Erstattung zum Nennwert über den ursprünglichen Zahlungsweg beantragen. Kontaktieren Sie Support oder Vertrieb; wir prüfen die verbleibende Nutzung vor der Bearbeitung.",
@@ -7812,7 +7814,8 @@
     "下载回传": "Download-Conversion",
     "查看实际下载应用": "Heruntergeladene App ansehen",
     "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Bei verteilten Downloads wird beim Beginn der Dateiübertragung die Konfiguration der beworbenen Quell-App verwendet. Normale Downloads werden weiterhin nach Abschluss gemeldet. Jede Zuordnung wird nur einmal gemeldet.",
-    "下载": "Download"
+    "下载": "Download",
+    "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Aktivieren Sie die Sicherheitsprüfung. Als gefährlich erkannte Links werden deaktiviert und vom Routing ausgeschlossen."
   },
   "fr": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Vous pouvez demander le remboursement de la partie non utilisée, à sa valeur nominale et via le moyen de paiement d’origine. Contactez l’assistance ou le service commercial ; nous vérifierons l’utilisation restante avant traitement.",
@@ -10417,7 +10420,8 @@
     "下载回传": "Conversion de téléchargement",
     "查看实际下载应用": "Voir l’application téléchargée",
     "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Les téléchargements répartis utilisent la configuration de l’application source annoncée dès le début du transfert. Les téléchargements ordinaires sont toujours signalés après leur achèvement. Chaque attribution est signalée une seule fois.",
-    "下载": "Téléchargement"
+    "下载": "Téléchargement",
+    "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Activez les contrôles de sécurité. Les liens signalés comme dangereux seront désactivés et exclus du routage."
   },
   "ko": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "미사용 부분은 액면 금액 기준으로 원래 결제 수단을 통해 환불을 신청할 수 있습니다. 고객 지원 또는 영업팀에 문의하세요. 남은 사용량을 확인한 후 처리합니다.",
@@ -13022,7 +13026,8 @@
     "下载回传": "다운로드 전환",
     "查看实际下载应用": "다운로드한 앱 보기",
     "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "분산 다운로드는 파일 전송이 시작되면 광고한 원본 앱의 설정으로 전환을 전송합니다. 일반 다운로드는 완료 후 전송하며, 동일한 기여에 대해 한 번만 전송합니다.",
-    "下载": "다운로드"
+    "下载": "다운로드",
+    "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "보안 위험 검사를 켜면 위험으로 감지된 링크가 비활성화되고 분산 대상에서 제외됩니다."
   },
   "ja": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用分は額面金額で元のお支払い方法への返金を申請できます。サポートまたは営業担当にご連絡ください。残りの利用量を確認してから手続きします。",
@@ -15627,7 +15632,8 @@
     "下载回传": "ダウンロードのコンバージョン",
     "查看实际下载应用": "ダウンロードしたアプリを見る",
     "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "振り分けダウンロードはファイル転送開始時に広告元アプリの設定で通知します。通常のダウンロードは引き続き完了後に通知し、同じアトリビューションは一度だけ通知します。",
-    "下载": "ダウンロード"
+    "下载": "ダウンロード",
+    "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "安全性チェックを有効にすると、危険と判定されたリンクは無効化され、振り分け対象から除外されます。"
   },
   "zh-TW": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用的部分可申請退款，按面額循原付款管道退回。請聯絡客服或商務處理，我們會核對剩餘用量後辦理。",
@@ -18232,7 +18238,8 @@
     "下载回传": "下載回傳",
     "查看实际下载应用": "查看實際下載應用",
     "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "分流下載開始傳輸檔案時，按投放來源應用設定回傳；一般下載仍在完整下載後回傳。同一次歸因不重複回傳。",
-    "下载": "下載"
+    "下载": "下載",
+    "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "開啟安全風險檢測，如命中報毒風險，該連結會被下架，不參與分流。"
   },
   "ru": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Можно запросить возврат неиспользованной части по номинальной стоимости исходным способом оплаты. Обратитесь в поддержку или отдел продаж; перед обработкой мы проверим оставшийся объём использования.",
@@ -20837,6 +20844,7 @@
     "下载回传": "Конверсия скачивания",
     "查看实际下载应用": "Посмотреть скачанное приложение",
     "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "При распределённых загрузках событие отправляется по настройкам рекламируемого исходного приложения в начале передачи файла. Обычные загрузки по-прежнему отправляют событие после завершения. Каждая атрибуция учитывается один раз.",
-    "下载": "Скачивание"
+    "下载": "Скачивание",
+    "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Включите проверку безопасности. Ссылки, отмеченные как опасные, будут отключены и исключены из распределения."
   }
 }
