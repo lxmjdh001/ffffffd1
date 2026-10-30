@@ -1,0 +1,92 @@
+package platform
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestAppListAdStatus(t *testing.T) {
+	s := testServer(t)
+	owner, outsider := seedUser(t, s, 0), seedUser(t, s, 0)
+	cookie, csrf := sessionFor(t, s, owner)
+	expected := map[string]bool{}
+	var facebookApp Application
+	for i, mode := range []string{"unconfigured", "disabled", "facebook", "tiktok", "both", "other-owner-config"} {
+		app := seedApp(t, s, owner, 10)
+		if err := s.DB.Model(&app).Updates(map[string]any{"name": mode, "created_at": s.Now().Add(time.Duration(i) * time.Second), "enabled": false}).Error; err != nil {
+			t.Fatal(err)
+		}
+		expected[app.ID] = mode == "facebook" || mode == "tiktok" || mode == "both"
+		if mode == "unconfigured" {
+			continue
+		}
+		cfg := defaultAds(app)
+		cfg.FacebookEnabled = mode == "facebook" || mode == "both" || mode == "other-owner-config"
+		cfg.TikTokEnabled = mode == "tiktok" || mode == "both"
+		cfg.FacebookPixel = "123456789"
+		cfg.TikTokPixel = "TESTPIXEL1"
+		cfg.FacebookToken, _ = s.encryptSecret("private-facebook-token")
+		cfg.TikTokToken, _ = s.encryptSecret("private-tiktok-token")
+		cfg.APISecret, _ = s.encryptSecret("private-signing-key")
+		if mode == "other-owner-config" {
+			cfg.UserID = outsider.ID
+		}
+		if err := s.DB.Create(&cfg).Error; err != nil {
+			t.Fatal(err)
+		}
+		if mode == "facebook" {
+			facebookApp = app
+		}
+	}
+	otherApp := seedApp(t, s, outsider, 10)
+	seedAds(t, s, otherApp)
+	removed := seedApp(t, s, owner, 10)
+	seedAds(t, s, removed)
+	if err := s.DB.Delete(&removed).Error; err != nil {
+		t.Fatal(err)
+	}
+	read := func(query string, total int64, count int) []appListView {
+		t.Helper()
+		w := call(t, s, "GET", "/api/apps"+query, nil, cookie, "")
+		requireCode(t, w, 200)
+		for _, secret := range []string{"private-facebook-token", "private-tiktok-token", "private-signing-key", "facebook_token", "tiktok_token", "api_secret"} {
+			if strings.Contains(w.Body.String(), secret) {
+				t.Fatalf("list leaked %s", secret)
+			}
+		}
+		var result struct {
+			Data  []appListView `json:"data"`
+			Total int64         `json:"total"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+			t.Fatal(err)
+		}
+		if result.Total != total || len(result.Data) != count {
+			t.Fatalf("wrong pagination: %s", w.Body.String())
+		}
+		for _, app := range result.Data {
+			want, owned := expected[app.ID]
+			if !owned || app.AdsEnabled != want {
+				t.Fatalf("incorrect ad status or owner: %+v", app)
+			}
+		}
+		return result.Data
+	}
+	read("", 6, 6)
+	read("?q=facebook", 1, 1)
+	first, second := read("?page=1&per_page=2", 6, 2), read("?page=2&per_page=2", 6, 2)
+	if first[0].ID == second[0].ID {
+		t.Fatal("pagination repeated rows")
+	}
+	// The list follows persisted platform switches immediately after a save.
+	var cfg AdConfig
+	if err := s.DB.First(&cfg, "app_id = ?", facebookApp.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	cfg.FacebookEnabled = false
+	requireCode(t, call(t, s, "PUT", "/api/apps/"+facebookApp.ID+"/ads", map[string]any{"config": cfg}, cookie, csrf), 200)
+	expected[facebookApp.ID] = false
+	read("?q=facebook", 1, 1)
+}
