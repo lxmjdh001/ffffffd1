@@ -187,3 +187,76 @@ func TestAPKTrafficButtonRiskFilterAndGlobalLanguage(t *testing.T) {
 		t.Fatal("external routing created a source ticket")
 	}
 }
+
+func TestAPKTrafficButtonVisitStatistics(t *testing.T) {
+	s := meteredServer(t, 0)
+	u := seedUser(t, s, 100*Dollar)
+	a := seedApp(t, s, u, 32)
+	p := apkButtonPool(t, s, u, "https://external.example/h5")
+	d := defaultPageDesign(a)
+	d.ButtonAction = "traffic"
+	d.TrafficPoolID = p.StatisticsID
+	cookie, csrf := sessionFor(t, s, u)
+	requireCode(t, call(t, s, "PUT", "/api/apps/"+a.ID+"/page-design", d, cookie, csrf), 200)
+
+	// Rendering and previewing the APK do not visit its bound routing pool.
+	requireCode(t, statsPublic(s, "GET", "/a/"+a.Slug+"/info", "198.51.100.8"), 200)
+	requireCode(t, call(t, s, "POST", "/api/apps/"+a.ID+"/page-design/preview", d, cookie, csrf), 200)
+	if out := statsRead(t, s, u, "traffic", p.Slug, ""); out.Summary.Views != 0 {
+		t.Fatal("page view or preview inflated routing visits")
+	}
+
+	click := func(accept, key string) *httptest.ResponseRecorder {
+		body := url.Values{"request_key": {key}}
+		r := httptest.NewRequest("POST", "http://localhost:8088/a/"+a.Slug+"/button", strings.NewReader(body.Encode()))
+		r.RemoteAddr = "198.51.100.8:1234"
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.Header.Set("Accept", accept)
+		r.Header.Set("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) Chrome/123")
+		w := httptest.NewRecorder()
+		s.Handler().ServeHTTP(w, r)
+		return w
+	}
+	ticketsBefore, ledgerBefore := countRows(t, s, &Ticket{}), countRows(t, s, &Ledger{})
+	// Invalid button submissions must not become visits.
+	requireCode(t, click("application/json", "invalid"), 400)
+	if out := statsRead(t, s, u, "traffic", p.Slug, ""); out.Summary.Views != 0 {
+		t.Fatal("invalid button submission counted")
+	}
+	for i, accept := range []string{"application/json", "text/html"} {
+		requireCode(t, click(accept, randomHex(16)), 200)
+		out := statsRead(t, s, u, "traffic", p.Slug, "")
+		if out.Summary.Views != int64(i+1) || out.Summary.UniqueIPs != 1 || out.Summary.Allowed != int64(i+1) || out.Records.Total != int64(i+1) {
+			t.Fatalf("button click lost or counted twice: %+v", out)
+		}
+		row := out.Records.Data[0]
+		if row.IP != "198.51.100.8" || row.Device != "手机" || row.OS != "Android" || row.Browser != "Chrome" || row.Outcome != "allowed" {
+			t.Fatalf("button visitor details lost: %+v", row)
+		}
+	}
+	// The public GET entry contributes to the same pool, while HEAD is ignored.
+	requireCode(t, statsPublic(s, "GET", "/r/"+p.Slug, "198.51.100.9"), 302)
+	requireCode(t, statsPublic(s, "HEAD", "/r/"+p.Slug, "198.51.100.9"), 302)
+	out := statsRead(t, s, u, "traffic", p.Slug, "")
+	if out.Summary.Views != 3 || out.Summary.UniqueIPs != 2 || out.Records.Total != 3 {
+		t.Fatalf("GET and button statistics did not aggregate: %+v", out)
+	}
+	if out := statsRead(t, s, u, "apps", a.ID, ""); out.Summary.Views != 1 {
+		t.Fatal("routing clicks inflated APK page views")
+	}
+	if countRows(t, s, &Ticket{}) != ticketsBefore || countRows(t, s, &Ledger{}) != ledgerBefore {
+		t.Fatal("routing statistics changed downloads or charges")
+	}
+	// Renaming keeps the immutable statistics identity used by the APK binding.
+	renamed := "button-stats-renamed"
+	requireCode(t, call(t, s, "PUT", "/api/traffic-pools/"+p.Slug, map[string]any{"slug": renamed, "enabled": true, "urls": []string{"https://external.example/h5"}}, cookie, csrf), 200)
+	requireCode(t, click("application/json", randomHex(16)), 200)
+	if out := statsRead(t, s, u, "traffic", renamed, ""); out.Summary.Views != 4 {
+		t.Fatal("renaming lost bound-button visit history")
+	}
+	// Analytics failure must never prevent the button from returning its target.
+	if err := s.DB.Migrator().DropTable(&AccessVisit{}); err != nil {
+		t.Fatal(err)
+	}
+	requireCode(t, click("application/json", randomHex(16)), 200)
+}
