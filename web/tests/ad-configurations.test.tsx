@@ -73,7 +73,8 @@ it('changes only the reported name in quick mode and lists each platform’s own
  const {requests,user}=start();await screen.findByText('还没有回传配置');await user.click(screen.getAllByRole('button',{name:'创建'})[0]);
  const dialog=screen.getByRole('dialog');await user.selectOptions(within(dialog).getByLabelText('关联应用'),'apk1');
  const meta=dialog.querySelectorAll('.ad-channel')[0] as HTMLElement;
- await user.selectOptions(within(meta).getByLabelText('回传事件'),'CompleteRegistration');
+ expect(within(meta).getByRole('option',{name:'注册成功 (CompleteRegistration)'})).toBeTruthy();
+ await user.selectOptions(within(meta).getByLabelText('回传事件'),'Install');
  await user.type(within(meta).getByLabelText('Pixel ID'),'123456789');await user.type(within(meta).getByLabelText('Access Token'),'fixture-token');
  await user.click(within(dialog).getByLabelText('TikTok'));
  const tiktok=dialog.querySelectorAll('.ad-channel')[1] as HTMLElement;
@@ -85,5 +86,5 @@ it('changes only the reported name in quick mode and lists each platform’s own
  await user.type(within(tiktok).getByLabelText('Pixel ID'),'TIKTOKPIXEL');await user.type(within(tiktok).getByLabelText('Access Token'),'fixture-token');
  await user.click(within(dialog).getByRole('button',{name:'保存配置'}));
  await waitFor(()=>expect(requests.find(r=>r.method==='POST')).toBeTruthy());
- expect(requests.find(r=>r.method==='POST')?.body.config).toMatchObject({mode:'quick',download_facebook_event:'CompleteRegistration',download_tiktok_event:'CustomerInstallClick',open_facebook_event:'ViewContent',register_facebook_event:'CompleteRegistration'});
+ expect(requests.find(r=>r.method==='POST')?.body.config).toMatchObject({mode:'quick',download_facebook_event:'Install',download_tiktok_event:'CustomerInstallClick',open_facebook_event:'ViewContent',register_facebook_event:'CompleteRegistration'});
 });
