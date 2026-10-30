@@ -51,7 +51,9 @@ func migrateVisitStatistics(tx *gorm.DB) error {
 	return tx.Create(&Migration{Version: 18, AppliedAt: time.Now().UTC()}).Error
 }
 func (s *Server) recordAccess(r *http.Request, owner, kind, id, outcome string) {
-	if r.Method != http.MethodGet {
+	// Validated APK detail buttons select a routing target with POST. Count that
+	// selection once alongside public GET entries; other resources stay GET-only.
+	if r.Method != http.MethodGet && (r.Method != http.MethodPost || kind != "traffic") {
 		return
 	}
 	ip := ""

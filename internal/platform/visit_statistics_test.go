@@ -276,3 +276,21 @@ func TestVisitStatisticsMigrationPreservesRoutingIdentityAndBalances(t *testing.
 		t.Fatal("migration replay changed identity, balances or business records")
 	}
 }
+
+func TestVisitStatisticsPostOnlyCountsRoutingSelections(t *testing.T) {
+	s := testServer(t)
+	u := seedUser(t, s, Dollar)
+	for _, kind := range []string{"apps", "pwas", "cloaks", "traffic"} {
+		for _, method := range []string{"POST", "HEAD", "PUT", "OPTIONS"} {
+			r := httptest.NewRequest(method, "http://localhost:8088/", nil)
+			s.recordAccess(r, u.ID, kind, "fixture", "allowed")
+		}
+	}
+	var rows []AccessVisit
+	if err := s.DB.Find(&rows).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Kind != "traffic" {
+		t.Fatalf("only a routing POST may count: %+v", rows)
+	}
+}
