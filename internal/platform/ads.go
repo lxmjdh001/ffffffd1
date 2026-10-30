@@ -388,10 +388,11 @@ func (s *Server) createConversion(tx *gorm.DB, event *Conversion, attr Attributi
 		return nil
 	}
 	platforms := []string{}
-	if c.FacebookEnabled && attr.FBC != "" {
+	quick := quickAdConversion(*event) && adMode(c) == "quick"
+	if c.FacebookEnabled && (quick || attr.FBC != "") {
 		platforms = append(platforms, "facebook")
 	}
-	if c.TikTokEnabled && attr.TTClid != "" {
+	if c.TikTokEnabled && (quick || attr.TTClid != "") {
 		platforms = append(platforms, "tiktok")
 	}
 	for _, p := range platforms {

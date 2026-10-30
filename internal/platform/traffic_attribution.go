@@ -130,7 +130,10 @@ func (s *Server) routedAttributionURL(r *http.Request, source Application, attr 
 			}
 			return "", err
 		}
-		if !(config.FacebookEnabled && attr.FBC != "" || config.TikTokEnabled && attr.TTClid != "") {
+		// Quick reporting follows the download action, including direct/organic
+		// visits. Preserve the source even when no ad click identifier exists.
+		quick := adMode(config) == "quick"
+		if !(config.FacebookEnabled && (quick || attr.FBC != "") || config.TikTokEnabled && (quick || attr.TTClid != "")) {
 			return raw, nil
 		}
 	}

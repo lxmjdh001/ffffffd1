@@ -179,7 +179,10 @@ func (s *Server) sendDelivery(ctx context.Context, d Delivery) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	user := map[string]any{"ip": event.IP, "user_agent": event.UserAgent, "ttclid": attr.TTClid}
+	user := map[string]any{"ip": event.IP, "user_agent": event.UserAgent}
+	if attr.TTClid != "" {
+		user["ttclid"] = attr.TTClid
+	}
 	if attr.TTP != "" {
 		user["ttp"] = attr.TTP
 	}

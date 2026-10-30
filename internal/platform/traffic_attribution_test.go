@@ -116,7 +116,11 @@ func routedAdFixtureFor(t *testing.T, crossDomain bool) *routedAdFixture {
 }
 func (f *routedAdFixture) landing(t *testing.T, click string) {
 	t.Helper()
-	w := routedAdRequest(f.s, "GET", "http://localhost:8088/a/"+f.apps[0].Slug+"/info?fbclid="+click+"&ttclid="+click, nil, nil, "")
+	path := "http://localhost:8088/a/" + f.apps[0].Slug + "/info"
+	if click != "" {
+		path += "?" + url.Values{"fbclid": {click}, "ttclid": {click}}.Encode()
+	}
+	w := routedAdRequest(f.s, "GET", path, nil, nil, "")
 	requireCode(t, w, 200)
 	f.cookies = w.Result().Cookies()
 	if e := f.s.DB.First(&f.root, "app_id = ? AND fb_clid = ?", f.apps[0].ID, click).Error; e != nil {
