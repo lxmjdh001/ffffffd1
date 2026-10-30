@@ -3,3 +3,32 @@
 @media(max-width:650px){.ad-configuration-list .table-wrap{overflow:visible}.ad-configuration-list table,.ad-configuration-list tbody{display:block;width:100%;min-width:0}.ad-configuration-list thead{display:none}.ad-configuration-list tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px 14px;padding:20px;border-bottom:1px solid #e0e7ef}.ad-configuration-list td{display:block;min-width:0;padding:0;border:0}.ad-configuration-list td::before{content:attr(data-label);display:block;font-size:12px;color:#7585ad;margin-bottom:8px}.ad-configuration-list td:first-child{grid-column:1/-1;order:1}.ad-configuration-list td:nth-child(2){order:2}.ad-configuration-list td:nth-child(4){order:3}.ad-configuration-list td:nth-child(3){order:4;grid-column:1/-1}.ad-configuration-list td:last-child{order:5;grid-column:1/-1}.ad-configuration-list td:last-child::before{display:none}.ad-configuration-list .row-actions{border-top:1px solid #edf1f6;padding-top:10px}.ad-configuration-list .row-actions>a,.ad-configuration-list .row-actions>button{min-height:44px}}
 
 .ad-event-select{display:grid;gap:8px;min-width:0}.ad-event-select select,.ad-event-select input{width:100%;min-width:0}
+
+/* Give the ad editor its own desktop proportions without changing other dialogs. */
+.modal.wide:has(.ad-create-form){width:min(1080px,calc(100vw - 48px));max-width:1080px;max-height:calc(100dvh - 32px)}
+.modal:has(.ad-create-form) .modal-inner{padding:18px 24px}
+.modal:has(.ad-create-form) .modal-head{min-height:36px;margin-bottom:10px}
+.modal:has(.ad-create-form) .modal-head h2{margin:0}
+.ad-create-tabs{margin-bottom:14px}
+.ad-create-tabs button{padding:10px 16px}
+.ad-create-form .form-grid{gap:12px 16px;margin-bottom:14px}
+.ad-create-form .field{margin-bottom:0}
+.ad-create-form .field>span{margin-bottom:5px}
+.ad-create-form .field input:not([type=checkbox]),.ad-create-form .field select{min-height:38px;padding:8px 11px}
+.ad-quick-channels{gap:16px;margin-top:0}
+.ad-channel{padding:14px}
+.ad-channel-heading{min-height:28px;margin:0 0 10px}
+.ad-channel:has(.ad-channel-heading input:not(:checked)) .ad-channel-heading{margin-bottom:0}
+.ad-channel-fields{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.ad-create-form .modal-footer{margin-top:14px;padding-top:12px;gap:10px}
+.ad-create-form .modal-footer .btn{min-height:40px;padding:9px 18px}
+@media(min-width:900px){
+ .ad-create-form .form-grid{grid-template-columns:220px minmax(0,1fr)}
+ .ad-channel-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .ad-channel-fields>.field:last-child{grid-column:1/-1}
+}
+@media(max-width:650px){
+ .modal.wide:has(.ad-create-form){width:calc(100vw - 24px);max-width:calc(100vw - 24px)}
+ .modal:has(.ad-create-form) .modal-inner{padding:16px}
+ .ad-create-form .field input:not([type=checkbox]),.ad-create-form .field select,.ad-create-form .modal-footer .btn{min-height:44px}
+}
