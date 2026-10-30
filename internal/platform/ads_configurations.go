@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	"gorm.io/gorm"
 )
 
 func adMode(c AdConfig) string {
@@ -21,6 +23,47 @@ func (s *Server) registerAdConfigurations(m *http.ServeMux) {
 	m.Handle("POST /api/ad-configurations", s.auth(s.createAdConfiguration))
 	m.Handle("GET /api/ad-app-options", s.auth(s.adApplicationOptions))
 	m.Handle("POST /api/ad-configurations/{kind}/{id}/enabled", s.auth(s.toggleAdConfiguration))
+	m.Handle("DELETE /api/ad-configurations/{kind}/{id}", s.auth(s.deleteAdConfiguration))
+}
+
+func (s *Server) deleteAdConfiguration(w http.ResponseWriter, r *http.Request) {
+	kind := r.PathValue("kind")
+	if kind != "apps" && kind != "pwas" {
+		http.NotFound(w, r)
+		return
+	}
+	request := r.Clone(r.Context())
+	u := *r.URL
+	request.URL = &u
+	request.URL.Path = "/api/" + kind + "/" + r.PathValue("id") + "/ads"
+	app, err := s.ownedAdvertisingApp(request)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		if _, err := lockUser(tx, app.UserID); err != nil {
+			return err
+		}
+		result := tx.Where("app_id = ? AND user_id = ?", app.ID, app.UserID).Delete(&AdConfig{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		// Retain history, but stop queued retries from using a recreated config.
+		events := tx.Model(&Conversion{}).Select("id").Where("app_id = ? AND user_id = ?", app.ID, app.UserID)
+		if err := tx.Model(&Delivery{}).Where("conversion_id IN (?) AND status IN ?", events, []string{"pending", "processing"}).Updates(map[string]any{"status": "failed", "last_error": "回传配置已删除"}).Error; err != nil {
+			return err
+		}
+		return recordAudit(tx, app.UserID, "ads.delete", app.ID, "删除广告回传配置（保留应用及历史事件）")
+	})
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	jsonOut(w, 200, map[string]bool{"ok": true})
 }
 
 type adConfigurationView struct {

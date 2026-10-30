@@ -2601,7 +2601,6 @@
     "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "Only exclude domains with confirmed risks. If all are flagged, retain one fallback link.",
     "下载回传": "Download conversion",
     "查看实际下载应用": "View downloaded app",
-    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Routed downloads report using the advertised source app’s settings when file transfer starts. Ordinary downloads still report after completion. Each attribution is reported once.",
     "下载": "Download",
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Enable safety risk checks. Links flagged as unsafe will be taken offline and excluded from routing.",
     "回传状态": "Conversion reporting status",
@@ -2656,7 +2655,12 @@
     "尚未确认本次点击的 PWA 安装": "The PWA installation for this visit has not been confirmed",
     "PWA 已停用或删除": "PWA disabled or deleted",
     "回传模式已变更": "Reporting mode has changed",
-    "事件 / 应用": "Event / App"
+    "事件 / 应用": "Event / App",
+    "删除回传配置？": "Delete ad configuration?",
+    "确认删除「{0}」的回传配置？": "Delete the ad configuration for “{0}”?",
+    "删除后将停止该应用的广告回传，关联应用和历史事件日志会保留。": "Deleting stops ad event reporting for this app. The app and historical event logs are retained.",
+    "回传配置已删除": "Ad configuration deleted",
+    "删除配置": "Delete configuration"
   },
   "pt": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Você pode solicitar reembolso da parte não utilizada, pelo valor nominal e pelo método de pagamento original. Contate o suporte ou a equipe comercial; verificaremos o saldo de uso restante antes de processar.",
@@ -5260,7 +5264,6 @@
     "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "Exclua apenas domínios com riscos confirmados. Se todos forem sinalizados, mantenha um link alternativo.",
     "下载回传": "Conversão de download",
     "查看实际下载应用": "Ver aplicativo baixado",
-    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Os downloads roteados usam as configurações do aplicativo de origem anunciado quando a transferência começa. Os downloads comuns continuam sendo informados após a conclusão. Cada atribuição é informada uma única vez.",
     "下载": "Download",
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Ative a verificação de riscos de segurança. Links sinalizados como perigosos serão removidos e excluídos do roteamento.",
     "回传状态": "Status do envio de conversões",
@@ -5315,7 +5318,12 @@
     "尚未确认本次点击的 PWA 安装": "A instalação do PWA desta visita ainda não foi confirmada",
     "PWA 已停用或删除": "PWA desativado ou excluído",
     "回传模式已变更": "O modo de relatório mudou",
-    "事件 / 应用": "Evento / Aplicativo"
+    "事件 / 应用": "Evento / Aplicativo",
+    "删除回传配置？": "Eliminar configuração de anúncios?",
+    "确认删除「{0}」的回传配置？": "Eliminar a configuração de anúncios de «{0}»?",
+    "删除后将停止该应用的广告回传，关联应用和历史事件日志会保留。": "A eliminação interrompe o envio de eventos publicitários desta aplicação. A aplicação e o histórico de eventos são mantidos.",
+    "回传配置已删除": "Configuração de anúncios eliminada",
+    "删除配置": "Eliminar configuração"
   },
   "de": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Für den ungenutzten Anteil können Sie eine Erstattung zum Nennwert über den ursprünglichen Zahlungsweg beantragen. Kontaktieren Sie Support oder Vertrieb; wir prüfen die verbleibende Nutzung vor der Bearbeitung.",
@@ -7919,7 +7927,6 @@
     "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "Nur Domains mit bestätigten Risiken werden ausgeschlossen. Sind alle markiert, bleibt ein Fallback-Link erhalten.",
     "下载回传": "Download-Conversion",
     "查看实际下载应用": "Heruntergeladene App ansehen",
-    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Bei verteilten Downloads wird beim Beginn der Dateiübertragung die Konfiguration der beworbenen Quell-App verwendet. Normale Downloads werden weiterhin nach Abschluss gemeldet. Jede Zuordnung wird nur einmal gemeldet.",
     "下载": "Download",
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Aktivieren Sie die Sicherheitsprüfung. Als gefährlich erkannte Links werden deaktiviert und vom Routing ausgeschlossen.",
     "回传状态": "Conversion-Übermittlungsstatus",
@@ -7974,7 +7981,12 @@
     "尚未确认本次点击的 PWA 安装": "Die PWA-Installation für diesen Besuch wurde noch nicht bestätigt",
     "PWA 已停用或删除": "PWA deaktiviert oder gelöscht",
     "回传模式已变更": "Rückmeldemodus wurde geändert",
-    "事件 / 应用": "Ereignis / App"
+    "事件 / 应用": "Ereignis / App",
+    "删除回传配置？": "Werbekonfiguration löschen?",
+    "确认删除「{0}」的回传配置？": "Die Werbekonfiguration für „{0}“ löschen?",
+    "删除后将停止该应用的广告回传，关联应用和历史事件日志会保留。": "Nach dem Löschen werden für diese App keine Werbeereignisse mehr übertragen. Die App und bisherige Ereignisprotokolle bleiben erhalten.",
+    "回传配置已删除": "Werbekonfiguration gelöscht",
+    "删除配置": "Konfiguration löschen"
   },
   "fr": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Vous pouvez demander le remboursement de la partie non utilisée, à sa valeur nominale et via le moyen de paiement d’origine. Contactez l’assistance ou le service commercial ; nous vérifierons l’utilisation restante avant traitement.",
@@ -10578,7 +10590,6 @@
     "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "Seuls les domaines présentant des risques confirmés sont exclus. S’ils sont tous signalés, un lien de secours est conservé.",
     "下载回传": "Conversion de téléchargement",
     "查看实际下载应用": "Voir l’application téléchargée",
-    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "Les téléchargements répartis utilisent la configuration de l’application source annoncée dès le début du transfert. Les téléchargements ordinaires sont toujours signalés après leur achèvement. Chaque attribution est signalée une seule fois.",
     "下载": "Téléchargement",
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Activez les contrôles de sécurité. Les liens signalés comme dangereux seront désactivés et exclus du routage.",
     "回传状态": "État de l’envoi des conversions",
@@ -10633,7 +10644,12 @@
     "尚未确认本次点击的 PWA 安装": "L’installation PWA de cette visite n’est pas encore confirmée",
     "PWA 已停用或删除": "PWA désactivée ou supprimée",
     "回传模式已变更": "Le mode de remontée a changé",
-    "事件 / 应用": "Événement / Application"
+    "事件 / 应用": "Événement / Application",
+    "删除回传配置？": "Supprimer la configuration publicitaire ?",
+    "确认删除「{0}」的回传配置？": "Supprimer la configuration publicitaire de « {0} » ?",
+    "删除后将停止该应用的广告回传，关联应用和历史事件日志会保留。": "La suppression arrête la transmission des événements publicitaires de cette application. L’application et l’historique des événements sont conservés.",
+    "回传配置已删除": "Configuration publicitaire supprimée",
+    "删除配置": "Supprimer la configuration"
   },
   "ko": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "미사용 부분은 액면 금액 기준으로 원래 결제 수단을 통해 환불을 신청할 수 있습니다. 고객 지원 또는 영업팀에 문의하세요. 남은 사용량을 확인한 후 처리합니다.",
@@ -13237,7 +13253,6 @@
     "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "위험이 확인된 도메인만 제외합니다. 모두 위험으로 표시되면 대체 링크 하나를 유지합니다.",
     "下载回传": "다운로드 전환",
     "查看实际下载应用": "다운로드한 앱 보기",
-    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "분산 다운로드는 파일 전송이 시작되면 광고한 원본 앱의 설정으로 전환을 전송합니다. 일반 다운로드는 완료 후 전송하며, 동일한 기여에 대해 한 번만 전송합니다.",
     "下载": "다운로드",
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "보안 위험 검사를 켜면 위험으로 감지된 링크가 비활성화되고 분산 대상에서 제외됩니다.",
     "回传状态": "전환 전송 상태",
@@ -13292,7 +13307,12 @@
     "尚未确认本次点击的 PWA 安装": "이번 방문의 PWA 설치가 아직 확인되지 않았습니다",
     "PWA 已停用或删除": "PWA가 비활성화되었거나 삭제되었습니다",
     "回传模式已变更": "전송 모드가 변경되었습니다",
-    "事件 / 应用": "이벤트 / 앱"
+    "事件 / 应用": "이벤트 / 앱",
+    "删除回传配置？": "광고 전송 설정을 삭제할까요?",
+    "确认删除「{0}」的回传配置？": "「{0}」의 광고 전송 설정을 삭제할까요?",
+    "删除后将停止该应用的广告回传，关联应用和历史事件日志会保留。": "삭제하면 이 앱의 광고 이벤트 전송이 중지됩니다. 앱과 기존 이벤트 로그는 유지됩니다.",
+    "回传配置已删除": "광고 전송 설정이 삭제되었습니다",
+    "删除配置": "설정 삭제"
   },
   "ja": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用分は額面金額で元のお支払い方法への返金を申請できます。サポートまたは営業担当にご連絡ください。残りの利用量を確認してから手続きします。",
@@ -15896,7 +15916,6 @@
     "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "リスクが確認されたドメインのみ除外します。すべて該当する場合は代替リンクを1件保持します。",
     "下载回传": "ダウンロードのコンバージョン",
     "查看实际下载应用": "ダウンロードしたアプリを見る",
-    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "振り分けダウンロードはファイル転送開始時に広告元アプリの設定で通知します。通常のダウンロードは引き続き完了後に通知し、同じアトリビューションは一度だけ通知します。",
     "下载": "ダウンロード",
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "安全性チェックを有効にすると、危険と判定されたリンクは無効化され、振り分け対象から除外されます。",
     "回传状态": "コンバージョン送信状態",
@@ -15951,7 +15970,12 @@
     "尚未确认本次点击的 PWA 安装": "今回の訪問の PWA インストールは未確認です",
     "PWA 已停用或删除": "PWA は無効化または削除されています",
     "回传模式已变更": "送信モードが変更されました",
-    "事件 / 应用": "イベント / アプリ"
+    "事件 / 应用": "イベント / アプリ",
+    "删除回传配置？": "広告連携設定を削除しますか？",
+    "确认删除「{0}」的回传配置？": "「{0}」の広告連携設定を削除しますか？",
+    "删除后将停止该应用的广告回传，关联应用和历史事件日志会保留。": "削除すると、このアプリの広告イベント送信が停止します。アプリと過去のイベントログは保持されます。",
+    "回传配置已删除": "広告連携設定を削除しました",
+    "删除配置": "設定を削除"
   },
   "zh-TW": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用的部分可申請退款，按面額循原付款管道退回。請聯絡客服或商務處理，我們會核對剩餘用量後辦理。",
@@ -18555,7 +18579,6 @@
     "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "僅剔除明確命中風險的網域；全部命中風險時保留一條備援連結。",
     "下载回传": "下載回傳",
     "查看实际下载应用": "查看實際下載應用",
-    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "分流下載開始傳輸檔案時，按投放來源應用設定回傳；一般下載仍在完整下載後回傳。同一次歸因不重複回傳。",
     "下载": "下載",
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "開啟安全風險檢測，如命中報毒風險，該連結會被下架，不參與分流。",
     "回传状态": "回傳狀態",
@@ -18610,7 +18633,12 @@
     "尚未确认本次点击的 PWA 安装": "尚未確認本次點擊的 PWA 安裝",
     "PWA 已停用或删除": "PWA 已停用或刪除",
     "回传模式已变更": "回傳模式已變更",
-    "事件 / 应用": "事件 / 應用"
+    "事件 / 应用": "事件 / 應用",
+    "删除回传配置？": "刪除回傳設定？",
+    "确认删除「{0}」的回传配置？": "確認刪除「{0}」的回傳設定？",
+    "删除后将停止该应用的广告回传，关联应用和历史事件日志会保留。": "刪除後將停止此應用的廣告回傳，關聯應用和歷史事件記錄會保留。",
+    "回传配置已删除": "回傳設定已刪除",
+    "删除配置": "刪除設定"
   },
   "ru": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Можно запросить возврат неиспользованной части по номинальной стоимости исходным способом оплаты. Обратитесь в поддержку или отдел продаж; перед обработкой мы проверим оставшийся объём использования.",
@@ -21214,7 +21242,6 @@
     "仅剔除明确命中风险的域名；全部命中风险时保留一条兜底链接。": "Исключаются только домены с подтверждённым риском. Если отмечены все, сохраняется одна резервная ссылка.",
     "下载回传": "Конверсия скачивания",
     "查看实际下载应用": "Посмотреть скачанное приложение",
-    "分流下载开始传输文件时，按投放来源应用配置回传；普通下载仍在完整下载后回传。同一次归因不重复回传。": "При распределённых загрузках событие отправляется по настройкам рекламируемого исходного приложения в начале передачи файла. Обычные загрузки по-прежнему отправляют событие после завершения. Каждая атрибуция учитывается один раз.",
     "下载": "Скачивание",
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Включите проверку безопасности. Ссылки, отмеченные как опасные, будут отключены и исключены из распределения.",
     "回传状态": "Статус отправки конверсий",
@@ -21269,6 +21296,11 @@
     "尚未确认本次点击的 PWA 安装": "Установка PWA для этого посещения ещё не подтверждена",
     "PWA 已停用或删除": "PWA отключено или удалено",
     "回传模式已变更": "Режим отправки изменён",
-    "事件 / 应用": "Событие / Приложение"
+    "事件 / 应用": "Событие / Приложение",
+    "删除回传配置？": "Удалить конфигурацию передачи событий?",
+    "确认删除「{0}」的回传配置？": "Удалить конфигурацию передачи событий для «{0}»?",
+    "删除后将停止该应用的广告回传，关联应用和历史事件日志会保留。": "После удаления передача рекламных событий для этого приложения прекратится. Приложение и история событий сохранятся.",
+    "回传配置已删除": "Конфигурация передачи событий удалена",
+    "删除配置": "Удалить конфигурацию"
   }
 }
