@@ -47,6 +47,13 @@ func migratePWAAds(tx *gorm.DB) error {
 	if e := tx.AutoMigrate(&AdConfig{}, &Attribution{}, &Conversion{}); e != nil {
 		return e
 	}
+	// GORM intentionally skips resizing primary keys during AutoMigrate.
+	// Existing PostgreSQL installs still have a 32-character config key.
+	if tx.Dialector.Name() == "postgres" {
+		if err := tx.Exec("ALTER TABLE ad_configs ALTER COLUMN app_id TYPE varchar(40)").Error; err != nil {
+			return err
+		}
+	}
 	return tx.Create(&Migration{Version: 32, AppliedAt: time.Now().UTC()}).Error
 }
 func (s *Server) registerPWAAds(m *http.ServeMux) {

@@ -258,3 +258,40 @@ func TestPWADepthSDKRegisterSignatureAndLegacyMigration(t *testing.T) {
 		t.Fatal("idempotent migration altered credentials or events")
 	}
 }
+
+func TestPWAAdsMigratesLegacyConfigPrimaryKey(t *testing.T) {
+	s := testServer(t)
+	u := seedUser(t, s, Dollar)
+	app := seedApp(t, s, u, 100)
+	cfg := quickAdConfig(app)
+	cfg.Mode = "deep"
+	cfg.FacebookToken, _ = s.encryptSecret("legacy-secret")
+	if e := s.DB.Create(&cfg).Error; e != nil {
+		t.Fatal(e)
+	}
+	if s.DB.Dialector.Name() == "postgres" {
+		if e := s.DB.Exec("ALTER TABLE ad_configs ALTER COLUMN app_id TYPE varchar(32)").Error; e != nil {
+			t.Fatal(e)
+		}
+	}
+	s.DB.Where("version = ?", 32).Delete(&Migration{})
+	if e := Migrate(s.DB); e != nil {
+		t.Fatal(e)
+	}
+	if e := Migrate(s.DB); e != nil {
+		t.Fatal(e)
+	}
+	var old AdConfig
+	s.DB.First(&old, "app_id = ?", app.ID)
+	if old.FacebookToken != cfg.FacebookToken || old.Mode != "deep" {
+		t.Fatal("legacy credentials or mode changed")
+	}
+	p := createPWAFixture(t, s, u, "Namespaced PWA")
+	wide := quickAdConfig(pwaAdApplication(p))
+	if e := s.DB.Create(&wide).Error; e != nil {
+		t.Fatal("legacy primary key cannot hold PWA namespace", e)
+	}
+	if countRows(t, s, &AdConfig{}) != 2 {
+		t.Fatal("namespace migration lost a config")
+	}
+}
