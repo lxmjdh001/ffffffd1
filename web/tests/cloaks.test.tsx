@@ -6,10 +6,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloaksPage, type Cloak, type CloakDraft } from '../src/cloaks';
 
-const editableKeys = ['name', 'status', 'enabled', 'target_type', 'target_url', 'traffic_pool_slug', 'target_id', 'app_target_mode', 'safe_url', 'allowed_ips', 'blocked_ips', 'blocked_languages', 'block_empty_language', 'blocked_browsers', 'blocked_uas', 'blocked_countries', 'allowed_platforms', 'blocked_devices'].sort();
+const editableKeys = ['name', 'status', 'enabled', 'target_type', 'target_url', 'traffic_pool_slug', 'target_id', 'app_target_mode', 'safe_url', 'allowed_ips', 'blocked_ips', 'blocked_languages', 'block_empty_language', 'blocked_browsers', 'blocked_uas', 'allowed_countries', 'blocked_countries', 'allowed_platforms', 'blocked_devices'].sort();
 const baseDraft: CloakDraft = {
   name: '海外应用推广', status: 'rules', enabled: true, target_type: 'url', target_url: 'https://download.example/app.apk', traffic_pool_slug: '', target_id: '', app_target_mode: '', safe_url: 'https://brand.example/help',
-  allowed_ips: [], blocked_ips: [], blocked_languages: [], block_empty_language: false, blocked_browsers: [], blocked_uas: [], blocked_countries: [], allowed_platforms: [], blocked_devices: [],
+  allowed_ips: [], blocked_ips: [], blocked_languages: [], block_empty_language: false, blocked_browsers: [], blocked_uas: [], allowed_countries: [], blocked_countries: [], allowed_platforms: [], blocked_devices: [],
 };
 const appDraft: CloakDraft = { ...baseDraft, target_type: 'app', target_url: '', target_id: 'a'.repeat(32), app_target_mode: 'direct' };
 const fixture = (overrides: Partial<Cloak> = {}): Cloak => ({
@@ -112,7 +112,7 @@ describe('cloak editor API integration', () => {
     expect(screen.getByRole('dialog').className).toContain('side');
     expect(mutations).toHaveLength(0);
   });
-  it('creates a traffic target with independent language/country blocks, UA keywords, and multiple allowed platforms', async () => {
+  it('creates a traffic target with independent language blocks and allowed countries, UA keywords, and multiple allowed platforms', async () => {
     const user = await showPage();
     await newEditor(user);
     await user.selectOptions(screen.getByRole('combobox', { name: '分流链接' }), 'launch-route');
@@ -121,7 +121,7 @@ describe('cloak editor API integration', () => {
     await user.click(screen.getByRole('checkbox', { name: /^英语/ }));
     await openTab(user, 'UA 拦截');
     await user.type(screen.getByRole('textbox', { name: /UA 拦截关键词/ }), '  curl  \n\nHeadlessChrome\n');
-    await openTab(user, '国家拦截');
+    await openTab(user, '允许国家');
     const search = screen.getByRole('textbox', { name: '搜索国家或地区' });
     await user.type(search, 'CN');
     await user.click(screen.getByRole('checkbox', { name: /^中国\s*CN$/ }));
@@ -136,7 +136,43 @@ describe('cloak editor API integration', () => {
     await user.click(screen.getByRole('checkbox', { name: /TikTok/ }));
     await user.click(screen.getByRole('checkbox', { name: /Facebook/ }));
     await saveNew(user);
-    expect(mutations).toEqual([{ path: '/api/cloaks', method: 'POST', body: { ...baseDraft, target_type: 'traffic_pool', target_url: '', traffic_pool_slug: 'launch-route', blocked_languages: ['zh', 'en'], blocked_uas: ['curl', 'HeadlessChrome'], blocked_countries: ['CN', 'XX'], allowed_platforms: ['tiktok', 'facebook'] } }]);
+    expect(mutations).toEqual([{ path: '/api/cloaks', method: 'POST', body: { ...baseDraft, target_type: 'traffic_pool', target_url: '', traffic_pool_slug: 'launch-route', blocked_languages: ['zh', 'en'], blocked_uas: ['curl', 'HeadlessChrome'], allowed_countries: ['CN', 'XX'], allowed_platforms: ['tiktok', 'facebook'] } }]);
+  });
+
+  it('preserves a legacy country block until the allowed country selection is changed', async () => {
+    rows = [fixture({ ...appDraft, blocked_countries: ['US'] })];
+    const user = await showPage();
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    await openTab(user, '允许国家');
+    expect(screen.getByText('此入口保留原有国家拦截规则；更改允许国家后，原规则将被替换。')).toBeTruthy();
+    expect((screen.getByRole('checkbox', { name: /^美国\s*US$/ }) as HTMLInputElement).checked).toBe(false);
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[0].body).toMatchObject({ allowed_countries: [], blocked_countries: ['US'] });
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    await openTab(user, '允许国家');
+    await user.click(screen.getByRole('checkbox', { name: /^美国\s*US$/ }));
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[1].body).toMatchObject({ allowed_countries: ['US'], blocked_countries: [] });
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    await openTab(user, '允许国家');
+    expect((screen.getByRole('checkbox', { name: /^美国\s*US$/ }) as HTMLInputElement).checked).toBe(true);
+    await user.click(screen.getByRole('checkbox', { name: /^美国\s*US$/ }));
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[2].body).toMatchObject({ allowed_countries: [], blocked_countries: [] });
+  });
+
+  it('can explicitly clear a legacy country block without selecting an allowlist', async () => {
+    rows = [fixture({ ...appDraft, blocked_countries: ['CN'] })];
+    const user = await showPage();
+    await user.click(screen.getByRole('button', { name: '编辑', exact: true }));
+    await openTab(user, '允许国家');
+    await user.click(screen.getByRole('button', { name: '清除原国家拦截规则' }));
+    await user.click(screen.getByRole('button', { name: '保存修改' }));
+    await screen.findByText('斗篷已保存，入口可以使用了');
+    expect(mutations[0].body).toMatchObject({ allowed_countries: [], blocked_countries: [] });
   });
 
   it('creates and edits with an empty safe URL, preserving the default English 404 page', async () => {
