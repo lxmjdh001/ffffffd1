@@ -24,6 +24,7 @@ func (s *Server) registerAdConfigurations(m *http.ServeMux) {
 }
 
 type adConfigurationView struct {
+	Platform      string `json:"platform"`
 	FacebookPixel string `json:"facebook_pixel"`
 	TikTokPixel   string `json:"tiktok_pixel"`
 	Kind          string `json:"resource_kind"`
@@ -47,26 +48,26 @@ func (s *Server) adConfigurationViews(r *http.Request, onlyConfigured bool) ([]a
 		byID[c.AppID] = c
 	}
 	views := []adConfigurationView{}
-	add := func(kind, id, name, slug, key string) {
+	add := func(kind, id, name, slug, key, platform string) {
 		c, ok := byID[key]
 		if onlyConfigured && !ok {
 			return
 		}
-		views = append(views, adConfigurationView{Kind: kind, ID: id, Name: name, Slug: slug, Mode: adMode(c), Enabled: !c.Disabled && (c.FacebookEnabled || c.TikTokEnabled), Facebook: c.FacebookEnabled, TikTok: c.TikTokEnabled, Configured: ok, FacebookPixel: c.FacebookPixel, TikTokPixel: c.TikTokPixel})
+		views = append(views, adConfigurationView{Kind: kind, ID: id, Name: name, Slug: slug, Mode: adMode(c), Enabled: !c.Disabled && (c.FacebookEnabled || c.TikTokEnabled), Facebook: c.FacebookEnabled, TikTok: c.TikTokEnabled, Configured: ok, FacebookPixel: c.FacebookPixel, TikTokPixel: c.TikTokPixel, Platform: platform})
 	}
 	var apps []Application
-	if e := s.DB.Select("id", "name", "slug").Where("user_id = ?", userOf(r).ID).Order("created_at DESC,id DESC").Find(&apps).Error; e != nil {
+	if e := s.DB.Select("id", "name", "slug", "platform").Where("user_id = ?", userOf(r).ID).Order("created_at DESC,id DESC").Find(&apps).Error; e != nil {
 		return nil, e
 	}
 	for _, a := range apps {
-		add("apps", a.ID, a.Name, a.Slug, a.ID)
+		add("apps", a.ID, a.Name, a.Slug, a.ID, a.Platform)
 	}
 	var pwas []PWAApp
 	if e := s.DB.Select("id", "name", "slug").Where("user_id = ?", userOf(r).ID).Order("created_at DESC,id DESC").Find(&pwas).Error; e != nil {
 		return nil, e
 	}
 	for _, a := range pwas {
-		add("pwas", a.ID, a.Name, a.Slug, pwaAdID(a.ID))
+		add("pwas", a.ID, a.Name, a.Slug, pwaAdID(a.ID), "PWA")
 	}
 	return views, nil
 }

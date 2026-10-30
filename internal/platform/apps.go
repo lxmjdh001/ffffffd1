@@ -31,7 +31,7 @@ func (s *Server) listApps(w http.ResponseWriter, r *http.Request) {
 	q := s.DB.Model(&Application{}).Select(`applications.*, EXISTS (
 		SELECT 1 FROM ad_configs
 		WHERE ad_configs.app_id = applications.id AND ad_configs.user_id = applications.user_id
-		AND (ad_configs.facebook_enabled = ? OR ad_configs.tik_tok_enabled = ?)
+		AND ad_configs.disabled = false AND (ad_configs.facebook_enabled = ? OR ad_configs.tik_tok_enabled = ?)
 	) AS ads_enabled`, true, true).Where("user_id = ?", userOf(r).ID)
 	listOut[appListView](w, r, addQuery(q, r, "name", "file_name"))
 }

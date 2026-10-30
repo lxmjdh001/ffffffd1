@@ -55,6 +55,11 @@ func main() {
 		slog.Error("migration failed", "error", e)
 		os.Exit(1)
 	}
+	// Schema-only operation: no administrator bootstrap, workers or asset uploads.
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		slog.Info("schema migration complete", "status", "passed", "transaction_committed", true)
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "reset-admin" {
 		if e = platform.ResetAdmin(db, c); e != nil {
 			slog.Error("admin reset failed", "error", e)
