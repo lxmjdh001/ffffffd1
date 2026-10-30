@@ -1,0 +1,25 @@
+/* Constrain long URLs without allowing them to paint over risk verdicts. */
+.modal.wide:has(.traffic-risk-details){width:min(1120px,calc(100vw - 40px));max-width:1120px}
+.traffic-risk-details{min-width:0}
+.traffic-risk-table{width:100%;table-layout:fixed;min-width:0}
+.traffic-risk-table .risk-url-col{width:43%}
+.traffic-risk-table .risk-status-col{width:19%}
+.traffic-risk-table .risk-eligible-col{width:15%}
+.traffic-risk-table .risk-date-col{width:23%}
+.traffic-risk-table th,.traffic-risk-table td{padding:18px 16px;white-space:normal;overflow-wrap:anywhere;vertical-align:middle}
+.traffic-risk-url{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.7}
+.traffic-risk-url:hover{text-decoration:underline}
+.traffic-risk-url:focus-visible{white-space:normal;overflow-wrap:anywhere}
+.traffic-risk-table .badge{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.traffic-risk-table .badge i{flex-shrink:0}
+.traffic-risk-date{font-variant-numeric:tabular-nums;line-height:1.7}
+@media(max-width:700px){
+ .modal.wide:has(.traffic-risk-details){width:calc(100vw - 24px);max-width:calc(100vw - 24px)}
+ .traffic-risk-details .table-wrap{overflow:visible}
+ .traffic-risk-table,.traffic-risk-table tbody{display:block;width:100%;min-width:0}
+ .traffic-risk-table thead,.traffic-risk-table colgroup{display:none}
+ .traffic-risk-table tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;padding:18px 0;border-bottom:1px solid #e9edf3}
+ .traffic-risk-table td{display:block;min-width:0;padding:0;border:0}
+ .traffic-risk-table td:first-child,.traffic-risk-table td:last-child{grid-column:1/-1}
+ .traffic-risk-table td::before{content:attr(data-label);display:block;margin-bottom:7px;font-size:12px;color:#7585ad}
+}
