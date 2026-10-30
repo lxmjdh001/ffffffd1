@@ -516,8 +516,7 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 		}
 		candidate := c.TargetURL
 		if c.TargetType == "traffic_pool" {
-			// Execute the existing pool here; do not redirect to its /r/ entry
-			// or replace the pool's own destination with an inline app page.
+			// Select using the existing pool's eligibility and allocation rules.
 			var err error
 			candidate, err = s.trafficTarget(r, c.TrafficPoolSlug, c.UserID)
 			if err != nil {
@@ -534,6 +533,16 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 			loop, err := s.cloakLoop(s.DB, candidate, requestHost(r))
 			if err == nil && !loop {
 				if merged, err := mergeCloakQuery(candidate, r.URL.RawQuery); err == nil {
+					if c.TargetType == "traffic_pool" {
+						rendered, err := s.renderCloakPoolTarget(w, r, owner, root, merged)
+						if err != nil {
+							fail(w, err)
+							return
+						}
+						if rendered {
+							return
+						}
+					}
 					target = merged
 					if root.ID != "" {
 						decorated, err := s.routedAttributionDestination(r, owner.ID, root, merged)

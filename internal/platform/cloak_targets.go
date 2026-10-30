@@ -1,9 +1,60 @@
 package platform
 
 import (
+	"errors"
 	"net/http"
+	"net/url"
 	"strings"
+
+	"gorm.io/gorm"
 )
+
+// Keep a cloak entry in place when its pool selects an owned native landing.
+// Selection, risk filtering and later routing buttons retain the pool's rules.
+// External or unavailable targets keep their existing redirect behavior.
+func (s *Server) renderCloakPoolTarget(w http.ResponseWriter, r *http.Request, owner User, root Attribution, raw string) (bool, error) {
+	app, target, err := s.routedAPKTarget(r, Application{UserID: owner.ID}, raw)
+	if err != nil {
+		return false, err
+	}
+	c := Cloak{TargetType: "app", TargetID: app.ID, AppTargetMode: "direct"}
+	if app.ID != "" {
+		parts := strings.Split(strings.Trim(target.Path, "/"), "/")
+		if len(parts) == 3 {
+			c.AppTargetMode = parts[2]
+		} else if app.DownloadMode == "info" {
+			c.AppTargetMode = "info"
+		}
+	} else {
+		target, err = url.Parse(raw)
+		if err != nil || target.User != nil || target.Hostname() == "" || target.Scheme != "https" && target.Scheme != "http" {
+			return false, nil
+		}
+		parts := strings.Split(strings.Trim(target.Path, "/"), "/")
+		if len(parts) != 2 || parts[0] != "p" {
+			return false, nil
+		}
+		trusted, err := s.trustedRoutedHost(r, owner.ID, target)
+		if err != nil || !trusted {
+			return false, err
+		}
+		var pwa PWAApp
+		if err := s.DB.Select("id").First(&pwa, "slug = ? AND user_id = ? AND enabled = ?", parts[1], owner.ID, true).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return false, nil
+			}
+			return false, err
+		}
+		c.TargetType, c.TargetID = "pwa", pwa.ID
+	}
+	request := r.Clone(r.Context())
+	u := *r.URL
+	request.URL = &u
+	// Use the merged target parameters, while retaining the incoming /c/ path
+	// and host for document URLs, forms, manifests and download tickets.
+	request.URL.RawQuery = target.RawQuery
+	return s.renderCloakApp(w, request, c, owner, root), nil
+}
 
 type cloakAppChoice struct {
 	ID        string `json:"id"`

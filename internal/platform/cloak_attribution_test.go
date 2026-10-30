@@ -347,12 +347,11 @@ func TestCloakRoutedAttributionContinuesThroughOwnedPool(t *testing.T) {
 	s.DB.Save(&c)
 	raw := f.click(t, true)
 	w := routedAdRequest(s, "GET", raw, nil, nil, "")
-	requireCode(t, w, 302)
-	u, _ := url.Parse(w.Header().Get("Location"))
-	if u.Host != "other.example" || u.Path != "/a/"+f.apps[1].Slug+"/direct" || u.Query().Get(routedAttributionParam) == "" {
-		t.Fatal("cloak pool lost the campaign or rewrote its own destination")
+	file, jar := cloakTicketFromPage(t, f, raw, "direct", w, nil)
+	u, _ := url.Parse(file)
+	if u.Host != "chosen.example" || !strings.HasPrefix(u.Path, "/d/") {
+		t.Fatal("native cloak-pool download left the cloak domain")
 	}
-	file, jar := f.targetTicket(t, u.String(), f.apps[1])
 	requireCode(t, routedAdRequest(s, "GET", file, jar, nil, "bytes=0-0"), 206)
 	var event Conversion
 	s.DB.First(&event)
@@ -382,8 +381,7 @@ func TestCloakRoutedAttributionDisabledSourceNeverUsesDestinationPixel(t *testin
 	raw := f.click(t, true)
 	s.DB.Model(&AdConfig{}).Where("app_id = ?", f.apps[0].ID).Updates(map[string]any{"facebook_enabled": false, "tik_tok_enabled": false})
 	w := routedAdRequest(s, "GET", raw, nil, nil, "")
-	requireCode(t, w, 302)
-	file, jar := f.targetTicket(t, w.Header().Get("Location"), f.apps[1])
+	file, jar := cloakTicketFromPage(t, f, raw, "direct", w, nil)
 	requireCode(t, routedAdRequest(s, "GET", file, jar, nil, "bytes=0-0"), 206)
 	var event Conversion
 	if err := s.DB.First(&event).Error; err != nil {

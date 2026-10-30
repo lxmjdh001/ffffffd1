@@ -106,8 +106,8 @@ func TestCloakRunsAppAndPoolHandlersWithoutChangingTheirBehavior(t *testing.T) {
 		}
 		s.DB.Create(&TrafficLink{ID: randomHex(16), PoolSlug: pool.Slug, UserID: owner.ID, URL: target, Status: "safe"})
 		// Standalone traffic retains its original redirect, including the
-		// configured destination domain. A cloak executes the pool directly,
-		// without an intermediate redirect to its /r/ entry or rewriting output.
+		// configured destination domain. A cloak selects the same target but
+		// renders an owned landing in place on its copied entry domain.
 		for _, method := range []string{"GET", "HEAD"} {
 			w = chosenCall(s, method, "chosen.example", "/r/"+pool.Slug+"?utm_source=test")
 			requireCode(t, w, 302)
@@ -119,10 +119,9 @@ func TestCloakRunsAppAndPoolHandlersWithoutChangingTheirBehavior(t *testing.T) {
 		poolBody["target_type"], poolBody["traffic_pool_slug"], poolBody["safe_url"] = "traffic_pool", pool.Slug, ""
 		poolCloak := createTestCloak(t, s, owner, poolBody)
 		w = chosenCall(s, "GET", "chosen.example", "/c/"+poolCloak.Slug+"?utm_source=test")
-		requireCode(t, w, 302)
-		// Retain the cloak's existing attribution parameter forwarding.
-		if w.Header().Get("Location") != target+"?utm_source=test" {
-			t.Fatal("cloak-to-pool changed the pool destination or added an intermediate hop")
+		requireCode(t, w, 200)
+		if w.Header().Get("Location") != "" || !strings.Contains(w.Header().Get("Content-Type"), "text/html") {
+			t.Fatal("cloak pool landing redirected instead of rendering in place")
 		}
 		requireCode(t, chosenCall(s, "GET", "foreign.example", "/c/"+poolCloak.Slug), 404)
 		if kind == "app" {
