@@ -2614,7 +2614,15 @@
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Enable safety risk checks. Links flagged as unsafe will be taken offline and excluded from routing.",
     "回传状态": "Conversion reporting status",
     "启用中": "Enabled",
-    "关联应用": "Linked app"
+    "关联应用": "Linked app",
+    "允许国家": "Allowed countries",
+    "勾选允许国家或地区": "Select allowed countries or regions",
+    "勾选后，仅所选国家和地区可通过；不选则不限制国家。无法定位的访问按“未知地区”判断。": "Only selected countries and regions can pass. Leave empty for no country restriction. Unlocated visits are treated as Unknown region.",
+    "此入口保留原有国家拦截规则；更改允许国家后，原规则将被替换。": "This entry retains its previous country block rules. Changing allowed countries replaces those rules.",
+    "清除原国家拦截规则": "Clear previous country block rules",
+    "地区识别暂未配置，访问将按“未知地区”判断。": "Region detection is not configured. Visits are treated as Unknown region.",
+    "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "Blocked visits, visits failing country or ad-platform allow rules, and unavailable destinations use the custom safe page. Leave empty for the default English 404 page.",
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Invalid allowed countries. Use two-letter region codes, XX or T1."
   },
   "pt": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Você pode solicitar reembolso da parte não utilizada, pelo valor nominal e pelo método de pagamento original. Contate o suporte ou a equipe comercial; verificaremos o saldo de uso restante antes de processar.",
@@ -5231,7 +5239,15 @@
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Ative a verificação de riscos de segurança. Links sinalizados como perigosos serão removidos e excluídos do roteamento.",
     "回传状态": "Status do envio de conversões",
     "启用中": "Ativo",
-    "关联应用": "Aplicativo associado"
+    "关联应用": "Aplicativo associado",
+    "允许国家": "Países permitidos",
+    "勾选允许国家或地区": "Selecione países ou regiões permitidos",
+    "勾选后，仅所选国家和地区可通过；不选则不限制国家。无法定位的访问按“未知地区”判断。": "Somente países e regiões selecionados podem acessar. Deixe vazio para não restringir países. Acessos sem localização são tratados como Região desconhecida.",
+    "此入口保留原有国家拦截规则；更改允许国家后，原规则将被替换。": "Esta entrada mantém as regras anteriores de bloqueio por país. Alterar os países permitidos substitui essas regras.",
+    "清除原国家拦截规则": "Limpar regras anteriores de bloqueio por país",
+    "地区识别暂未配置，访问将按“未知地区”判断。": "A detecção de região não está configurada. Os acessos são tratados como Região desconhecida.",
+    "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "Acessos bloqueados, que não atendam às regras de países ou plataformas de anúncios permitidos, ou com destino indisponível usam a página segura personalizada. Deixe vazio para a página 404 padrão em inglês.",
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Países permitidos inválidos. Use códigos de região de duas letras, XX ou T1."
   },
   "de": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Für den ungenutzten Anteil können Sie eine Erstattung zum Nennwert über den ursprünglichen Zahlungsweg beantragen. Kontaktieren Sie Support oder Vertrieb; wir prüfen die verbleibende Nutzung vor der Bearbeitung.",
@@ -7848,7 +7864,15 @@
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Aktivieren Sie die Sicherheitsprüfung. Als gefährlich erkannte Links werden deaktiviert und vom Routing ausgeschlossen.",
     "回传状态": "Conversion-Übermittlungsstatus",
     "启用中": "Aktiviert",
-    "关联应用": "Verknüpfte App"
+    "关联应用": "Verknüpfte App",
+    "允许国家": "Erlaubte Länder",
+    "勾选允许国家或地区": "Erlaubte Länder oder Regionen auswählen",
+    "勾选后，仅所选国家和地区可通过；不选则不限制国家。无法定位的访问按“未知地区”判断。": "Nur ausgewählte Länder und Regionen werden zugelassen. Ohne Auswahl gibt es keine Länderbeschränkung. Nicht lokalisierbare Zugriffe gelten als Unbekannte Region.",
+    "此入口保留原有国家拦截规则；更改允许国家后，原规则将被替换。": "Dieser Zugang behält die bisherigen Ländersperren bei. Änderungen an erlaubten Ländern ersetzen diese Regeln.",
+    "清除原国家拦截规则": "Bisherige Ländersperren löschen",
+    "地区识别暂未配置，访问将按“未知地区”判断。": "Die Regionserkennung ist nicht konfiguriert. Zugriffe gelten als Unbekannte Region.",
+    "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "Gesperrte Zugriffe, Zugriffe ohne Länder- oder Werbeplattform-Freigabe sowie nicht verfügbare Ziele führen zur eigenen Sicherheitsseite. Ohne Angabe erscheint die englische Standard-404-Seite.",
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Ungültige erlaubte Länder. Verwenden Sie zweistellige Regionscodes, XX oder T1."
   },
   "fr": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Vous pouvez demander le remboursement de la partie non utilisée, à sa valeur nominale et via le moyen de paiement d’origine. Contactez l’assistance ou le service commercial ; nous vérifierons l’utilisation restante avant traitement.",
@@ -10465,7 +10489,15 @@
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Activez les contrôles de sécurité. Les liens signalés comme dangereux seront désactivés et exclus du routage.",
     "回传状态": "État de l’envoi des conversions",
     "启用中": "Activé",
-    "关联应用": "Application associée"
+    "关联应用": "Application associée",
+    "允许国家": "Pays autorisés",
+    "勾选允许国家或地区": "Sélectionnez les pays ou régions autorisés",
+    "勾选后，仅所选国家和地区可通过；不选则不限制国家。无法定位的访问按“未知地区”判断。": "Seuls les pays et régions sélectionnés sont admis. Sans sélection, aucune restriction par pays. Les visites non localisées sont traitées comme Région inconnue.",
+    "此入口保留原有国家拦截规则；更改允许国家后，原规则将被替换。": "Cette entrée conserve ses anciennes règles de blocage par pays. Modifier les pays autorisés remplace ces règles.",
+    "清除原国家拦截规则": "Effacer les anciennes règles de blocage par pays",
+    "地区识别暂未配置，访问将按“未知地区”判断。": "La détection de région n’est pas configurée. Les visites sont traitées comme Région inconnue.",
+    "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "Les visites bloquées, non autorisées par les règles de pays ou de plateforme publicitaire, ou sans destination disponible utilisent la page de sécurité personnalisée. Laissez vide pour la page 404 anglaise par défaut.",
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Pays autorisés invalides. Utilisez des codes de région à deux lettres, XX ou T1."
   },
   "ko": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "미사용 부분은 액면 금액 기준으로 원래 결제 수단을 통해 환불을 신청할 수 있습니다. 고객 지원 또는 영업팀에 문의하세요. 남은 사용량을 확인한 후 처리합니다.",
@@ -13082,7 +13114,15 @@
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "보안 위험 검사를 켜면 위험으로 감지된 링크가 비활성화되고 분산 대상에서 제외됩니다.",
     "回传状态": "전환 전송 상태",
     "启用中": "활성화됨",
-    "关联应用": "연결된 앱"
+    "关联应用": "연결된 앱",
+    "允许国家": "허용 국가",
+    "勾选允许国家或地区": "허용할 국가 또는 지역 선택",
+    "勾选后，仅所选国家和地区可通过；不选则不限制国家。无法定位的访问按“未知地区”判断。": "선택한 국가와 지역만 통과할 수 있습니다. 선택하지 않으면 국가를 제한하지 않습니다. 위치를 확인할 수 없는 방문은 알 수 없는 지역으로 처리합니다.",
+    "此入口保留原有国家拦截规则；更改允许国家后，原规则将被替换。": "이 진입점은 기존 국가 차단 규칙을 유지합니다. 허용 국가를 변경하면 기존 규칙이 교체됩니다.",
+    "清除原国家拦截规则": "기존 국가 차단 규칙 지우기",
+    "地区识别暂未配置，访问将按“未知地区”判断。": "지역 감지가 설정되지 않았습니다. 방문은 알 수 없는 지역으로 처리됩니다.",
+    "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "차단되거나 국가 또는 광고 플랫폼 허용 조건을 충족하지 못하거나 대상을 사용할 수 없으면 사용자 지정 안전 페이지로 이동합니다. 비워 두면 기본 영어 404 페이지가 표시됩니다.",
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "허용 국가 설정이 잘못되었습니다. 두 자리 지역 코드, XX 또는 T1을 사용하세요."
   },
   "ja": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用分は額面金額で元のお支払い方法への返金を申請できます。サポートまたは営業担当にご連絡ください。残りの利用量を確認してから手続きします。",
@@ -15699,7 +15739,15 @@
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "安全性チェックを有効にすると、危険と判定されたリンクは無効化され、振り分け対象から除外されます。",
     "回传状态": "コンバージョン送信状態",
     "启用中": "有効",
-    "关联应用": "関連アプリ"
+    "关联应用": "関連アプリ",
+    "允许国家": "許可する国",
+    "勾选允许国家或地区": "許可する国・地域を選択",
+    "勾选后，仅所选国家和地区可通过；不选则不限制国家。无法定位的访问按“未知地区”判断。": "選んだ国・地域のみが通過できます。未選択の場合、国の制限はありません。位置を特定できないアクセスは「不明な地域」として判定します。",
+    "此入口保留原有国家拦截规则；更改允许国家后，原规则将被替换。": "この入口には以前の国別ブロックルールが保持されています。許可する国を変更すると、以前のルールが置き換わります。",
+    "清除原国家拦截规则": "以前の国別ブロックルールを解除",
+    "地区识别暂未配置，访问将按“未知地区”判断。": "地域検出が設定されていません。アクセスは「不明な地域」として判定されます。",
+    "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "ブロック条件に一致する場合、国・広告プラットフォームの許可条件を満たさない場合、または対象が利用できない場合は、カスタム安全ページへ移動します。空欄の場合は標準の英語404ページを表示します。",
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "許可する国の設定が無効です。2文字の地域コード、XX、またはT1を使用してください。"
   },
   "zh-TW": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用的部分可申請退款，按面額循原付款管道退回。請聯絡客服或商務處理，我們會核對剩餘用量後辦理。",
@@ -18316,7 +18364,15 @@
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "開啟安全風險檢測，如命中報毒風險，該連結會被下架，不參與分流。",
     "回传状态": "回傳狀態",
     "启用中": "啟用中",
-    "关联应用": "關聯應用"
+    "关联应用": "關聯應用",
+    "允许国家": "允許國家",
+    "勾选允许国家或地区": "勾選允許國家或地區",
+    "勾选后，仅所选国家和地区可通过；不选则不限制国家。无法定位的访问按“未知地区”判断。": "勾選後，僅所選國家和地區可通過；不選則不限制國家。無法定位的存取按「未知地區」判斷。",
+    "此入口保留原有国家拦截规则；更改允许国家后，原规则将被替换。": "此入口保留原有國家攔截規則；變更允許國家後，原規則將被取代。",
+    "清除原国家拦截规则": "清除原國家攔截規則",
+    "地区识别暂未配置，访问将按“未知地区”判断。": "地區識別暫未設定，存取將按「未知地區」判斷。",
+    "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "命中攔截條件、未滿足國家或廣告允許條件或目標無法使用時，進入自訂安全頁；留空則顯示預設英文 404 頁面。",
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "允許國家設定無效，請使用兩位地區代碼、XX 或 T1"
   },
   "ru": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Можно запросить возврат неиспользованной части по номинальной стоимости исходным способом оплаты. Обратитесь в поддержку или отдел продаж; перед обработкой мы проверим оставшийся объём использования.",
@@ -20933,6 +20989,14 @@
     "开启安全风险检测,如命中报毒风险该链接会被下架,不参与分流.": "Включите проверку безопасности. Ссылки, отмеченные как опасные, будут отключены и исключены из распределения.",
     "回传状态": "Статус отправки конверсий",
     "启用中": "Включено",
-    "关联应用": "Связанное приложение"
+    "关联应用": "Связанное приложение",
+    "允许国家": "Разрешённые страны",
+    "勾选允许国家或地区": "Выберите разрешённые страны или регионы",
+    "勾选后，仅所选国家和地区可通过；不选则不限制国家。无法定位的访问按“未知地区”判断。": "Допускаются только выбранные страны и регионы. Пустой список означает отсутствие ограничений по странам. Посещения без геолокации считаются неизвестным регионом.",
+    "此入口保留原有国家拦截规则；更改允许国家后，原规则将被替换。": "Сохранены прежние правила блокировки стран. Изменение разрешённых стран заменит эти правила.",
+    "清除原国家拦截规则": "Очистить прежние правила блокировки стран",
+    "地区识别暂未配置，访问将按“未知地区”判断。": "Определение региона не настроено. Посещения считаются посещениями из неизвестного региона.",
+    "命中拦截条件、未满足国家或广告允许条件或目标不可用时，进入自定义安全页；留空则显示默认英文 404 页面。": "При блокировке, несоответствии разрешённым странам или рекламным платформам либо недоступности цели используется заданная безопасная страница. Пустое поле означает стандартную страницу 404 на английском.",
+    "允许国家配置无效，请使用两位地区代码、XX 或 T1": "Недопустимые разрешённые страны. Используйте двухбуквенные коды регионов, XX или T1."
   }
 }

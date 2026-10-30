@@ -45,6 +45,7 @@ type Cloak struct {
 	BlockedLanguages   []string          `json:"blocked_languages" gorm:"serializer:json;type:text"`
 	BlockedBrowsers    []string          `json:"blocked_browsers" gorm:"serializer:json;type:text"`
 	BlockedUAs         []string          `json:"blocked_uas" gorm:"serializer:json;type:text"`
+	AllowedCountries   []string          `json:"allowed_countries" gorm:"serializer:json;type:text"`
 	BlockedCountries   []string          `json:"blocked_countries" gorm:"serializer:json;type:text"`
 	AllowedPlatforms   []string          `json:"allowed_platforms" gorm:"serializer:json;type:text"`
 	BlockedDevices     []CloakDeviceRule `json:"blocked_devices" gorm:"serializer:json;type:text"`
@@ -68,6 +69,7 @@ type cloakInput struct {
 	BlockedLanguages   []string          `json:"blocked_languages"`
 	BlockedBrowsers    []string          `json:"blocked_browsers"`
 	BlockedUAs         []string          `json:"blocked_uas"`
+	AllowedCountries   []string          `json:"allowed_countries"`
 	BlockedCountries   []string          `json:"blocked_countries"`
 	AllowedPlatforms   []string          `json:"allowed_platforms"`
 	BlockedDevices     []CloakDeviceRule `json:"blocked_devices"`
@@ -130,6 +132,10 @@ func (s *Server) saveCloak(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 			c.ID, c.Slug, c.CreatedAt = old.ID, old.Slug, old.CreatedAt
+			// Older clients cannot edit or accidentally clear the new allowlist.
+			if in.AllowedCountries == nil {
+				c.AllowedCountries = old.AllowedCountries
+			}
 		}
 		c.UserID, c.UpdatedAt = u.ID, s.Now()
 		if c.TargetType == "traffic_pool" {
@@ -309,10 +315,15 @@ func normalizeCloak(in cloakInput) (Cloak, error) {
 	if err != nil {
 		return c, problem(400, "UA 关键词不能为空且最多 200 个字符，最多配置 100 项")
 	}
-	c.BlockedCountries, err = normalizeCloakStrings(in.BlockedCountries, 300, func(v string) (string, bool) {
+	normalizeCountry := func(v string) (string, bool) {
 		v = strings.ToUpper(v)
 		return v, cloakCountry.MatchString(v)
-	})
+	}
+	c.AllowedCountries, err = normalizeCloakStrings(in.AllowedCountries, 300, normalizeCountry)
+	if err != nil {
+		return c, problem(400, "允许国家配置无效，请使用两位地区代码、XX 或 T1")
+	}
+	c.BlockedCountries, err = normalizeCloakStrings(in.BlockedCountries, 300, normalizeCountry)
 	if err != nil {
 		return c, problem(400, "国家拦截配置无效，请使用两位地区代码、XX 或 T1")
 	}
@@ -565,6 +576,10 @@ func cloakIPMatches(values []string, raw string) bool {
 }
 
 func cloakBlocked(c Cloak, r *http.Request, country string) bool {
+	if len(c.AllowedCountries) > 0 && !containsCloak(c.AllowedCountries, country) {
+		return true
+	}
+	// Keep legacy blocks active until the owner replaces the country selection.
 	if containsCloak(c.BlockedCountries, country) {
 		return true
 	}
