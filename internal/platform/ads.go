@@ -64,7 +64,8 @@ func defaultAds(a Application) AdConfig {
 }
 
 // Called only after ownedApp has verified the application's owner.
-func (s *Server) writeAdConfig(w http.ResponseWriter, c AdConfig) {
+func (s *Server) writeAdConfig(w http.ResponseWriter, c AdConfig, includeTokens bool) {
+	w.Header().Set("Cache-Control", "no-store")
 	secret := ""
 	if c.APISecret != "" && adMode(c) != "quick" {
 		var err error
@@ -74,7 +75,22 @@ func (s *Server) writeAdConfig(w http.ResponseWriter, c AdConfig) {
 			return
 		}
 	}
-	jsonOut(w, 200, map[string]any{"config": c, "facebook_token_set": c.FacebookToken != "", "tiktok_token_set": c.TikTokToken != "", "api_secret_set": c.APISecret != "", "api_secret": secret})
+	view := map[string]any{"config": c, "facebook_token_set": c.FacebookToken != "", "tiktok_token_set": c.TikTokToken != "", "api_secret_set": c.APISecret != "", "api_secret": secret}
+	if includeTokens {
+		for name, encrypted := range map[string]string{"facebook_token": c.FacebookToken, "tiktok_token": c.TikTokToken} {
+			plain := ""
+			if encrypted != "" {
+				var err error
+				plain, err = s.decryptSecret(encrypted)
+				if err != nil {
+					fail(w, err)
+					return
+				}
+			}
+			view[name] = plain
+		}
+	}
+	jsonOut(w, 200, view)
 }
 func (s *Server) getAds(w http.ResponseWriter, r *http.Request) {
 	a, e := s.ownedAdvertisingApp(r)
@@ -90,7 +106,7 @@ func (s *Server) getAds(w http.ResponseWriter, r *http.Request) {
 			c.DownloadFacebookEvent = "D1PWAInstall"
 		}
 	}
-	e = s.DB.First(&c, "app_id = ?", a.ID).Error
+	e = s.DB.First(&c, "app_id = ? AND user_id = ?", a.ID, a.UserID).Error
 	if e != nil && !errors.Is(e, gorm.ErrRecordNotFound) {
 		fail(w, e)
 		return
@@ -101,7 +117,7 @@ func (s *Server) getAds(w http.ResponseWriter, r *http.Request) {
 			c.AllowedOrigin = pwaAdOrigin(p)
 		}
 	}
-	s.writeAdConfig(w, c)
+	s.writeAdConfig(w, c, r.URL.Query().Get("include_tokens") == "1")
 }
 
 var adIdentifier = regexp.MustCompile(`^[A-Za-z0-9_:-]{1,100}$`)
@@ -204,7 +220,7 @@ func (s *Server) saveAds(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
-	s.writeAdConfig(w, c)
+	s.writeAdConfig(w, c, false)
 }
 func (s *Server) rotateAPISecret(w http.ResponseWriter, r *http.Request) {
 	a, e := s.ownedAdvertisingApp(r)

@@ -348,13 +348,17 @@ func (s *Server) renderPWALanding(a *PWAApp, r *http.Request, buf *bytes.Buffer)
 		Decoration                   landingDecoration
 		App                          *PWAApp
 		Base, JS                     string
-		MetaName, Icon               string
+		MetaName, Icon, Language     string
 		ReturnFlowToken              string
 		APKStyle, BaseStyle          template.CSS
 		CSS                          []string
 		Chinese, Preview, APKPreview bool
 	}
-	localized := pwaLandingLanguage(c, r.Header.Get("Accept-Language"))
+	requested := r.URL.Query().Get("language")
+	if requested == "" {
+		requested = r.Header.Get("Accept-Language")
+	}
+	localized := pwaLandingLanguage(c, requested)
 	name, icon := localized.AppName, localized.AppIcon
 	if name == "" {
 		name = a.Name
@@ -362,7 +366,7 @@ func (s *Server) renderPWALanding(a *PWAApp, r *http.Request, buf *bytes.Buffer)
 	if icon == "" {
 		icon = "/p/" + a.Slug + "/icon/192.png"
 	}
-	v := view{ReturnFlowToken: s.returnFlowViewToken("pwa", a.ID, r), App: a, Base: "/p/" + a.Slug + "/", JS: entry.File, CSS: entry.CSS, Chinese: pwaWantsChinese(r), Preview: strings.HasPrefix(r.URL.Path, "/api/pwa-landing/preview/"), APKPreview: strings.HasPrefix(r.URL.Path, "/api/pwa-landing/preview/") && r.URL.Query().Get("apk") == "1", MetaName: name, Icon: icon, BaseStyle: template.CSS(pwaLandingBaseCSS)}
+	v := view{ReturnFlowToken: s.returnFlowViewToken("pwa", a.ID, r), App: a, Base: "/p/" + a.Slug + "/", JS: entry.File, CSS: entry.CSS, Language: localized.Language, Chinese: strings.HasPrefix(strings.ToLower(localized.Language), "zh"), Preview: strings.HasPrefix(r.URL.Path, "/api/pwa-landing/preview/"), APKPreview: strings.HasPrefix(r.URL.Path, "/api/pwa-landing/preview/") && r.URL.Query().Get("apk") == "1", MetaName: name, Icon: icon, BaseStyle: template.CSS(pwaLandingBaseCSS)}
 	if !v.Preview {
 		v.ExternalBrowser = s.externalBrowserJSON(r, "pwa", a.ID, a.Slug, a.UserID, c.Settings.ExternalBrowser)
 	}
@@ -379,7 +383,7 @@ func (s *Server) renderPWALanding(a *PWAApp, r *http.Request, buf *bytes.Buffer)
 	return pwaLandingHTML.Execute(buf, v)
 }
 
-var pwaLandingHTML = template.Must(template.New("pwa-landing").Parse(`<!doctype html><html lang="{{if .Chinese}}zh-CN{{else}}en{{end}}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="{{.App.ThemeColor}}"><title>{{.MetaName}}</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="{{.MetaName}}"><meta name="description" content="{{.App.Description}}"><link rel="manifest" href="{{.Base}}manifest.webmanifest"><link rel="icon" href="{{.Base}}icon/192.png"><link rel="apple-touch-icon" href="{{.Icon}}">{{range .CSS}}<link rel="stylesheet" href="/pwa-template-assets/{{.}}">{{end}}{{if .Preview}}<style id="pwa-return-flow-style">{{.BaseStyle}}</style>{{else}}<link id="pwa-return-flow-style" rel="stylesheet" href="{{.Base}}style.css">{{end}}{{if not .Preview}}<script src="{{.Base}}landing-config.js" defer></script><script src="{{.ClientJS}}" defer></script>{{end}}{{if .APKPreview}}<style>{{.APKStyle}}</style><script defer src="{{.AdapterJS}}"></script>{{end}}<script type="{{.ScriptType}}" defer src="{{.JSURL}}"></script></head><body data-external-browser="{{.ExternalBrowser}}" class="{{.Decoration.Class}} {{if .APKPreview}}d1-apk-preview{{end}}" {{if .APKPreview}}data-d1-apk-reference{{else}}data-d1-pwa-reference{{end}} data-base="{{.Base}}" data-locale="{{if .Chinese}}zh{{else}}en{{end}}" {{if not .Preview}}data-return-flow="{{.App.ReturnFlowJSON}}" data-return-flow-token="{{.ReturnFlowToken}}" data-return-flow-endpoint="{{.Base}}return-flow/view"{{end}} data-return-flow-app="{{.App.ID}}" data-push-enabled="{{.App.PushEnabled}}">{{.Decoration.Noise}}<div id="app"></div><aside id="d1-pwa-status" hidden><p id="install-status" role="status"></p><section id="install-guide" hidden><p id="install-guide-text"></p><button type="button" id="install-guide-close">Close</button></section></aside><noscript>Enable JavaScript to install this app.</noscript></body></html>`))
+var pwaLandingHTML = template.Must(template.New("pwa-landing").Parse(`<!doctype html><html lang="{{.Language}}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="{{.App.ThemeColor}}"><title>{{.MetaName}}</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="{{.MetaName}}"><meta name="description" content="{{.App.Description}}"><link rel="manifest" href="{{.Base}}manifest.webmanifest"><link rel="icon" href="{{.Base}}icon/192.png"><link rel="apple-touch-icon" href="{{.Icon}}">{{range .CSS}}<link rel="stylesheet" href="/pwa-template-assets/{{.}}">{{end}}{{if .Preview}}<style id="pwa-return-flow-style">{{.BaseStyle}}</style>{{else}}<link id="pwa-return-flow-style" rel="stylesheet" href="{{.Base}}style.css">{{end}}{{if not .Preview}}<script src="{{.Base}}landing-config.js" defer></script><script src="{{.ClientJS}}" defer></script>{{end}}{{if .APKPreview}}<style>{{.APKStyle}}</style><script defer src="{{.AdapterJS}}"></script>{{end}}<script type="{{.ScriptType}}" defer src="{{.JSURL}}"></script></head><body data-external-browser="{{.ExternalBrowser}}" class="{{.Decoration.Class}} {{if .APKPreview}}d1-apk-preview{{end}}" {{if .APKPreview}}data-d1-apk-reference{{else}}data-d1-pwa-reference{{end}} data-base="{{.Base}}" data-locale="{{if .Chinese}}zh{{else}}en{{end}}" {{if not .Preview}}data-return-flow="{{.App.ReturnFlowJSON}}" data-return-flow-token="{{.ReturnFlowToken}}" data-return-flow-endpoint="{{.Base}}return-flow/view"{{end}} data-return-flow-app="{{.App.ID}}" data-push-enabled="{{.App.PushEnabled}}">{{.Decoration.Noise}}<div id="app"></div><aside id="d1-pwa-status" hidden><p id="install-status" role="status"></p><section id="install-guide" hidden><p id="install-guide-text"></p><button type="button" id="install-guide-close">Close</button></section></aside><noscript>Enable JavaScript to install this app.</noscript></body></html>`))
 
 func pwaLandingContains(values []string, value string) bool {
 	for _, item := range values {

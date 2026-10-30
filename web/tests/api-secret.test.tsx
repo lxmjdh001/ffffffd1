@@ -31,7 +31,7 @@ beforeEach(() => {
   Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute('open'); } });
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
     if (String(input) === '/api/me') return json({ user: { id: 'test-member', role: 'member' }, csrf_token: 'test-csrf' });
-    if (String(input) === '/api/apps/test-app/ads') return json({ config: appConfig, facebook_token_set: false, tiktok_token_set: false, api_secret_set: !!persistedKey, api_secret: persistedKey });
+    if (String(input).split('?')[0] === '/api/apps/test-app/ads') return json({ config: appConfig, facebook_token_set: false, tiktok_token_set: false, api_secret_set: !!persistedKey, api_secret: persistedKey, ...(String(input).endsWith('?include_tokens=1') ? {facebook_token:'fixture-meta-visible',tiktok_token:'fixture-tiktok-visible'} : {}) });
     if (String(input) === '/api/apps/test-app/ads/rotate-key') { generations++; persistedKey = generatedKey; return json({ api_secret: generatedKey }); }
     throw new Error(`Unexpected request: ${input}`);
   }));
@@ -87,4 +87,12 @@ it('keeps a new key on the page after closing its dialog and after reloading', a
   expect(screen.getByText(generatedKey)).toBeTruthy();
   await copyRepeatedly(user, generatedKey);
   expect(generations).toBe(1);
+});
+
+it('restores both saved channel tokens as editable text in deep settings', async () => {
+ const user=await openPage();
+ await user.click(screen.getByRole('button',{name:'广告平台配置'}));
+ await screen.findByDisplayValue('fixture-meta-visible');
+ expect(screen.getByDisplayValue('fixture-meta-visible').getAttribute('type')).toBe('text');
+ expect(screen.getByDisplayValue('fixture-tiktok-visible').getAttribute('type')).toBe('text');
 });

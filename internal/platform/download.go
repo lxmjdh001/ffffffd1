@@ -254,30 +254,35 @@ func (s *Server) downloadClient(w http.ResponseWriter, r *http.Request) {
 func apkClientScript() string {
 	return externalBrowserJS + "\n" + `"use strict";
 const languages=` + string(pageLocaleJSON) + `;
-const copy=languages[document.documentElement.lang]||languages['zh-CN'];
+function downloadCopy(){
+ const selected=window.__APP_CONFIG__?.app?.storeInfo?.language||window.__APP_CONFIG__?.customApp?.setting?.language||document.documentElement.lang||'en';
+ const lang=String(selected).replace(/_/g,'-').toLowerCase(),keys=Object.keys(languages);
+ const key=keys.find(key=>key.toLowerCase()===lang)||keys.find(key=>key.toLowerCase().split('-')[0]===lang.split('-')[0])||'en';
+ return languages[key]||languages.en;
+}
 const form=document.getElementById('d1-native-download')||document.querySelector('form');
 const button=form.querySelector('button');
 const status=document.getElementById('download-status');
+const setDownloadStatus=value=>{if(status){status.textContent=value;status.hidden=!value;}};
+setDownloadStatus('');
 let returnFlowSource=false;
 window.D1ReturnFlowInstall=(options)=>{returnFlowSource=options?.source==='return_flow';try{form.requestSubmit();}finally{returnFlowSource=false;}};
 form.addEventListener('submit',async function(event){
- event.preventDefault();if(button.disabled)return;if(window.D1ExternalBrowser?.open())return;const fromReturnFlow=returnFlowSource;button.disabled=true;status.textContent=copy.preparing;
+ event.preventDefault();if(button.disabled)return;if(window.D1ExternalBrowser?.open())return;const copy=downloadCopy(),fromReturnFlow=returnFlowSource;button.disabled=true;setDownloadStatus('');
  try {
   const body=new URLSearchParams(new FormData(form));if(window.D1ExternalBrowser?.returnToken)body.set('external_return',window.D1ExternalBrowser.returnToken);
   const response=await fetch(form.action,{method:'POST',credentials:'same-origin',headers:{Accept:'application/json'},body});
   const data=await response.json();
-  if(!response.ok)throw new Error(data.error||copy.download_failed);
+  if(!response.ok)throw new Error(copy.download_failed);
   if(data.redirect_url!==undefined){
    if(!form.hasAttribute('data-traffic-button')||typeof data.redirect_url!=='string'||!/^https?:\/\/[^\s]+$/.test(data.redirect_url))throw new Error(copy.invalid_url);
-   status.textContent=copy.ready;
    window.dispatchEvent(new CustomEvent('d1-apk-download-start',{detail:{source:fromReturnFlow?'return_flow':'page'}}));
    window.location.assign(data.redirect_url);return;
   }
   if(!/^\/d\/[a-f0-9]{64}$/.test(data.download_url))throw new Error(copy.invalid_url);
-  status.textContent=copy.ready;
   window.dispatchEvent(new CustomEvent('d1-apk-download-start',{detail:{source:fromReturnFlow?'return_flow':'page'}}));
   window.location.assign(data.download_url);
- }catch(error){status.textContent=error.message||copy.network_error;}
+ }catch(error){setDownloadStatus([copy.download_failed,copy.invalid_url].includes(error?.message)?error.message:copy.network_error);}
  finally{button.disabled=false;}
 });` + "\n" + returnFlowJS + "\n" + apkLandingBridgeJS
 }

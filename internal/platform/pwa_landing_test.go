@@ -10,6 +10,29 @@ import (
 func landingFixture() PWALandingConfig {
 	return PWALandingConfig{Template: "google_play", StartupBgColor: "#ffffff", StartupThemeColor: "#01875f", DisplayMode: "fullscreen", PWAOrientation: "portrait", EnableGoogleBadge: true, EnableOfficialVerify: true, LanguagePriority: []string{"en-US", "zh-CN"}, StoreInfos: []PWALandingLanguage{{Language: "en-US", AppName: "North Studio", DeveloperName: "North", AppSummary: "A useful app", DownloadCount: "1M+", ReviewCount: "200", DetailImages: []string{"https://images.example/screen.png"}, Reviews: []PWALandingReview{{Nickname: "Reviewer", Comment: "Great", Rating: 5}}}, {Language: "zh-CN", AppName: "北方工作室", AppSummary: "欢迎使用", CustomImages: []string{"https://images.example/custom.png"}, ShowInstallButton: true, ButtonText: "安装", ButtonPosition: "bottom"}}, Settings: PWALandingSettings{PackagePriority: "pwa", IOSCompatible: true, EnableIframeEmbed: true}}
 }
+func TestPWALandingHelperLanguageMatchesConfiguredPage(t *testing.T) {
+	s := testServer(t)
+	u := seedUser(t, s, 0)
+	p := createPWAFixture(t, s, u, "Localized install page")
+	c := landingFixture()
+	c.LanguagePriority = []string{"ar-SA"}
+	c.StoreInfos = []PWALandingLanguage{{Language: "ar-SA", AppName: "Arabic page"}, {Language: "en-US", AppName: "English page"}}
+	raw, _ := json.Marshal(c)
+	if err := s.DB.Model(&p).Update("landing_json", string(raw)).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct{ suffix, browser, language string }{
+		{"", "zh-CN", "ar-SA"},
+		{"?language=ar-SA", "en-US", "ar-SA"},
+		{"?language=en-US", "zh-CN", "en-US"},
+	} {
+		w := pwaPublicCall(t, s, "/p/"+p.Slug+"/"+test.suffix, "", test.browser)
+		requireCode(t, w, 200)
+		if !strings.Contains(w.Body.String(), `lang="`+test.language+`"`) || !strings.Contains(w.Body.String(), `data-locale="en"`) {
+			t.Fatal("install helper text follows browser language instead of configured page")
+		}
+	}
+}
 func TestPWAInstallAnimationStylesStayOnInstallPages(t *testing.T) {
 	s := testServer(t)
 	owner := seedUser(t, s, 0)
