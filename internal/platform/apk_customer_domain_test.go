@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestAPKCustomerDomainRoutingKeepsNativeOriginAttributionAndBilling(t *testing.T) {
+func TestAPKCustomerDomainRoutingUsesPoolOriginAttributionAndBilling(t *testing.T) {
 	for _, ending := range []string{"", "/direct", "/info"} {
 		t.Run(ending, func(t *testing.T) {
 			f := routedAdFixtureFor(t, true)
@@ -37,8 +37,8 @@ func TestAPKCustomerDomainRoutingKeepsNativeOriginAttributionAndBilling(t *testi
 			if err != nil {
 				t.Fatal(err)
 			}
-			if u.Scheme != "https" || u.Host != "customer.example" || u.Path != "/a/"+f.apps[1].Slug+"/direct" || u.Query().Get("keep") != "existing" || u.Fragment != "section" || u.Query().Get(routedAttributionParam) == "" {
-				t.Fatal("customer target changed path/query or left origin", u)
+			if u.Scheme != "https" || u.Host != "download.example" || u.Path != "/a/"+f.apps[1].Slug+"/direct" || u.Query().Get("keep") != "existing" || u.Fragment != "section" || u.Query().Get(routedAttributionParam) == "" {
+				t.Fatal("routing changed the configured pool hostname, path, or query", u)
 			}
 			if got := usageOwner(t, s, f.owner.ID); got.BalanceMicros != f.owner.BalanceMicros || countRows(t, s, &Conversion{}) != 0 {
 				t.Fatal("routing charged or sent conversion")
@@ -52,7 +52,7 @@ func TestAPKCustomerDomainRoutingKeepsNativeOriginAttributionAndBilling(t *testi
 			landing := routedAdRequest(s, "GET", u.String(), nil, nil, "")
 			targetJar := landing.Result().Cookies()
 			requireCode(t, landing, 307)
-			file := "https://customer.example" + landing.Header().Get("Location")
+			file := "https://download.example" + landing.Header().Get("Location")
 
 			requireCode(t, routedAdRequest(s, "GET", file, targetJar, nil, "bytes=0-0"), 206)
 			if got := usageOwner(t, s, f.owner.ID); got.BalanceMicros != f.owner.BalanceMicros-50000 {
@@ -69,7 +69,7 @@ func TestAPKCustomerDomainRoutingKeepsNativeOriginAttributionAndBilling(t *testi
 	}
 }
 
-func TestAPKCustomerDomainRoutingOnlyRebasesOwnedNativeTargets(t *testing.T) {
+func TestAPKCustomerDomainRoutingOnlyNormalizesOwnedNativeTargets(t *testing.T) {
 	f := routedAdFixtureFor(t, true)
 	s := f.s
 	addChosenDomain(t, s, f.owner, "customer.example")

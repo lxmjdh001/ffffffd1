@@ -501,8 +501,8 @@ func TestCloakRoutedOriginalCloakToAPKToPoolRemainsSupported(t *testing.T) {
 	var result map[string]string
 	json.Unmarshal(w.Body.Bytes(), &result)
 	u, _ := url.Parse(result["redirect_url"])
-	if u.Host != "chosen.example" {
-		t.Fatal("APK button did not keep the chosen customer hostname")
+	if u.Host != "download.example" {
+		t.Fatal("APK routing button did not preserve the configured pool hostname")
 	}
 	file, jar := f.targetTicket(t, u.String(), f.apps[1])
 	requireCode(t, routedAdRequest(s, "GET", file, jar, nil, "bytes=0-0"), 206)

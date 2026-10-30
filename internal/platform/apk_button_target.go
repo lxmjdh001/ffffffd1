@@ -4,7 +4,6 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -106,7 +105,7 @@ func (s *Server) apkPageButton(w http.ResponseWriter, r *http.Request) {
 	}
 	// This is a download action, not another landing-page visit. Native APK
 	// targets bypass their own detail/routing button, preventing recursive pools.
-	// Keep a verified customer entry's hostname, then sign the final handoff.
+	// Preserve the pool's configured hostname, then sign the final handoff.
 	target, err = s.apkButtonNativeTarget(r, a, target)
 	if err != nil {
 		fail(w, err)
@@ -135,14 +134,8 @@ func (s *Server) apkButtonNativeTarget(r *http.Request, source Application, raw 
 	if err != nil || app.ID == "" || target == nil {
 		return raw, err
 	}
-	if owner, ok := r.Context().Value(domainOwnerKey).(string); ok && owner == source.UserID {
-		// Domain middleware has authenticated this customer's incoming binding.
-		origin, err := url.Parse(s.pwaRequestOrigin(r))
-		if err != nil {
-			return "", err
-		}
-		target.Scheme, target.Host = origin.Scheme, origin.Host
-	}
+	// A routing button honors the URL selected from the owner's pool. Ordinary
+	// downloads keep using their relative endpoints on the copied entry host.
 	target.Path, target.RawPath = "/a/"+app.Slug+"/direct", ""
 	return target.String(), nil
 }
