@@ -220,6 +220,11 @@ func (s *Server) replayDownloadAdCompletions(ctx context.Context) {
 		if err != nil || json.Unmarshal(raw, &receipt) != nil || !hexKey.MatchString(receipt.TicketHash) || !hexKey.MatchString(receipt.UserID) {
 			continue
 		}
+		if receipt.Start < 0 || receipt.End < 0 {
+			// Financial start-only receipts belong exclusively to accounting.
+			s.wakeCompletions()
+			continue
+		}
 		readCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		var ticket Ticket
 		err = s.DB.WithContext(readCtx).Select("attribution_id", "charged", "ranges").First(&ticket, "hash = ? AND user_id = ?", receipt.TicketHash, receipt.UserID).Error

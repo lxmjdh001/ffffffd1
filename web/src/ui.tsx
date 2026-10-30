@@ -11,7 +11,7 @@ export const number = (n = 0) => n.toLocaleString(getLocale());
 export const bytes = (n = 0) => n >= 2 ** 30 ? `${(n / 2 ** 30).toFixed(1)} GB` : n >= 2 ** 20 ? `${(n / 2 ** 20).toFixed(1)} MB` : `${(n / 1024).toFixed(1)} KB`;
 export const date = (s?: string | null, full = false) => s ? new Intl.DateTimeFormat(getLocale(), { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', ...(full ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : {}) }).format(new Date(s)) : '—';
 export const errorText = (e: unknown) => e instanceof Error ? t(e.message) : t("操作失败，请重试");
-export const ledgerKind = (kind: string) => ({ registration_gift: t('注册赠送'), apk_external: t('APK 外部跳转'), pwa_external: t('PWA 外部跳转'), apk_uv: t('APK 访问 UV'), pwa_install: t('PWA 安装'), cloak_uv: t('斗篷访问 UV'), pwa_push: t('PWA 消息推送'), return_flow: t('回流页扣费'), referral_reward: t('邀请返利'), withdrawal_hold: t('提现冻结'), withdrawal_refund: t('提现退回') } as Record<string, string>)[kind] || '';
+export const ledgerKind = (kind: string) => ({ registration_gift: t('注册赠送'), apk_external: t('APK 外部跳转'), pwa_external: t('PWA 外部跳转'), apk_uv: t('APK 下载'), pwa_install: t('PWA 安装'), cloak_uv: t('斗篷访问 UV'), pwa_push: t('PWA 消息推送'), return_flow: t('回流页扣费'), referral_reward: t('邀请返利'), withdrawal_hold: t('提现冻结'), withdrawal_refund: t('提现退回') } as Record<string, string>)[kind] || '';
 export function PageHeader({ eyebrow, title, subtitle, action }: { eyebrow?: string; title: string; subtitle?: string; action?: ReactNode }) {
   useLocale(); return <div className="page-heading"><div>{eyebrow && <div className="eyebrow">{eyebrow}</div>}<h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>{action && <div className="heading-action">{action}</div>}</div>; }
 export function Spinner() {

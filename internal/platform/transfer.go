@@ -126,10 +126,13 @@ func (s *Server) reserveDownload(t Ticket) error {
 		if ticket.Reserved && !ticket.Charged && ticket.ExpiresAt.Before(s.Now().Add(40*time.Minute)) {
 			return tx.Model(&ticket).Update("expires_at", s.Now().Add(40*time.Minute)).Error
 		}
-		if ticket.Charged || ticket.Reserved {
+		if ticket.Charged {
 			return nil
 		}
 		if ticket.Metered {
+			if e = s.reserveAPKDownload(tx, &u, &ticket); e != nil {
+				return e
+			}
 			now := s.Now()
 			ticket.Reserved = true
 			ticket.Period = period(now)
@@ -140,6 +143,9 @@ func (s *Server) reserveDownload(t Ticket) error {
 				ticket.ExpiresAt = now.Add(40 * time.Minute)
 			}
 			return tx.Save(&ticket).Error
+		}
+		if ticket.Reserved {
+			return nil
 		}
 		// Tickets issued before the cutover retain their original settlement
 		// rules, even though all newly issued tickets use UV billing.
@@ -210,6 +216,14 @@ func (s *Server) finishRange(t Ticket, start, end int64) error {
 		}
 		if start < 0 || end < start || end >= ticket.Size {
 			return errors.New("invalid completed byte range")
+		}
+		// A confirmed range also recovers a first-byte settlement after a crash.
+		occurred := s.Now()
+		if ticket.StartedAt != nil {
+			occurred = *ticket.StartedAt
+		}
+		if e = s.settleAPKDownloadStart(tx, &u, &ticket, occurred); e != nil {
+			return e
 		}
 		var ranges []byteRange
 		if ticket.Ranges != "" {

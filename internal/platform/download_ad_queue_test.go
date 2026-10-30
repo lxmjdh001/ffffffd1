@@ -124,8 +124,8 @@ func TestDownloadAdFailureCannotRollBackAccountingAndReplaysAfterRestart(t *test
 		t.Fatal("accounting depended on advertising")
 	}
 	after := usageOwner(t, s, f.owner.ID)
-	if after.BalanceMicros != before.BalanceMicros || after.HeldMicros != before.HeldMicros {
-		t.Fatal("download preparation changed UV accounting")
+	if after.BalanceMicros != before.BalanceMicros-50000 || after.HeldMicros != before.HeldMicros {
+		t.Fatal("download start did not settle its UV independently of advertising")
 	}
 	event := <-s.downloadAdStarts
 	path, err := s.writeDownloadAdStart(event)

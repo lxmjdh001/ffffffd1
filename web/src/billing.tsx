@@ -60,7 +60,7 @@ export function BillingPage() {
       <section className="billing-monthly-metric" aria-label={t("本月消费")}><span><CreditCard size={17}/>{t("本月消费")}<small>USD</small></span><strong>$ {money(d.usage.spent_micros, 3)}</strong></section>
     </div> : <div className="billing-top compact-billing-top">
       <section className="balance-panel compact-balance">
-        <div className="balance-main"><span><Wallet size={16} />{t("可用余额 ")}<small>USD</small></span><strong>$ {money(available, 3)}</strong><p>{config.metered_billing ? t("APK 访问 UV") + " $" : t("超额下载 $")}{money(config.download_price_micros, 3)} {t(" / 次")}</p>{d.user.held_micros > 0 && <p>{config.metered_billing ? t("预留金额") + " $" : t("下载中预留 $")}{money(d.user.held_micros, 6)}</p>}</div>
+        <div className="balance-main"><span><Wallet size={16} />{t("可用余额 ")}<small>USD</small></span><strong>$ {money(available, 3)}</strong><p>{config.metered_billing ? t("APK 下载") + " $" : t("超额下载 $")}{money(config.download_price_micros, 3)} {t(" / 次")}</p>{d.user.held_micros > 0 && <p>{config.metered_billing ? t("预留金额") + " $" : t("下载中预留 $")}{money(d.user.held_micros, 6)}</p>}</div>
         <button className="btn balance-recharge" onClick={() => openRecharge()}><Plus size={16} />{t("充值余额")}</button>
       </section>
       <section className="panel compact-quota">

@@ -112,12 +112,29 @@ const domainOwnerKey contextKey = "domain-owner"
 const downloadAudienceKey contextKey = "download-audience"
 
 func userOf(r *http.Request) User { return r.Context().Value(userKey).(User) }
+
+// Use only Cloudflare's published networks, independently of operator-defined
+// country-header proxies. Rechecked against https://www.cloudflare.com/ips-v4
+// and /ips-v6 on 2026-10-30. Never trust a browser's bare CF/XFF headers.
+var clientCloudflareNetworks, _ = parseCloakCountryNetworks(defaultCloakCountryCIDRs)
+
 func (s *Server) clientIP(r *http.Request) string {
 	host, _, e := net.SplitHostPort(r.RemoteAddr)
 	if e != nil {
 		host = r.RemoteAddr
 	}
 	ip := net.ParseIP(host)
+	cloudflareVisitor := func(peer net.IP) string {
+		if ipInCloakNetworks(peer, clientCloudflareNetworks) {
+			if visitor := net.ParseIP(strings.TrimSpace(r.Header.Get("CF-Connecting-IP"))); visitor != nil {
+				return visitor.String()
+			}
+		}
+		return ""
+	}
+	if visitor := cloudflareVisitor(ip); visitor != "" {
+		return visitor
+	}
 	trusted := func(ip net.IP) bool {
 		for _, n := range s.Config.TrustedProxies {
 			if n.Contains(ip) {
@@ -134,6 +151,9 @@ func (s *Server) clientIP(r *http.Request) string {
 				return host
 			}
 			host = p.String()
+			if visitor := cloudflareVisitor(p); visitor != "" {
+				return visitor
+			}
 			if !trusted(p) {
 				break
 			}

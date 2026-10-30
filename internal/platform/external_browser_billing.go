@@ -2,7 +2,6 @@ package platform
 
 import (
 	"crypto/hmac"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -70,21 +69,4 @@ func (s *Server) paidExternalReturn(kind, id, target, token string) bool {
 	parts := strings.Split(token, ".")
 	var n int64
 	return s.DB.Model(&MeteredEvent{}).Where("id = ? AND kind = ? AND resource_id = ? AND state = ?", parts[1], kind+"_external", id, "charged").Count(&n).Error == nil && n == 1
-}
-
-func (s *Server) chargeAPKAccess(r *http.Request, app Application) error {
-	token := r.URL.Query().Get(externalReturnParam)
-	if token == "" && r.Method == http.MethodPost {
-		token = r.FormValue("external_return")
-	}
-	if token != "" {
-		d, e := s.pageDesign(app)
-		if e != nil {
-			return e
-		}
-		if d.ExternalBrowser != nil && s.paidExternalReturn("apk", app.ID, d.ExternalBrowser.URL, token) {
-			return nil
-		}
-	}
-	return s.chargeUsageUV(r, app.UserID, "apk_uv", app.ID)
 }

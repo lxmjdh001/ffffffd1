@@ -161,32 +161,34 @@ type DownloadGrant struct {
 	ExpiresAt time.Time `gorm:"index"`
 }
 type Ticket struct {
-	Metered       bool
-	Hash          string `gorm:"primaryKey;size:64"`
-	AppID         string `gorm:"index;size:32"`
-	UserID        string `gorm:"size:32"`
-	FileKey       string `gorm:"size:32"`
-	VisitorHash   string `gorm:"size:64"`
-	Host          string
-	Charged       bool
-	Reserved      bool `gorm:"index"`
-	Released      bool
-	Free          bool
-	PriceMicros   int64
-	Period        string `gorm:"size:7"`
-	GrantID       string `gorm:"size:64;index"`
-	Size          int64
-	AppName       string
-	Ranges        string
-	IP            string `gorm:"size:64"`
-	UserAgent     string
-	Source        string
-	Device        string
-	OS            string
-	Browser       string
-	AttributionID string `gorm:"size:32;index"`
-	StartedAt     *time.Time
-	ExpiresAt     time.Time `gorm:"index"`
+	BillingEventID string `gorm:"size:64;index;not null;default:''"`
+	BillingPrepaid bool   `gorm:"not null;default:false"`
+	Metered        bool
+	Hash           string `gorm:"primaryKey;size:64"`
+	AppID          string `gorm:"index;size:32"`
+	UserID         string `gorm:"size:32"`
+	FileKey        string `gorm:"size:32"`
+	VisitorHash    string `gorm:"size:64"`
+	Host           string
+	Charged        bool
+	Reserved       bool `gorm:"index"`
+	Released       bool
+	Free           bool
+	PriceMicros    int64
+	Period         string `gorm:"size:7"`
+	GrantID        string `gorm:"size:64;index"`
+	Size           int64
+	AppName        string
+	Ranges         string
+	IP             string `gorm:"size:64"`
+	UserAgent      string
+	Source         string
+	Device         string
+	OS             string
+	Browser        string
+	AttributionID  string `gorm:"size:32;index"`
+	StartedAt      *time.Time
+	ExpiresAt      time.Time `gorm:"index"`
 }
 type Download struct {
 	Metered       bool      `json:"metered"`

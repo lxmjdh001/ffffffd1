@@ -150,7 +150,10 @@ func Migrate(db *gorm.DB) error {
 			if err := migrateHomeContact(tx); err != nil {
 				return err
 			}
-			return migrateTrafficAttribution(tx)
+			if err := migrateTrafficAttribution(tx); err != nil {
+				return err
+			}
+			return migrateAPKDownloadBilling(tx)
 		}
 		if err := tx.AutoMigrate(&Settings{}); err != nil {
 			return err
@@ -202,7 +205,10 @@ func Migrate(db *gorm.DB) error {
 		if err := migrateHomeContact(tx); err != nil {
 			return err
 		}
-		return migrateTrafficAttribution(tx)
+		if err := migrateTrafficAttribution(tx); err != nil {
+			return err
+		}
+		return migrateAPKDownloadBilling(tx)
 	})
 }
 func BootstrapAdmin(db *gorm.DB, c Config) error {
