@@ -22,8 +22,18 @@ import (
 	"gorm.io/gorm"
 )
 
+type appListView struct {
+	Application
+	AdsEnabled bool `json:"ads_enabled"`
+}
+
 func (s *Server) listApps(w http.ResponseWriter, r *http.Request) {
-	listOut[Application](w, r, addQuery(s.DB.Model(&Application{}).Where("user_id = ?", userOf(r).ID), r, "name", "file_name"))
+	q := s.DB.Model(&Application{}).Select(`applications.*, EXISTS (
+		SELECT 1 FROM ad_configs
+		WHERE ad_configs.app_id = applications.id AND ad_configs.user_id = applications.user_id
+		AND (ad_configs.facebook_enabled = ? OR ad_configs.tik_tok_enabled = ?)
+	) AS ads_enabled`, true, true).Where("user_id = ?", userOf(r).ID)
+	listOut[appListView](w, r, addQuery(q, r, "name", "file_name"))
 }
 func (s *Server) ownedApp(r *http.Request) (Application, error) {
 	var a Application

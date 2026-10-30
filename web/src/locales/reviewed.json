@@ -5751,6 +5751,39 @@
       "未完了の出金があります。処理後に削除してください。",
       "使用者存在未完成的提領，請處理完成後再刪除",
       "У пользователя есть незавершённые выводы. Обработайте их перед удалением."
+    ],
+    [
+      "回传状态",
+      "Conversion reporting status",
+      "Status do envio de conversões",
+      "Conversion-Übermittlungsstatus",
+      "État de l’envoi des conversions",
+      "전환 전송 상태",
+      "コンバージョン送信状態",
+      "回傳狀態",
+      "Статус отправки конверсий"
+    ],
+    [
+      "启用中",
+      "Enabled",
+      "Ativo",
+      "Aktiviert",
+      "Activé",
+      "활성화됨",
+      "有効",
+      "啟用中",
+      "Включено"
+    ],
+    [
+      "关联应用",
+      "Linked app",
+      "Aplicativo associado",
+      "Verknüpfte App",
+      "Application associée",
+      "연결된 앱",
+      "関連アプリ",
+      "關聯應用",
+      "Связанное приложение"
     ]
   ]
 }
