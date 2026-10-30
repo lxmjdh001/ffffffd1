@@ -2655,7 +2655,8 @@
     "事件凭证无效": "Invalid event proof",
     "尚未确认本次点击的 PWA 安装": "The PWA installation for this visit has not been confirmed",
     "PWA 已停用或删除": "PWA disabled or deleted",
-    "回传模式已变更": "Reporting mode has changed"
+    "回传模式已变更": "Reporting mode has changed",
+    "事件 / 应用": "Event / App"
   },
   "pt": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Você pode solicitar reembolso da parte não utilizada, pelo valor nominal e pelo método de pagamento original. Contate o suporte ou a equipe comercial; verificaremos o saldo de uso restante antes de processar.",
@@ -5313,7 +5314,8 @@
     "事件凭证无效": "Comprovante de evento inválido",
     "尚未确认本次点击的 PWA 安装": "A instalação do PWA desta visita ainda não foi confirmada",
     "PWA 已停用或删除": "PWA desativado ou excluído",
-    "回传模式已变更": "O modo de relatório mudou"
+    "回传模式已变更": "O modo de relatório mudou",
+    "事件 / 应用": "Evento / Aplicativo"
   },
   "de": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Für den ungenutzten Anteil können Sie eine Erstattung zum Nennwert über den ursprünglichen Zahlungsweg beantragen. Kontaktieren Sie Support oder Vertrieb; wir prüfen die verbleibende Nutzung vor der Bearbeitung.",
@@ -7971,7 +7973,8 @@
     "事件凭证无效": "Ungültiger Ereignisnachweis",
     "尚未确认本次点击的 PWA 安装": "Die PWA-Installation für diesen Besuch wurde noch nicht bestätigt",
     "PWA 已停用或删除": "PWA deaktiviert oder gelöscht",
-    "回传模式已变更": "Rückmeldemodus wurde geändert"
+    "回传模式已变更": "Rückmeldemodus wurde geändert",
+    "事件 / 应用": "Ereignis / App"
   },
   "fr": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Vous pouvez demander le remboursement de la partie non utilisée, à sa valeur nominale et via le moyen de paiement d’origine. Contactez l’assistance ou le service commercial ; nous vérifierons l’utilisation restante avant traitement.",
@@ -10629,7 +10632,8 @@
     "事件凭证无效": "Preuve d’événement invalide",
     "尚未确认本次点击的 PWA 安装": "L’installation PWA de cette visite n’est pas encore confirmée",
     "PWA 已停用或删除": "PWA désactivée ou supprimée",
-    "回传模式已变更": "Le mode de remontée a changé"
+    "回传模式已变更": "Le mode de remontée a changé",
+    "事件 / 应用": "Événement / Application"
   },
   "ko": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "미사용 부분은 액면 금액 기준으로 원래 결제 수단을 통해 환불을 신청할 수 있습니다. 고객 지원 또는 영업팀에 문의하세요. 남은 사용량을 확인한 후 처리합니다.",
@@ -13287,7 +13291,8 @@
     "事件凭证无效": "이벤트 증명이 유효하지 않습니다",
     "尚未确认本次点击的 PWA 安装": "이번 방문의 PWA 설치가 아직 확인되지 않았습니다",
     "PWA 已停用或删除": "PWA가 비활성화되었거나 삭제되었습니다",
-    "回传模式已变更": "전송 모드가 변경되었습니다"
+    "回传模式已变更": "전송 모드가 변경되었습니다",
+    "事件 / 应用": "이벤트 / 앱"
   },
   "ja": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用分は額面金額で元のお支払い方法への返金を申請できます。サポートまたは営業担当にご連絡ください。残りの利用量を確認してから手続きします。",
@@ -15945,7 +15950,8 @@
     "事件凭证无效": "イベント証明が無効です",
     "尚未确认本次点击的 PWA 安装": "今回の訪問の PWA インストールは未確認です",
     "PWA 已停用或删除": "PWA は無効化または削除されています",
-    "回传模式已变更": "送信モードが変更されました"
+    "回传模式已变更": "送信モードが変更されました",
+    "事件 / 应用": "イベント / アプリ"
   },
   "zh-TW": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用的部分可申請退款，按面額循原付款管道退回。請聯絡客服或商務處理，我們會核對剩餘用量後辦理。",
@@ -18603,7 +18609,8 @@
     "事件凭证无效": "事件憑證無效",
     "尚未确认本次点击的 PWA 安装": "尚未確認本次點擊的 PWA 安裝",
     "PWA 已停用或删除": "PWA 已停用或刪除",
-    "回传模式已变更": "回傳模式已變更"
+    "回传模式已变更": "回傳模式已變更",
+    "事件 / 应用": "事件 / 應用"
   },
   "ru": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Можно запросить возврат неиспользованной части по номинальной стоимости исходным способом оплаты. Обратитесь в поддержку или отдел продаж; перед обработкой мы проверим оставшийся объём использования.",
@@ -21261,6 +21268,7 @@
     "事件凭证无效": "Недействительное подтверждение события",
     "尚未确认本次点击的 PWA 安装": "Установка PWA для этого посещения ещё не подтверждена",
     "PWA 已停用或删除": "PWA отключено или удалено",
-    "回传模式已变更": "Режим отправки изменён"
+    "回传模式已变更": "Режим отправки изменён",
+    "事件 / 应用": "Событие / Приложение"
   }
 }

@@ -90,3 +90,80 @@ func TestAppListAdStatus(t *testing.T) {
 	expected[facebookApp.ID] = false
 	read("?q=facebook", 1, 1)
 }
+
+func TestConversionListApplicationNumbers(t *testing.T) {
+	s := testServer(t)
+	owner, other := seedUser(t, s, 0), seedUser(t, s, 0)
+	source, target := seedApp(t, s, owner, 10), seedApp(t, s, owner, 10)
+	foreign := seedApp(t, s, other, 10)
+	removed := seedApp(t, s, owner, 10)
+	if err := s.DB.Delete(&removed).Error; err != nil {
+		t.Fatal(err)
+	}
+	pwa := createPWAFixture(t, s, owner, "PWA events")
+	cookie, _ := sessionFor(t, s, owner)
+	add := func(appID, targetID, event string) Conversion {
+		t.Helper()
+		c := Conversion{ID: randomHex(16), AppID: appID, UserID: owner.ID, DownloadedAppID: targetID, Event: event, EventID: randomHex(32), AttributionID: randomHex(16), EventTime: s.Now(), CreatedAt: s.Now()}
+		if err := s.DB.Create(&c).Error; err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	direct := add(source.ID, source.ID, "download_start")
+	routed := add(source.ID, target.ID, "download_start")
+	opened := add(source.ID, "", "app_open")
+	deleted := add(source.ID, removed.ID, "download_complete")
+	foreignTarget := add(source.ID, foreign.ID, "download_start")
+	pwaEvent := add(pwaAdID(pwa.ID), "", "pwa_click")
+	delivery := Delivery{ID: randomHex(16), ConversionID: routed.ID, Platform: "facebook", EventName: "Lead", Status: "sent"}
+	if err := s.DB.Create(&delivery).Error; err != nil {
+		t.Fatal(err)
+	}
+	read := func(path string, total int64, count int) []conversionListView {
+		t.Helper()
+		w := call(t, s, "GET", path, nil, cookie, "")
+		requireCode(t, w, 200)
+		var result struct {
+			Data  []conversionListView `json:"data"`
+			Total int64                `json:"total"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+			t.Fatal(err)
+		}
+		if result.Total != total || len(result.Data) != count {
+			t.Fatalf("unexpected page: %s", w.Body.String())
+		}
+		if strings.Contains(w.Body.String(), foreign.Slug) {
+			t.Fatal("another account's application number leaked")
+		}
+		return result.Data
+	}
+	path := "/api/apps/" + source.ID + "/events"
+	expected := map[string]string{direct.ID: source.Slug, routed.ID: target.Slug, opened.ID: source.Slug, deleted.ID: "", foreignTarget.ID: ""}
+	for _, c := range read(path, 5, 5) {
+		if slug, ok := expected[c.ID]; !ok || c.ApplicationSlug != slug {
+			t.Fatalf("wrong application number: %+v", c)
+		}
+		if c.ID == routed.ID && (len(c.Deliveries) != 1 || c.Deliveries[0].Status != "sent") {
+			t.Fatal("delivery status was lost")
+		}
+	}
+	first, second := read(path+"?per_page=2&page=1", 5, 2), read(path+"?per_page=2&page=2", 5, 2)
+	if first[0].ID == second[0].ID || first[1].ID == second[0].ID {
+		t.Fatal("pagination repeated an event")
+	}
+	if err := s.DB.Model(&target).Update("slug", "renamed-target").Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range read(path, 5, 5) {
+		if c.ID == routed.ID && c.ApplicationSlug != "renamed-target" {
+			t.Fatal("application number did not follow the application list")
+		}
+	}
+	pwaRows := read("/api/pwas/"+pwa.ID+"/events", 1, 1)
+	if pwaRows[0].ID != pwaEvent.ID || pwaRows[0].ApplicationSlug != pwa.Slug {
+		t.Fatal("PWA application number or event scope is incorrect")
+	}
+	requireCode(t, call(t, s, "GET", "/api/apps/"+foreign.ID+"/events", nil, cookie, ""), 404)
+}

@@ -578,13 +578,58 @@ func (s *Server) sdkEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonOut(w, 202, map[string]any{"event_id": event.EventID, "id": event.ID, "queued_platforms": len(event.Deliveries), "message": "事件已接收，广告平台回传结果请查看日志"})
 }
+
+type conversionListView struct {
+	Conversion
+	ApplicationSlug string `json:"application_slug"`
+}
+
 func (s *Server) listConversions(w http.ResponseWriter, r *http.Request) {
 	app, e := s.ownedAdvertisingApp(r)
 	if e != nil {
 		fail(w, e)
 		return
 	}
-	listOut[Conversion](w, r, s.DB.Model(&Conversion{}).Preload("Deliveries").Where("app_id = ?", app.ID))
+	q := s.DB.Model(&Conversion{}).Where("app_id = ?", app.ID)
+	var total int64
+	if e = q.Count(&total).Error; e != nil {
+		fail(w, e)
+		return
+	}
+	offset, limit := pageParams(r)
+	events := []Conversion{}
+	if e = q.Preload("Deliveries").Order("created_at DESC, id DESC").Offset(offset).Limit(limit).Find(&events).Error; e != nil {
+		fail(w, e)
+		return
+	}
+	// Resolve only this page's download targets, with the same account boundary
+	// as the application list. Never expose another account's application slug.
+	targetIDs := []string{}
+	for _, event := range events {
+		if event.DownloadedAppID != "" {
+			targetIDs = append(targetIDs, event.DownloadedAppID)
+		}
+	}
+	targetSlugs := map[string]string{}
+	if len(targetIDs) > 0 {
+		var targets []Application
+		if e = s.DB.Select("id", "slug").Where("id IN ? AND user_id = ?", targetIDs, app.UserID).Find(&targets).Error; e != nil {
+			fail(w, e)
+			return
+		}
+		for _, target := range targets {
+			targetSlugs[target.ID] = target.Slug
+		}
+	}
+	items := make([]conversionListView, 0, len(events))
+	for _, event := range events {
+		slug := app.Slug
+		if event.DownloadedAppID != "" {
+			slug = targetSlugs[event.DownloadedAppID]
+		}
+		items = append(items, conversionListView{Conversion: event, ApplicationSlug: slug})
+	}
+	jsonOut(w, 200, map[string]any{"data": items, "total": total})
 }
 func (s *Server) retryDelivery(w http.ResponseWriter, r *http.Request) {
 	var d Delivery
