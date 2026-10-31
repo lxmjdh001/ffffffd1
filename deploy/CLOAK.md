@@ -26,12 +26,12 @@
 
 ## 可信国家来源
 
-国家识别不调用第三方 IP 接口，使用 Cloudflare 的 `CF-IPCountry`。在 Cloudflare 中启用 **Add visitor location headers**，并保证相关域名开启代理。没有经 Cloudflare 转发、没有地区头或解析失败时，地区为 `XX`。
+国家识别不调用第三方 IP 接口，优先使用可信 Cloudflare 的 `CF-IPCountry`，再用本地 Country MMDB 兜底。配置和更新方法见 [GEOIP.md](GEOIP.md)。在 Cloudflare 中启用 **Add visitor location headers**，并保证相关域名开启代理。没有可信地区头时会查询真实访客 IP；本地库也无匹配结果时地区为 `XX`。
 
 默认可信边缘网段来自 Cloudflare 官方 [IPv4 列表](https://www.cloudflare.com/ips-v4) 和 [IPv6 列表](https://www.cloudflare.com/ips-v6)，核对时间为 2026-10-24，共 22 段。运营者应随官方调整更新配置：
 
 ```dotenv
-# 空值：使用内置 Cloudflare 网段；none：明确禁用国家识别。
+# 空值：使用内置 Cloudflare 网段；none：禁用 Cloudflare 地区头识别（本地 GeoIP 仍可兜底）。
 CLOAK_COUNTRY_PROXY_CIDRS=
 
 # 只写可信内部反向代理网段，不要将任意公网客户端列为可信代理。

@@ -762,7 +762,7 @@ func ipInCloakNetworks(ip net.IP, networks []*net.IPNet) bool {
 	return false
 }
 
-func (s *Server) cloakRequestCountry(r *http.Request) string {
+func (s *Server) trustedEdgeCountry(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr
