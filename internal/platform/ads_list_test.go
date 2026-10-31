@@ -167,3 +167,54 @@ func TestConversionListApplicationNumbers(t *testing.T) {
 	}
 	requireCode(t, call(t, s, "GET", "/api/apps/"+foreign.ID+"/events", nil, cookie, ""), 404)
 }
+
+func TestConversionListDeviceAndSystem(t *testing.T) {
+	for _, kind := range []string{"apps", "pwas"} {
+		t.Run(kind, func(t *testing.T) {
+			s := testServer(t)
+			owner := seedUser(t, s, 0)
+			cookie, _ := sessionFor(t, s, owner)
+			app := seedApp(t, s, owner, 10)
+			id, adID := app.ID, app.ID
+			if kind == "pwas" {
+				pwa := createPWAFixture(t, s, owner, "Device history")
+				id, adID = pwa.ID, pwaAdID(pwa.ID)
+			}
+			cases := []struct{ ua, device, system string }{
+				{"Mozilla/5.0 (Linux; Android 15; Pixel 9) Chrome/130 Mobile Safari/537.36", "手机", "Android"},
+				{"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile Safari/604.1", "手机", "iOS"},
+				{"Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) Mobile Safari/604.1", "平板", "iOS"},
+				{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130", "桌面", "Windows"},
+				{"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Safari/605.1", "桌面", "macOS"},
+				{"Googlebot/2.1", "机器人", "未知系统"},
+				{"", "未知设备", "未知系统"},
+				{"   ", "未知设备", "未知系统"},
+			}
+			expected := map[string]int{}
+			for i, item := range cases {
+				event := Conversion{ID: randomHex(16), AppID: adID, UserID: owner.ID, Event: "download_start", EventID: randomHex(32), AttributionID: randomHex(16), UserAgent: item.ua, EventTime: s.Now().Add(-24 * time.Hour), CreatedAt: s.Now()}
+				if err := s.DB.Create(&event).Error; err != nil {
+					t.Fatal(err)
+				}
+				expected[event.ID] = i
+			}
+			w := call(t, s, "GET", "/api/"+kind+"/"+id+"/events", nil, cookie, "")
+			requireCode(t, w, 200)
+			var result struct {
+				Data []conversionListView `json:"data"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if len(result.Data) != len(cases) {
+				t.Fatalf("missing historical events: %s", w.Body.String())
+			}
+			for _, event := range result.Data {
+				i, ok := expected[event.ID]
+				if !ok || event.Device != cases[i].device || event.OS != cases[i].system || event.UserAgent != cases[i].ua {
+					t.Fatalf("incorrect device details: %+v", event)
+				}
+			}
+		})
+	}
+}

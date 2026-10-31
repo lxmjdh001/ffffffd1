@@ -599,6 +599,8 @@ func (s *Server) sdkEvent(w http.ResponseWriter, r *http.Request) {
 type conversionListView struct {
 	Conversion
 	ApplicationSlug string `json:"application_slug"`
+	Device          string `json:"device"`
+	OS              string `json:"os"`
 }
 
 func (s *Server) listConversions(w http.ResponseWriter, r *http.Request) {
@@ -644,7 +646,14 @@ func (s *Server) listConversions(w http.ResponseWriter, r *http.Request) {
 		if event.DownloadedAppID != "" {
 			slug = targetSlugs[event.DownloadedAppID]
 		}
-		items = append(items, conversionListView{Conversion: event, ApplicationSlug: slug})
+		device, system, _ := classifyDevice(event.UserAgent)
+		if strings.TrimSpace(event.UserAgent) == "" {
+			device = "未知设备"
+		}
+		if system == "未知" {
+			system = "未知系统"
+		}
+		items = append(items, conversionListView{Conversion: event, ApplicationSlug: slug, Device: device, OS: system})
 	}
 	jsonOut(w, 200, map[string]any{"data": items, "total": total})
 }
