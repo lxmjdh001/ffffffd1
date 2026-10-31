@@ -35,7 +35,7 @@ beforeEach(() => {
   account.gift_balance_micros=0;account.gift_held_micros=0;
   config = {
     currency: 'USD', site_name: 'D1 Apk', development: true, registration_open: true,
-    recharge_bonus_enabled: true, recharge_bonus_tiers: [{ threshold_micros: 200000000, percent: 15 }, { threshold_micros: 500000000, percent: 35 }, { threshold_micros: 1000000000, percent: 50 }],
+    recharge_bonus_enabled: true, recharge_bonus_tiers: [{ threshold_micros: 300000000, percent: 10 }, { threshold_micros: 1000000000, percent: 30 }, { threshold_micros: 3000000000, percent: 50 }, { threshold_micros: 10000000000, percent: 80 }],
     turnstile_site_key: '', public_url: 'http://localhost:8088', download_base_url: '', download_domain_mode: 'unified', cname_target: 'dns.d1apk.com',
     plans: [free, { ...free, id: 'pro', name: '尊享套餐', price_micros: 99000000, app_limit: 500, storage_bytes: 30 * 2 ** 30, download_limit: 10000 }], download_price_micros: 500,
     max_upload_bytes: 2 ** 30, domain_limit: 5, payment_methods: ['manual'], support_email: '', usdt_rate_micros: 1000000,
@@ -51,7 +51,7 @@ beforeEach(() => {
     if (path === '/api/dashboard') return json(dashboard);
     if (path === '/api/orders' && options?.method === 'POST') {
       const body = JSON.parse(String(options.body)); submissions.push(body);
-      createdOrder = { ...order, method: body.method, pay_url: 'https://payments.example/submit.php?order=test-order', usdt_units: 1000007123, wallet: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t' };
+      createdOrder = { ...order, bonus_micros: 300000000, method: body.method, pay_url: 'https://payments.example/submit.php?order=test-order', usdt_units: 1000007123, wallet: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t' };
       if (body.method === 'usdt') createdOrder.usdt_units = Math.round(Number(body.amount) * 1e6) - 990000;
       return json(createdOrder);
     }
@@ -205,7 +205,7 @@ describe('recharge promotion', () => {
     expect(channels.getAllByRole('button')).toHaveLength(2);
     expect(channels.queryByRole('button', { name: '支付宝' })).toBeNull();
     expect(channels.getByRole('button', { name: 'USDT' }).getAttribute('aria-pressed')).toBe('true');
-    await user.click(screen.getByRole('button', { name: /^\$1000/ }));
+    await user.click(screen.getByRole('button', { name: /^\$1000(?:赠送|$)/ }));
     await user.click(screen.getByRole('button', { name: '创建充值订单' }));
     await waitFor(() => expect(submissions).toEqual([{ amount: '1000', method: 'usdt' }]));
     await screen.findByRole('heading', { name: '充值订单' });
@@ -284,23 +284,29 @@ describe('recharge promotion', () => {
     expect(submissions).toEqual([]);
   });
 
-  it('offers five quick amounts, marks the gift tier and submits only the real payment amount', async () => {
+  it('offers six quick amounts, marks the gift tier and submits only the real payment amount', async () => {
     const user = openBilling();
     await user.click(await screen.findByRole('button', { name: '充值余额' }));
     const dialog = within(screen.getByRole('dialog'));
-    expect(dialog.getAllByRole('button', { name: /^\$/ }).map(button => button.textContent)).toEqual(['$50', '$100', '$200赠送15%', '$500赠送35%', '$1000赠送50%']);
-    expect(dialog.queryByText('活动赠送')).toBeNull();
-    await user.click(dialog.getByRole('button', { name: /^\$1000/ }));
-    expect(dialog.getByText('+ $500.00')).toBeTruthy();
-    expect(dialog.getByText('$1,500.00')).toBeTruthy();
+    expect(dialog.getAllByRole('button', { name: /^\$/ }).map(button => button.textContent)).toEqual(['$100', '$200', '$500赠送10%', '$1000赠送30%', '$3000赠送50%', '$10000赠送80%']);
+    expect(dialog.queryByText('账户以美元计价，充值后按实际用量扣费。')).toBeNull();
+    expect(dialog.queryByText('最低充值 50 USDT（50 美元）')).toBeNull();
+    expect(dialog.queryByText(/按最高适用档位/)).toBeNull();
+    expect(dialog.getByText('满 $300.00 赠送10% · 满 $1,000.00 赠送30% · 满 $3,000.00 赠送50% · 满 $10,000.00 赠送80%')).toBeTruthy();
+    await user.click(dialog.getByRole('button', { name: /^\$10000/ }));
+    expect(dialog.getByText('+ $8,000.00')).toBeTruthy();
+    expect(dialog.getByText('$18,000.00')).toBeTruthy();
+    await user.click(dialog.getByRole('button', { name: /^\$1000(?:赠送|$)/ }));
+    expect(dialog.getByText('+ $300.00')).toBeTruthy();
+    expect(dialog.getByText('$1,300.00')).toBeTruthy();
     await user.click(dialog.getByRole('button', { name: '创建充值订单' }));
     await waitFor(() => expect(submissions).toEqual([{ amount: '1000', method: 'manual' }]));
     await screen.findByRole('heading', { name: '充值订单' });
     const payment = within(screen.getByRole('dialog'));
     expect(payment.getByText('应付金额')).toBeTruthy();
     expect(payment.getByText('$ 1,000.00')).toBeTruthy();
-    expect(payment.getByText('+ $500.00')).toBeTruthy();
-    expect(payment.getByText('$1,500.00')).toBeTruthy();
+    expect(payment.getByText('+ $300.00')).toBeTruthy();
+    expect(payment.getByText('$1,300.00')).toBeTruthy();
   });
 
   it('previews custom amounts at the threshold without rounding away fractional-cent bonuses', async () => {
@@ -308,7 +314,7 @@ describe('recharge promotion', () => {
     await user.click(await screen.findByRole('button', { name: '充值余额' }));
     const dialog = within(screen.getByRole('dialog'));
     const amount = dialog.getByRole('spinbutton', { name: '充值金额（美元）' });
-    for (const [value, bonus, total] of [['199.99', '', ''], ['200.01', '+ $30.0015', '$230.0115'], ['500.01', '+ $175.0035', '$675.0135'], ['1000.01', '+ $500.005', '$1,500.015'], ['2000', '+ $1,000.00', '$3,000.00']]) {
+    for (const [value, bonus, total] of [['299.99', '', ''], ['300.01', '+ $30.001', '$330.011'], ['1000.01', '+ $300.003', '$1,300.013'], ['3000.01', '+ $1,500.005', '$4,500.015'], ['9999.99', '+ $4,999.995', '$14,999.985'], ['10000', '+ $8,000.00', '$18,000.00']]) {
       await user.clear(amount); await user.type(amount, value);
       if (bonus) { expect(dialog.getByText(bonus)).toBeTruthy(); expect(dialog.getByText(total)).toBeTruthy(); }
       else expect(dialog.queryByText('活动赠送')).toBeNull();
@@ -335,13 +341,13 @@ describe('recharge promotion', () => {
     const user = openBilling();
     await user.click(await screen.findByRole('button', { name: '充值余额' }));
     const dialog = within(screen.getByRole('dialog'));
-    expect(dialog.getByText('最低充值 50 USDT（50 美元）')).toBeTruthy();
+    expect(dialog.queryByText('最低充值 50 USDT（50 美元）')).toBeNull();
     const input = dialog.getByRole('spinbutton', { name: '充值金额（美元）' }) as HTMLInputElement;
     expect(input.min).toBe('50');
     await user.clear(input); await user.type(input, '49.99');
     await user.click(dialog.getByRole('button', { name: '创建充值订单' }));
     expect(submissions).toEqual([]);
-    await user.click(dialog.getByRole('button', { name: '$50', exact: true }));
+    await user.clear(input); await user.type(input, '50');
     await user.click(dialog.getByRole('button', { name: '创建充值订单' }));
     await waitFor(() => expect(submissions).toEqual([{ amount: '50', method: 'manual' }]));
   });

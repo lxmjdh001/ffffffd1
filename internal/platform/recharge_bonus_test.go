@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strconv"
 	"sync"
 	"testing"
 )
@@ -34,7 +35,7 @@ func TestRechargeBonusThresholdAndCustomAmount(t *testing.T) {
 	for _, tc := range []struct {
 		amount string
 		bonus  int64
-	}{{"100", 0}, {"199.99", 0}, {"200", 30 * Dollar}, {"499.99", 74998500}, {"500", 175 * Dollar}, {"999.99", 349996500}, {"1000", 500 * Dollar}, {"1000.01", 500005000}, {"2000", 1000 * Dollar}, {"10000", 5000 * Dollar}} {
+	}{{"100", 0}, {"200", 0}, {"299.99", 0}, {"300", 30 * Dollar}, {"300.01", 30001000}, {"999.99", 99999000}, {"1000", 300 * Dollar}, {"1000.01", 300003000}, {"2999.99", 899997000}, {"3000", 1500 * Dollar}, {"9999.99", 4999995000}, {"10000", 8000 * Dollar}} {
 		t.Run(tc.amount, func(t *testing.T) {
 			o := createBonusOrder(t, s, cookie, csrf, randomHex(16), tc.amount, "manual")
 			if o.BonusMicros != tc.bonus {
@@ -44,6 +45,80 @@ func TestRechargeBonusThresholdAndCustomAmount(t *testing.T) {
 	}
 	if err := s.DB.First(&u, "id = ?", u.ID).Error; err != nil || u.BalanceMicros != 0 || countRows(t, s, &Ledger{}) != 0 {
 		t.Fatal("creating unpaid orders credited funds")
+	}
+}
+
+func TestRechargeTenThousandBonusSettlement(t *testing.T) {
+	for _, method := range []string{"manual", "usdt"} {
+		t.Run(method, func(t *testing.T) {
+			s := testServer(t)
+			s.Config.USDTWallet = usdtContract
+			u := seedUser(t, s, 0)
+			cookie, csrf := sessionFor(t, s, u)
+			o := createBonusOrder(t, s, cookie, csrf, randomHex(16), "10000", method)
+			if o.AmountMicros != 10000*Dollar || o.BonusMicros != 8000*Dollar {
+				t.Fatal("10,000 top-up did not snapshot the 80% bonus")
+			}
+			for range 2 {
+				if err := s.settle(o.ID, "fixture:"+o.ID, method, o.AmountMicros); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := s.DB.First(&u, "id = ?", u.ID).Error; err != nil || u.BalanceMicros != 18000*Dollar || countRows(t, s, &Ledger{}) != 2 {
+				t.Fatal("principal and 80% bonus were not credited exactly once")
+			}
+		})
+	}
+}
+
+func TestRechargeTenThousandBonusMigration(t *testing.T) {
+	for _, existingTopTier := range []bool{false, true} {
+		t.Run(strconv.FormatBool(existingTopTier), func(t *testing.T) {
+			s := testServer(t)
+			u := seedUser(t, s, 50*Dollar)
+			old := Order{ID: randomHex(16), UserID: u.ID, IdempotencyKey: randomHex(16), Method: "manual", AmountMicros: 10000 * Dollar, BonusMicros: 5000 * Dollar, Status: "pending"}
+			if err := s.DB.Create(&old).Error; err != nil {
+				t.Fatal(err)
+			}
+			settings, _ := getSettings(s.DB)
+			settings.RechargeBonusEnabled = false
+			settings.RechargeBonusTiers = []RechargeTier{{300 * Dollar, 10}, {1000 * Dollar, 30}, {3000 * Dollar, 50}}
+			if existingTopTier {
+				settings.RechargeBonusTiers = append(settings.RechargeBonusTiers, RechargeTier{10000 * Dollar, 50})
+			}
+			if err := s.DB.Save(&settings).Error; err != nil {
+				t.Fatal(err)
+			}
+			if err := s.DB.Delete(&Migration{}, "version = ?", 33).Error; err != nil {
+				t.Fatal(err)
+			}
+			for range 2 {
+				if err := Migrate(s.DB); err != nil {
+					t.Fatal(err)
+				}
+			}
+			settings, err := getSettings(s.DB)
+			if err != nil || settings.RechargeBonusEnabled || !reflect.DeepEqual(settings.RechargeBonusTiers, defaultRechargeTiers()) {
+				t.Fatal("migration lost prior tiers, changed the campaign switch or duplicated the new tier")
+			}
+			if err := s.DB.First(&old, "id = ?", old.ID).Error; err != nil || old.BonusMicros != 5000*Dollar {
+				t.Fatal("migration rewrote a pending order's promised bonus")
+			}
+			if err := s.DB.First(&u, "id = ?", u.ID).Error; err != nil || u.BalanceMicros != 50*Dollar || countRows(t, s, &Ledger{}) != 0 {
+				t.Fatal("migration altered account funds")
+			}
+			settings.RechargeBonusTiers = []RechargeTier{{500 * Dollar, 20}}
+			if err := s.DB.Save(&settings).Error; err != nil {
+				t.Fatal(err)
+			}
+			if err := Migrate(s.DB); err != nil {
+				t.Fatal(err)
+			}
+			after, _ := getSettings(s.DB)
+			if !reflect.DeepEqual(settings.RechargeBonusTiers, after.RechargeBonusTiers) {
+				t.Fatal("repeated migration overwrote subsequent operator changes")
+			}
+		})
 	}
 }
 
@@ -58,7 +133,7 @@ func TestRechargeBonusSettlementAllMethods(t *testing.T) {
 			u := seedUser(t, s, 0)
 			cookie, csrf := sessionFor(t, s, u)
 			o := createBonusOrder(t, s, cookie, csrf, randomHex(16), "1000", method)
-			if o.AmountMicros != 1000*Dollar || o.BonusMicros != 500*Dollar {
+			if o.AmountMicros != 1000*Dollar || o.BonusMicros != 300*Dollar {
 				t.Fatal("order did not snapshot principal and gift separately")
 			}
 			if method == "usdt" {
@@ -91,14 +166,14 @@ func TestRechargeBonusSettlementAllMethods(t *testing.T) {
 				})
 			}
 			wg.Wait()
-			if err := s.DB.First(&u, "id = ?", u.ID).Error; err != nil || u.BalanceMicros != 1500*Dollar {
+			if err := s.DB.First(&u, "id = ?", u.ID).Error; err != nil || u.BalanceMicros != 1300*Dollar {
 				t.Fatal("principal and gift were not credited exactly once")
 			}
 			if countRows(t, s, &Ledger{}) != 2 {
 				t.Fatal("expected separate principal and gift entries")
 			}
 			var gift Ledger
-			if err := s.DB.First(&gift, "reference = ?", "recharge-bonus:"+o.ID).Error; err != nil || gift.Kind != "recharge_bonus" || gift.AmountMicros != 500*Dollar || gift.BalanceMicros != 1500*Dollar {
+			if err := s.DB.First(&gift, "reference = ?", "recharge-bonus:"+o.ID).Error; err != nil || gift.Kind != "recharge_bonus" || gift.AmountMicros != 300*Dollar || gift.BalanceMicros != 1300*Dollar {
 				t.Fatal("gift ledger is not traceable to the order")
 			}
 		})
@@ -116,7 +191,7 @@ func TestRechargeBonusLocksOrderTermsAndRollsBackAtomically(t *testing.T) {
 	}
 	retried := createBonusOrder(t, s, cookie, csrf, key, "1000", "manual")
 	future := createBonusOrder(t, s, cookie, csrf, randomHex(16), "1000", "manual")
-	if retried.ID != original.ID || retried.BonusMicros != 500*Dollar || future.BonusMicros != 0 {
+	if retried.ID != original.ID || retried.BonusMicros != 300*Dollar || future.BonusMicros != 0 {
 		t.Fatal("campaign changes rewrote an order or a retry's promised gift")
 	}
 	// The base credit succeeds within the cap, but the gift would exceed it.

@@ -124,7 +124,7 @@ func TestUZFCentOrderCreationAndRepeatedSettlement(t *testing.T) {
 	cookie, csrf := sessionFor(t, s, u)
 	key := randomHex(16)
 	order = createBonusOrder(t, s, cookie, csrf, key, "500", "usdt")
-	if order.USDTUnits < 499010000 || order.USDTUnits > 500100000 || order.USDTUnits%10000 != 0 || order.AmountMicros != 500*Dollar || order.BonusMicros != 175*Dollar {
+	if order.USDTUnits < 499010000 || order.USDTUnits > 500100000 || order.USDTUnits%10000 != 0 || order.AmountMicros != 500*Dollar || order.BonusMicros != 50*Dollar {
 		t.Fatal("new cent order lost the requested range, principal or activity bonus")
 	}
 	retry := createBonusOrder(t, s, cookie, csrf, key, "500", "usdt")
@@ -141,7 +141,7 @@ func TestUZFCentOrderCreationAndRepeatedSettlement(t *testing.T) {
 		})
 	}
 	wg.Wait()
-	if err := s.DB.First(&u, "id = ?", u.ID).Error; err != nil || u.BalanceMicros != 675*Dollar || countRows(t, s, &Ledger{}) != 2 {
+	if err := s.DB.First(&u, "id = ?", u.ID).Error; err != nil || u.BalanceMicros != 550*Dollar || countRows(t, s, &Ledger{}) != 2 {
 		t.Fatal("cent payment did not credit the original principal and bonus exactly once")
 	}
 }
