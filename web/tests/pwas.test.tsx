@@ -228,3 +228,12 @@ describe('PWA applications', () => {
   });
 
 });
+
+it('invalidates cloak, advertising and detail choices when a PWA is paused',async()=>{
+ const user=setup();await screen.findByText('我的商店');
+ const related=[['cloak-targets'],['ad-app-options'],['ad-configurations'],['config-import','pwas',1],['pwa',app.id],['dashboard']];
+ for(const key of related)client.setQueryData(key,{old:true});
+ await user.click(screen.getByRole('button',{name:'暂停应用',exact:true}));
+ await waitFor(()=>expect(writes.some(write=>write.method==='PUT')).toBe(true));
+ await waitFor(()=>{for(const key of related)expect(client.getQueryState(key)?.isInvalidated).toBe(true);});
+});

@@ -34,6 +34,7 @@ it.each(['apps','pwas'])('deletes a %s configuration and makes its app selectabl
  const {requests,user}=start([row]);await screen.findByText('123456789');
  client.setQueryData(['ad-configuration-edit',kind,row.resource_id],{config});
  client.setQueryData(['ads',kind,row.resource_id],{api_secret:'cached-fixture-secret'});
+ client.setQueryData(['ad-credentials',kind,row.resource_id],{facebook_token:'cached-fixture-token'});
  await user.click(screen.getByRole('button',{name:'删除',exact:true}));
  await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'删除配置'}));
  await screen.findByText('回传配置已删除');
@@ -42,6 +43,7 @@ it.each(['apps','pwas'])('deletes a %s configuration and makes its app selectabl
  await screen.findByText('还没有回传配置');
  expect(client.getQueryData(['ad-configuration-edit',kind,row.resource_id])).toBeUndefined();
  expect(client.getQueryData(['ads',kind,row.resource_id])).toBeUndefined();
+ expect(client.getQueryData(['ad-credentials',kind,row.resource_id])).toBeUndefined();
  await user.click(screen.getAllByRole('button',{name:'创建'})[0]);
  const dialog=screen.getByRole('dialog');
  await user.selectOptions(within(dialog).getByLabelText('应用类型'),kind);
@@ -88,3 +90,11 @@ it('changes only the reported name in quick mode and lists each platform’s own
  await waitFor(()=>expect(requests.find(r=>r.method==='POST')).toBeTruthy());
  expect(requests.find(r=>r.method==='POST')?.body.config).toMatchObject({mode:'quick',download_facebook_event:'Install',download_tiktok_event:'CustomerInstallClick',open_facebook_event:'ViewContent',register_facebook_event:'CompleteRegistration'});
 });
+
+ it('invalidates related application and editor data when advertising is toggled',async()=>{
+  const {user}=start([binding]);await screen.findByText('123456789');
+  const related=[['app','apk1'],['ads','apps','apk1'],['ad-app-options'],['ad-credentials','apps','apk1'],['cloak-targets']];
+  for(const key of related)client.setQueryData(key,{old:true});
+  await user.click(screen.getByRole('button',{name:'关闭'}));
+  await waitFor(()=>{for(const key of related)expect(client.getQueryState(key)?.isInvalidated).toBe(true);});
+ });

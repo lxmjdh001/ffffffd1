@@ -13,6 +13,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/minio/minio-go/v7"
 )
@@ -29,6 +30,40 @@ var landingTemplateImageNames = []string{"GooglePlaybestapp-right.png", "age/age
 
 //go:embed templates/landing-classic/*.js
 var landingClassicFiles embed.FS
+
+type landingAssetEntry struct {
+	File    string   `json:"file"`
+	CSS     []string `json:"css"`
+	IsEntry bool     `json:"isEntry"`
+}
+
+// Embedded build assets are immutable until the next binary is deployed.
+// Share their parsed manifest, never visitor HTML, credentials or attribution.
+var landingManifest = sync.OnceValues(func() (map[string]landingAssetEntry, error) {
+	raw, err := pwaLandingFiles.ReadFile("templates/pwa-landing/.vite/manifest.json")
+	if err != nil {
+		return nil, err
+	}
+	var entries map[string]landingAssetEntry
+	err = json.Unmarshal(raw, &entries)
+	return entries, err
+})
+
+func landingTemplateEntry(layout string) (landingAssetEntry, error) {
+	entries, err := landingManifest()
+	if err != nil {
+		return landingAssetEntry{}, err
+	}
+	key := "google-play/src/main.ts"
+	if layout == "custom" {
+		key = "custom-app/src/main.ts"
+	}
+	entry := entries[key]
+	if entry.File == "" {
+		return entry, fmt.Errorf("landing asset missing")
+	}
+	return entry, nil
+}
 
 func landingJavaScript() (map[string][]byte, error) {
 	files := map[string][]byte{
@@ -54,15 +89,8 @@ func landingJavaScript() (map[string][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	manifest, err := pwaLandingFiles.ReadFile("templates/pwa-landing/.vite/manifest.json")
+	entries, err := landingManifest()
 	if err != nil {
-		return nil, err
-	}
-	var entries map[string]struct {
-		File    string `json:"file"`
-		IsEntry bool   `json:"isEntry"`
-	}
-	if err = json.Unmarshal(manifest, &entries); err != nil {
 		return nil, err
 	}
 	for _, entry := range entries {

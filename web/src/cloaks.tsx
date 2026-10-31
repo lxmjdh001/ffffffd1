@@ -2,7 +2,7 @@ import { VisitStatisticsButton } from './visit-statistics';
 // i18n: static UI literals
 import { localizedCountry, localizedLanguage, t, translateContent, useLocale } from './i18n';
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronRight, CircleHelp, Copy, Globe2, Languages, Link2, ListFilter, Monitor, Pencil, Plus, Save, Search, ShieldCheck, ShieldOff, SlidersHorizontal, Smartphone, Tablet, Trash2, X } from 'lucide-react';
 import { api, send } from './api';
@@ -91,6 +91,7 @@ export function CloaksPage() {
   const deviceOptions = translateContent(originalDevices);
   const { data, error, refetch } = useQuery({ queryKey: ['cloaks'], queryFn: () => api<CloaksResponse>('/cloaks') });
   const pools = useQuery({ queryKey: ['traffic-pools'], queryFn: () => api<{ data: TrafficChoice[] }>('/traffic-pools') });
+  const cache = useQueryClient();
   const targets = useQuery({ queryKey: ['cloak-targets'], queryFn: () => api<TargetChoices>('/cloak-targets') });
   const [draft, setDraft] = useState<CloakDraft>();
   const [editing, setEditing] = useState<Cloak>();
@@ -114,17 +115,17 @@ export function CloaksPage() {
     try {
       const payload: CloakDraft = { ...editable(draft), name: draft.name.trim(), target_url: draft.target_type === 'url' ? draft.target_url.trim() : '', traffic_pool_slug: draft.target_type === 'traffic_pool' ? draft.traffic_pool_slug : '', target_id: draft.target_type === 'app' || draft.target_type === 'pwa' ? draft.target_id : '', app_target_mode: draft.target_type === 'app' ? draft.app_target_mode || 'direct' : '', safe_url: draft.safe_url.trim(), allowed_ips: ipLines(allowedIPText), blocked_ips: ipLines(blockedIPText), blocked_uas: uaText.split(/\r?\n/).map(value => value.trim()).filter(Boolean) };
       const result = await send<Cloak>(editing ? `/cloaks/${editing.id}` : '/cloaks', payload, editing ? 'PUT' : 'POST');
-      setSaved(result); setDraft(undefined); setEditing(undefined); await refetch();
+      setSaved(result); setDraft(undefined); setEditing(undefined); await cache.invalidateQueries();
     } catch (error) { setMessage(errorText(error)); } finally { setBusy(false); }
   };
   const changeStatus = async (item: Cloak, status: CloakStatus) => {
     setBusy(true); setMessage(''); setSaved(undefined);
-    try { await send(`/cloaks/${item.id}`, { ...editable(item), status, enabled: status === 'rules' }, 'PUT'); await refetch(); }
+    try { await send(`/cloaks/${item.id}`, { ...editable(item), status, enabled: status === 'rules' }, 'PUT'); await cache.invalidateQueries(); }
     finally { setBusy(false); }
   };
   const remove = async () => {
     if (!deleting) return; setBusy(true); setMessage('');
-    try { await api(`/cloaks/${deleting.id}`, { method: 'DELETE' }); setDeleting(undefined); setSaved(undefined); await refetch(); }
+    try { await api(`/cloaks/${deleting.id}`, { method: 'DELETE' }); setDeleting(undefined); setSaved(undefined); await cache.invalidateQueries(); }
     catch (error) { setMessage(errorText(error)); } finally { setBusy(false); }
   };
   const setDeviceSystems = (device: Device, systems: string[]) => update('blocked_devices', [...(draft?.blocked_devices || []).filter(rule => rule.device !== device), ...(systems.length ? [{ device, systems }] : [])]);

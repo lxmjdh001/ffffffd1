@@ -62,6 +62,10 @@ func (s *Server) recordAccess(r *http.Request, owner, kind, id, outcome string) 
 	}
 	device, system, browser := classifyDevice(r.UserAgent())
 	row := AccessVisit{ID: randomHex(16), UserID: owner, Kind: kind, ResourceID: id, IP: ip, UserAgent: cleanText(r.UserAgent(), 2048), Country: s.cloakRequestCountry(r), Device: device, OS: system, Browser: browser, Outcome: outcome, CreatedAt: s.Now().UTC()}
+	if s.visitWriter != nil {
+		s.visitWriter.record(row)
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), time.Second)
 	defer cancel()
 	if e := s.DB.WithContext(ctx).Create(&row).Error; e != nil {
@@ -222,11 +226,32 @@ func (s *Server) visitStatistics(w http.ResponseWriter, r *http.Request) {
 	jsonOut(w, 200, map[string]any{"range": selected, "allowed_ranges": ranges, "timezone": "Asia/Shanghai", "start_at": start.UTC(), "end_at": now.UTC(), "summary": summary, "series": series, "countries": countries, "devices": devices, "records": map[string]any{"data": records, "total": summary.Views}})
 }
 func (s *Server) cleanupVisitStatistics(ctx context.Context) {
-	if e := s.rate("visit-statistics-cleanup", 1, time.Hour); e != nil {
+	if ctx.Err() != nil {
 		return
 	}
-	stale := s.DB.Model(&AccessVisit{}).Select("id").Where("created_at < ?", s.Now().AddDate(0, 0, -35)).Order("created_at").Limit(5000)
-	if e := s.DB.WithContext(ctx).Where("id IN (?)", stale).Delete(&AccessVisit{}).Error; e != nil {
-		slog.Error("visit statistics cleanup failed", "error", e)
+	if e := s.rate("visit-statistics-cleanup", 1, time.Minute); e != nil {
+		return
+	}
+	// At 200 page arrivals/s, an hourly 5,000-row pass cannot keep up.
+	// Small committed batches bound locks/WAL; the deadline prevents analytics
+	// retention from monopolizing the maintenance worker (including payments).
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	cutoff := s.Now().AddDate(0, 0, -35)
+	for range 20 {
+		if ctx.Err() != nil {
+			return
+		}
+		stale := s.DB.WithContext(ctx).Model(&AccessVisit{}).Select("id").Where("created_at < ?", cutoff).Order("created_at").Limit(5000)
+		result := s.DB.WithContext(ctx).Where("id IN (?)", stale).Delete(&AccessVisit{})
+		if result.Error != nil {
+			if ctx.Err() == nil {
+				slog.Error("visit statistics cleanup failed", "error", result.Error)
+			}
+			return
+		}
+		if result.RowsAffected < 5000 {
+			return
+		}
 	}
 }

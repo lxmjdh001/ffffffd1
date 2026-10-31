@@ -21,19 +21,18 @@ var hexKey = regexp.MustCompile(`^[a-f0-9]{32,64}$`)
 
 func (s *Server) publicApp(r *http.Request) (Application, error) {
 	var a Application
-	q := s.DB.Where("slug = ? AND enabled = ? AND blocked = ?", r.PathValue("slug"), true, false)
+	q := s.DB.WithContext(r.Context()).Joins("JOIN users ON users.id = applications.user_id AND users.disabled = ?", false).Where("applications.slug = ? AND applications.enabled = ? AND applications.blocked = ?", r.PathValue("slug"), true, false)
 	if owner := r.Context().Value(domainOwnerKey); owner != nil {
-		q = q.Where("user_id = ?", owner)
+		q = q.Where("applications.user_id = ?", owner)
 	}
 	if e := q.First(&a).Error; e != nil {
 		return a, e
 	}
-	var owner User
-	if e := s.DB.First(&owner, "id = ? AND disabled = ?", a.UserID, false).Error; e != nil {
-		return a, gorm.ErrRecordNotFound
-	}
-	if audience, managed := r.Context().Value(downloadAudienceKey).(string); managed && audience != "all" && owner.PlanID(s.Now()) != audience {
-		return a, gorm.ErrRecordNotFound
+	if audience, managed := r.Context().Value(downloadAudienceKey).(string); managed && audience != "all" {
+		var owner User
+		if e := s.DB.WithContext(r.Context()).Select("id", "pro_until").First(&owner, "id = ?", a.UserID).Error; e != nil || owner.PlanID(s.Now()) != audience {
+			return a, gorm.ErrRecordNotFound
+		}
 	}
 	return a, nil
 }

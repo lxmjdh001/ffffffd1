@@ -17,6 +17,8 @@ it('sends a renamed identifier to the original pool endpoint',async()=>{
   return new Response(JSON.stringify({paid:false,configured:false,data:[{pool:{name:'应用分流',mode:'random',enabled:true,risk_enabled:false,slug:original},links:[{id:'link1',url:'https://one.example.com/app.apk',position:0,status:'pending'}],entry_url:'http://localhost:8088/r/'+original}]}),{headers:{'Content-Type':'application/json'}});
  }));
  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});const user=userEvent.setup();
+ const related=[['apk-button-traffic-pools','apk1'],['cloak-targets'],['page-design','apk1']];
+ for(const key of related)client.setQueryData(key,{old:true});
  render(<QueryClientProvider client={client}><MemoryRouter><TrafficPage/></MemoryRouter></QueryClientProvider>);
  await user.click(await screen.findByRole('button',{name:'编辑'}));
  const field=screen.getByRole('textbox',{name:/分流标识/});await user.clear(field);await user.type(field,'My-Route');
@@ -24,5 +26,6 @@ it('sends a renamed identifier to the original pool endpoint',async()=>{
  await user.click(screen.getByRole('button',{name:'保存分流'}));
  await waitFor(()=>expect(request).toBeDefined());
  expect(request).toMatchObject({path:'/api/traffic-pools/'+original,body:{slug:'my-route',enabled:true}});
+ await waitFor(()=>{for(const key of related)expect(client.getQueryState(key)?.isInvalidated).toBe(true);});
  client.clear();
 });

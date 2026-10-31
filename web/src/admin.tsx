@@ -64,7 +64,7 @@ export function AdminSettingsPage() {
         next.plans = previous.plans.map(p => section === 'plan_' + p.id ? result.plans.find(x => x.id === p.id) || p : p);
         return next;
       });
-      cache.setQueryData(['admin-settings'], result); reload();
+      cache.setQueryData(['admin-settings'], result); await cache.invalidateQueries(); reload();
       setFeedback(previous => ({ ...previous, [section]: { success: true } }));
     } catch (e) { setFeedback(previous => ({ ...previous, [section]: { error: errorText(e) } })); }
     finally { setBusy(undefined); }

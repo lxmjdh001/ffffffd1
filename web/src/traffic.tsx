@@ -3,7 +3,7 @@ import { VisitStatisticsButton } from './visit-statistics';
 // i18n: static UI literals
 import { t, useLocale } from './i18n';
 import { useState, type FormEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Copy, Pencil, Plus, Power, ShieldCheck, Trash2 } from 'lucide-react';
 import { api, send } from './api';
@@ -27,11 +27,12 @@ function isEligible(l: TrafficLink, item: TrafficItem, paid: boolean, metered = 
 }
 export function TrafficPage() {
   useLocale(); const config = useConfig()?.config || { metered_billing: false };
- const { data, error, refetch } = useQuery({ queryKey: ['traffic-pools'], queryFn: () => api<TrafficResponse>('/traffic-pools'), refetchInterval: 15000 });
+ const { data, error } = useQuery({ queryKey: ['traffic-pools'], queryFn: () => api<TrafficResponse>('/traffic-pools'), refetchInterval: 15000 });
  const [draft, setDraft] = useState<Draft>(); const [details, setDetails] = useState<string>(); const [deleting, setDeleting] = useState<TrafficItem>();
  const [busy, setBusy] = useState(false); const [message, setMessage] = useState('');
  const [sharing, setSharing] = useState<TrafficItem>();
- const refresh = async () => { await refetch(); };
+ const cache = useQueryClient();
+ const refresh = async () => { await cache.invalidateQueries(); };
  const edit = (item: TrafficItem) => { setMessage(''); setDraft({ slug: item.pool.slug, identifier: item.pool.slug, name: item.pool.name, mode: item.pool.mode || 'random', enabled: item.pool.enabled, risk_enabled: item.pool.risk_enabled && data?.paid === true, text: item.links.map(l => l.url).join('\n') }); };
  const save = async (e: FormEvent) => {
   e.preventDefault(); if (!draft) return; setBusy(true); setMessage('');

@@ -77,7 +77,7 @@ export function PageDesigner() {
   if (issue) { setActiveLanguage(apkLocaleCode(issue.language)); setMessage(issue.message); requestAnimationFrame(() => focusField(formRef.current?.querySelector(issue.selector),issue.message)); return; }
   if (!validReturnFlow(draft.return_flow_config)) { focusField(formRef.current?.querySelector('.return-flow-editor input')); return; }
   setBusy(true); setMessage(''); setSaved(false);
-  try { await send(`/apps/${id}/page-design`, document, 'PUT'); cache.setQueryData(['page-design', id], { ...data, design: document }); setDirty(false); setSaved(true); navigate('/apps'); } catch (e) { setMessage(errorText(e)); focusSaveError(formRef.current,errorText(e)); } finally { setBusy(false); }
+  try { await send(`/apps/${id}/page-design`, document, 'PUT'); cache.setQueryData(['page-design', id], { ...data, design: document }); await cache.invalidateQueries(); setDirty(false); setSaved(true); navigate('/apps'); } catch (e) { setMessage(errorText(e)); focusSaveError(formRef.current,errorText(e)); } finally { setBusy(false); }
  };
  if (error) return <ErrorState error={error} retry={() => refetch()} />;
  if (!data || !draft) return <Spinner />;

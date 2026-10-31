@@ -8,6 +8,7 @@ import { AppDetailPage } from '../src/apps';
 import { AdminSettingsPage } from '../src/admin';
 import { authProvider } from '../src/api';
 import { ConfigContext } from '../src/ui';
+import { useDownloadDomain } from '../src/download-domain';
 import type { Config, SettingsResponse } from '../src/types';
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
@@ -41,8 +42,12 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); client.clear(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-function open(path = '/apps/test-app') {
-  render(<MemoryRouter initialEntries={[path]}><AdminContext queryClient={client} authProvider={authProvider}><ConfigContext.Provider value={{ config: { public_url: 'https://d1apk.com', download_base_url: 'https://d1apk.com' } as Config, reload: vi.fn() }}><Routes><Route path="/apps/:id" element={<AppDetailPage />} /><Route path="/admin/settings" element={<AdminSettingsPage />} /></Routes></ConfigContext.Provider></AdminContext></MemoryRouter>);
+function AssignedDomainProbe() {
+  const {data}=useDownloadDomain();
+  return <a aria-label="当前分配域名" href={data?.download_base_url}>当前分配域名</a>;
+}
+function open(path = '/apps/test-app', domainProbe = false) {
+  render(<MemoryRouter initialEntries={[path]}><AdminContext queryClient={client} authProvider={authProvider}><ConfigContext.Provider value={{ config: { public_url: 'https://d1apk.com', download_base_url: 'https://d1apk.com' } as Config, reload: vi.fn() }}><Routes><Route path="/apps/:id" element={<AppDetailPage />} /><Route path="/admin/settings" element={<AdminSettingsPage />} /></Routes>{domainProbe&&<AssignedDomainProbe/>}</ConfigContext.Provider></AdminContext></MemoryRouter>);
   return userEvent.setup();
 }
 
@@ -99,6 +104,19 @@ it('lets administrators configure the homepage sales contact in basic settings',
   await waitFor(() => expect(saved?.section).toBe('basic'));
   expect(saved?.settings.support_url).toBe('https://support.example.com/chat?source=home');
   expect(saved?.settings.download_price_micros).toBe(3000);
+});
+
+it('refreshes an already mounted assigned-domain query after saving domains without waiting for its 30-second cache', async () => {
+  role='admin'; assignedBase='https://old.example.com';
+  const user=open('/admin/settings',true);
+  await waitFor(()=>expect(screen.getByRole('link',{name:'当前分配域名'}).getAttribute('href')).toBe(assignedBase));
+  await user.click(await screen.findByRole('button',{name:'添加域名'}));
+  await user.type(screen.getByRole('textbox',{name:'域名 1'}),'https://new.example.com');
+  assignedBase='https://new.example.com';
+  expect(screen.getByRole('link',{name:'当前分配域名'}).getAttribute('href')).toBe('https://old.example.com');
+  await user.click(screen.getByRole('button',{name:'保存域名配置'}));
+  await waitFor(()=>expect(saved?.section).toBe('domains'));
+  await waitFor(()=>expect(screen.getByRole('link',{name:'当前分配域名'}).getAttribute('href')).toBe('https://new.example.com'));
 });
 
 it('lets administrators retain old links without offering the domain to customers', async () => {

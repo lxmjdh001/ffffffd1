@@ -134,19 +134,10 @@ func (s *Server) renderAPKLanding(a Application, d PageDesign, nonce, attributio
 	} else {
 		layout = "custom"
 	}
-	raw, _ := pwaLandingFiles.ReadFile("templates/pwa-landing/.vite/manifest.json")
-	var entries map[string]struct {
-		File string   `json:"file"`
-		CSS  []string `json:"css"`
-	}
-	if e := json.Unmarshal(raw, &entries); e != nil {
+	entry, e := landingTemplateEntry(layout)
+	if e != nil {
 		return e
 	}
-	key := "google-play/src/main.ts"
-	if layout == "custom" {
-		key = "custom-app/src/main.ts"
-	}
-	entry := entries[key]
 	decoration := s.newLandingDecoration("apk", a.UserID)
 	v := map[string]any{"App": a, "Design": d, "JS": entry.File, "CSS": entry.CSS, "Nonce": nonce, "Attribution": attribution, "DeepLink": deepLink, "AdsEnabled": ads, "ReturnFlowToken": viewToken, "Size": pageDesignSize(a.Size), "Decoration": decoration, "APKStyle": apkReferenceStyles(decoration.Class)}
 	v["ExternalBrowser"] = external

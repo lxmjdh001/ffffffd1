@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"io"
 	"log/slog"
 	"math/big"
@@ -104,7 +105,7 @@ func (s *Server) deleteTrafficPool(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		var p TrafficPool
-		if err := tx.First(&p, "slug = ? AND user_id = ?", r.PathValue("slug"), userOf(r).ID).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&p, "slug = ? AND user_id = ?", r.PathValue("slug"), userOf(r).ID).Error; err != nil {
 			return err
 		}
 		if err := tx.Where("pool_slug = ?", p.Slug).Delete(&TrafficLink{}).Error; err != nil {
@@ -327,7 +328,10 @@ func (s *Server) routeTraffic(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, target, http.StatusFound)
 }
 
-// Traffic and cloaks share eligibility and cursor updates under the owner lock.
+// Visitors never take the balance/owner lock. Random selection takes a shared
+// pool lock; sequential selection exclusively locks only its own cursor. Pool
+// editors/deleters lock the pool before replacing links, so selection cannot
+// combine an old configuration with a newly edited list.
 func (s *Server) trafficTarget(r *http.Request, slug, ownerID string) (string, error) {
 	return s.selectTrafficTarget(r, slug, "", ownerID)
 }
@@ -336,9 +340,9 @@ func (s *Server) selectTrafficTarget(r *http.Request, slug, bindingID, ownerID s
 	target := ""
 	visited := false
 	statisticsID := ""
-	err := s.DB.Transaction(func(tx *gorm.DB) error {
-		owner, err := lockUser(tx, ownerID)
-		if err != nil {
+	err := s.DB.WithContext(r.Context()).Transaction(func(tx *gorm.DB) error {
+		var owner User
+		if err := tx.First(&owner, "id = ?", ownerID).Error; err != nil {
 			return err
 		}
 		if owner.Disabled {
@@ -354,7 +358,13 @@ func (s *Server) selectTrafficTarget(r *http.Request, slug, bindingID, ownerID s
 		} else {
 			query = query.Where("slug = ?", slug)
 		}
-		if err := query.First(&p).Error; err != nil {
+		// Two predicates avoid upgrading a shared lock when a concurrent editor
+		// switches modes. The fallback also handles a switch back to random.
+		err := query.Session(&gorm.Session{}).Where("mode = ?", "random").Clauses(clause.Locking{Strength: "SHARE"}).First(&p).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			err = query.Clauses(clause.Locking{Strength: "UPDATE"}).First(&p).Error
+		}
+		if err != nil {
 			return err
 		}
 		visited = true
@@ -364,14 +374,16 @@ func (s *Server) selectTrafficTarget(r *http.Request, slug, bindingID, ownerID s
 			return err
 		}
 		candidates := links
-		eligible, e := s.riskEligible(tx, owner)
-		if e != nil {
-			return e
-		}
 		// Lookups are asynchronous. Only confirmed risk excludes a host. Keep
 		// one explicit fallback if every host is flagged, without clearing risk.
-		if p.RiskEnabled && (eligible || meteredEnabled(tx)) {
-			candidates, _ = trafficCandidates(links, s.Now())
+		if p.RiskEnabled {
+			x, err := getSettings(tx)
+			if err != nil {
+				return err
+			}
+			if x.MeteredBilling || owner.PlanID(s.Now()) == "pro" {
+				candidates, _ = trafficCandidates(links, s.Now())
+			}
 		}
 		if len(candidates) == 0 {
 			return problem(503, "分流暂无下载链接，请联系应用发布者")

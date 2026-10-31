@@ -42,6 +42,9 @@ type Server struct {
 	downloadAdWake      chan struct{}
 	completionWake      chan struct{}
 	downloadAdOverflows atomic.Uint64
+	// Set before serving requests by StartVisitWriter; tests may retain the
+	// synchronous writer for deterministic fixture assertions.
+	visitWriter *visitWriter
 	// Push delivery uses a separate restricted client; tests may replace its
 	// transport without changing payment, DNS, or advertisement HTTP traffic.
 	pwaPushHTTP *http.Client
@@ -168,10 +171,7 @@ func (s *Server) rate(key string, limit int64, window time.Duration) error {
 	slot := now.UnixNano() / window.Nanoseconds()
 	k := s.mac(fmt.Sprintf("rate:%s:%d", key, slot))
 	b := RateBucket{Key: k, Count: 1, ExpiresAt: now.Add(2 * window)}
-	if e := s.DB.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "key"}}, DoUpdates: clause.Assignments(map[string]any{"count": gorm.Expr("rate_buckets.count + 1")})}).Create(&b).Error; e != nil {
-		return e
-	}
-	if e := s.DB.First(&b, "key = ?", k).Error; e != nil {
+	if e := s.DB.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "key"}}, DoUpdates: clause.Assignments(map[string]any{"count": gorm.Expr("rate_buckets.count + 1")})}, clause.Returning{Columns: []clause.Column{{Name: "count"}}}).Create(&b).Error; e != nil {
 		return e
 	}
 	if b.Count > limit {

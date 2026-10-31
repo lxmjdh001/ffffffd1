@@ -326,20 +326,9 @@ func (s *Server) registerPWALandingRoutes(m *http.ServeMux) {
 }
 func (s *Server) renderPWALanding(a *PWAApp, r *http.Request, buf *bytes.Buffer) error {
 	c := storedPWALanding(a.LandingJSON)
-	manifest, _ := pwaLandingFiles.ReadFile("templates/pwa-landing/.vite/manifest.json")
-	var entries map[string]struct {
-		File string   `json:"file"`
-		CSS  []string `json:"css"`
-	}
-	if err := json.Unmarshal(manifest, &entries); err != nil {
+	entry, err := landingTemplateEntry(c.Template)
+	if err != nil {
 		return err
-	}
-	entry := entries["google-play/src/main.ts"]
-	if c.Template == "custom" {
-		entry = entries["custom-app/src/main.ts"]
-	}
-	if entry.File == "" {
-		return fmt.Errorf("landing asset missing")
 	}
 	type view struct {
 		ExternalBrowser              string
