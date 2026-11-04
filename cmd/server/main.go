@@ -16,6 +16,13 @@ import (
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	if len(os.Args) > 1 && os.Args[1] == "geoip-check" {
+		if err := platform.CheckGeoIP(os.Args[2:], os.Stdout); err != nil {
+			slog.Error("GeoIP database check failed", "error", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
 		client := http.Client{Timeout: 3 * time.Second}
 		resp, e := client.Get("http://127.0.0.1:8088/healthz")
@@ -73,6 +80,15 @@ func main() {
 		os.Exit(1)
 	}
 	app := platform.NewServer(db, c)
+	geoIP, geoErr := platform.OpenGeoIP(c)
+	if geoErr != nil {
+		slog.Warn("local GeoIP unavailable; trusted country headers remain active", "error", geoErr)
+		geoIP = &platform.GeoIPDatabases{}
+	}
+	defer geoIP.Close()
+	app.GeoIP = geoIP
+	geoInfo := geoIP.Info()
+	slog.Info("local GeoIP databases loaded", "country", geoInfo.Country, "asn", geoInfo.ASN)
 	app.Media, e = platform.NewR2MediaStore(c)
 	if e != nil {
 		slog.Error("R2 media storage unavailable", "error", e)
@@ -118,6 +134,24 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	geoReload := make(chan os.Signal, 1)
+	signal.Notify(geoReload, syscall.SIGHUP)
+	defer signal.Stop(geoReload)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-geoReload:
+				if err := geoIP.Reload(c); err != nil {
+					slog.Warn("GeoIP reload rejected; previous databases retained", "error", err)
+				} else {
+					info := geoIP.Info()
+					slog.Info("local GeoIP databases reloaded", "country", info.Country, "asn", info.ASN)
+				}
+			}
+		}
+	}()
 	stopVisits := app.StartVisitWriter()
 	server := &http.Server{Addr: c.Addr, Handler: app.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 20 * time.Minute, WriteTimeout: 30 * time.Minute, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32768}
 	adPrepareCtx, stopAdPrepare := context.WithCancel(context.Background())

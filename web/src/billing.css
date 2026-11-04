@@ -66,3 +66,14 @@
   .billing-page .usage-pricing--compact .usage-rate-grid article:not(.usage-rate-free) { grid-column: 1 / -1; }
   .billing-page .usage-pricing--compact .usage-rate-grid strong { font-size: 17px; }
 }
+
+.amount-options.recharge-amount-options {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px 8px;
+}
+.recharge-amount-options button { min-width: 0; min-height: 44px; padding: 9px 4px; }
+.recharge-amount-options .recharge-gift-badge { right: 4px; }
+@media (max-width: 650px) {
+  .amount-options.recharge-amount-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

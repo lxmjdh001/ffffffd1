@@ -26,6 +26,7 @@ import (
 )
 
 type Server struct {
+	GeoIP               countryResolver
 	LandingScripts      *LandingScriptRelease
 	Media               *R2MediaStore
 	PageImages          *R2PageImageStore

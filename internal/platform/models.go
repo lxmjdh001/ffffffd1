@@ -52,7 +52,7 @@ type DownloadDomainRule struct {
 }
 
 func defaultRechargeTiers() []RechargeTier {
-	return []RechargeTier{{200 * Dollar, 15}, {500 * Dollar, 35}, {1000 * Dollar, 50}}
+	return []RechargeTier{{300 * Dollar, 10}, {1000 * Dollar, 30}, {3000 * Dollar, 50}, {10000 * Dollar, 80}}
 }
 
 type Settings struct {

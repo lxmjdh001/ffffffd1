@@ -13,6 +13,7 @@ import (
 )
 
 type Config struct {
+	GeoIPCountryDB, GeoIPASNDB                                            string
 	DisableDIYLanding                                                     bool
 	LandingScreenshotBrowser                                              string
 	LandingScreenshotNoSandbox                                            bool
@@ -44,6 +45,8 @@ func env(key, fallback string) string {
 func LoadConfig() (Config, error) {
 	c := Config{Env: env("APP_ENV", "development"), Addr: env("HTTP_ADDR", "127.0.0.1:8088"), DatabaseURL: os.Getenv("DATABASE_URL"), DataDir: env("DATA_DIR", "data"), WebDir: env("WEB_DIR", "web/dist"), PublicURL: strings.TrimRight(env("APP_URL", "http://localhost:8088"), "/"), Secret: os.Getenv("APP_SECRET"), AdminEmail: env("ADMIN_ACCOUNT", os.Getenv("ADMIN_EMAIL")), AdminPassword: os.Getenv("ADMIN_PASSWORD"), ClamAVAddr: os.Getenv("CLAMAV_ADDR"), FutoonURL: os.Getenv("FUTOON_API_URL"), FutoonPID: os.Getenv("FUTOON_PID"), FutoonKey: os.Getenv("FUTOON_KEY"), USDTMonitorURL: os.Getenv("USDT_MONITOR_URL"), USDTMonitorSecret: os.Getenv("USDT_MONITOR_SECRET"), USDTWallet: os.Getenv("USDT_WALLET"), TronAPIURL: env("TRON_API_URL", "https://api.trongrid.io"), TronAPIKey: os.Getenv("TRON_API_KEY")}
 	c.Role = env("SERVER_ROLE", "all")
+	c.GeoIPCountryDB = strings.TrimSpace(os.Getenv("GEOIP_COUNTRY_DB"))
+	c.GeoIPASNDB = strings.TrimSpace(os.Getenv("GEOIP_ASN_DB"))
 	c.DisableDIYLanding = env("DISABLE_DIY_LANDING", "false") == "true"
 	if err := c.loadLandingScreenshotConfig(); err != nil {
 		return c, err
