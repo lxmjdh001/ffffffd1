@@ -3,12 +3,51 @@ package platform
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+func TestLoginSessionExpiresAfterThreeDays(t *testing.T) {
+	for _, role := range []string{"member", "admin"} {
+		t.Run(role, func(t *testing.T) {
+			s := testServer(t)
+			u := seedUser(t, s, 0)
+			if err := s.DB.Model(&u).Update("role", role).Error; err != nil {
+				t.Fatal(err)
+			}
+			now := s.Now().UTC().Truncate(time.Second)
+			s.Now = func() time.Time { return now }
+			deadline := now.Add(72 * time.Hour)
+			w := httptest.NewRecorder()
+			s.establishSession(w, httptest.NewRequest("POST", "/api/auth/login", nil), u)
+			requireCode(t, w, 200)
+			cookies := w.Result().Cookies()
+			if len(cookies) != 1 || cookies[0].MaxAge != 259200 || !cookies[0].HttpOnly {
+				t.Fatal("login cookie must last exactly three days")
+			}
+			cookie := cookies[0]
+			var session Session
+			if err := s.DB.First(&session, "hash = ?", hashString(cookie.Value)).Error; err != nil {
+				t.Fatal(err)
+			}
+			if !session.ExpiresAt.Equal(deadline) {
+				t.Fatal("server and cookie session deadlines differ")
+			}
+			now = deadline.Add(-time.Second)
+			requireCode(t, call(t, s, "GET", "/api/me", nil, cookie, ""), 200)
+			now = deadline
+			expired := call(t, s, "GET", "/api/me", nil, cookie, "")
+			requireCode(t, expired, 401)
+			if !strings.Contains(expired.Body.String(), "登录过期，请重新登录") {
+				t.Fatal("expired login did not prompt the user to sign in again")
+			}
+		})
+	}
+}
 
 func TestRegistrationAndSessionLifecycle(t *testing.T) {
 	s := testServer(t)

@@ -219,9 +219,12 @@ func (s *Server) cookieName() string {
 	}
 	return "d1_session"
 }
+
+const sessionLifetime = 3 * 24 * time.Hour
+
 func (s *Server) establishSession(w http.ResponseWriter, r *http.Request, u User) {
 	token := randomHex(32)
-	session := Session{Hash: hashString(token), UserID: u.ID, CSRF: randomHex(32), ExpiresAt: s.Now().Add(7 * 24 * time.Hour)}
+	session := Session{Hash: hashString(token), UserID: u.ID, CSRF: randomHex(32), ExpiresAt: s.Now().Add(sessionLifetime)}
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
 		if old, e := r.Cookie(s.cookieName()); e == nil {
 			if e = tx.Delete(&Session{}, "hash = ?", hashString(old.Value)).Error; e != nil {
@@ -234,7 +237,7 @@ func (s *Server) establishSession(w http.ResponseWriter, r *http.Request, u User
 		fail(w, e)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: s.cookieName(), Value: token, Path: "/", Secure: s.Config.Production(), HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: 7 * 86400})
+	http.SetCookie(w, &http.Cookie{Name: s.cookieName(), Value: token, Path: "/", Secure: s.Config.Production(), HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: int(sessionLifetime / time.Second)})
 	jsonOut(w, 200, map[string]any{"user": u, "csrf_token": session.CSRF})
 }
 func (s *Server) auth(fn http.HandlerFunc) http.Handler {
