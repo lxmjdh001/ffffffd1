@@ -1,8 +1,15 @@
 import type { AuthProvider, DataProvider } from 'react-admin';
 import type { User, Plan, ImpersonationInfo } from './types';
+import { t } from './i18n';
 
 let csrf = '';
 export class APIError extends Error { constructor(message: string, public status: number) { super(message); } }
+function responseError(message: string, status: number) {
+  // Keep expired/missing cookies clear, including responses from an older server
+  // during deployment. Credential and account errors retain their own message.
+  const expired = status === 401 && ['请先登录', '登录已过期，请重新登录', '登录过期，请重新登录'].includes(message);
+  return new APIError(expired ? t('登录过期，请重新登录') : message, status);
+}
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
@@ -12,7 +19,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   // A cancelled identity request may finish after a new session is established.
   // Ignore its payload before it can restore an old CSRF token.
   options.signal?.throwIfAborted();
-  if (!response.ok) throw new APIError(payload.error || '请求失败', response.status);
+  if (!response.ok) throw responseError(payload.error || '请求失败', response.status);
   if (payload.csrf_token) csrf = payload.csrf_token;
   return payload as T;
 }
@@ -23,7 +30,7 @@ export const authProvider: AuthProvider = {
   login: async ({ action, ...params }) => send<{ user: User; csrf_token: string }>(action === 'register' ? '/auth/register' : '/auth/login', params),
   logout: async () => { try { await api('/auth/logout', { method: 'POST' }); } catch (e) { if (!(e instanceof APIError) || e.status !== 401) throw e; } finally { csrf = ''; } },
   checkAuth: async params => { await getMe(params); },
-  checkError: async error => { if (error.status === 401) throw error; },
+  checkError: async error => { if (error.status === 401) throw responseError(error.message || '登录过期，请重新登录', 401); },
   getIdentity: async params => { const { user, impersonation } = await getMe(params); return { ...user, fullName: user.name, ...(impersonation?{impersonation}:{}) }; },
   getPermissions: async params => {
     try { return (await getMe(params)).user.role; }
@@ -54,7 +61,7 @@ export function upload(path: string, form: FormData, onProgress: (n: number) => 
     const xhr = new XMLHttpRequest(); xhr.open('POST', `/api${path}`); xhr.withCredentials = true; xhr.setRequestHeader('X-CSRF-Token', csrf);
     const abort = () => xhr.abort(); signal?.addEventListener('abort', abort, { once: true });
     xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100)); };
-    xhr.onload = () => { signal?.removeEventListener('abort', abort); try { const data = JSON.parse(xhr.responseText); if (xhr.status >= 200 && xhr.status < 300) resolve(data); else reject(new APIError(data.error || '上传失败', xhr.status)); } catch { reject(new Error('上传未完成，请重试')); } };
+    xhr.onload = () => { signal?.removeEventListener('abort', abort); try { const data = JSON.parse(xhr.responseText); if (xhr.status >= 200 && xhr.status < 300) resolve(data); else reject(responseError(data.error || '上传失败', xhr.status)); } catch { reject(new Error('上传未完成，请重试')); } };
     xhr.onerror = () => reject(new Error('网络错误，上传未完成')); xhr.onabort = () => reject(new Error('上传已取消')); xhr.timeout = 20 * 60 * 1000; xhr.ontimeout = () => reject(new Error('上传超时，请重试')); xhr.send(form);
   });
 }

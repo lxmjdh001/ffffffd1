@@ -247,12 +247,12 @@ func (s *Server) authSession(fn http.HandlerFunc, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, e := r.Cookie(s.cookieName())
 		if e != nil || len(c.Value) != 64 {
-			fail(w, problem(401, "请先登录"))
+			fail(w, problem(401, "登录过期，请重新登录"))
 			return
 		}
 		var session Session
 		if e = s.DB.First(&session, "hash = ? AND expires_at > ?", hashString(c.Value), s.Now()).Error; e != nil {
-			fail(w, problem(401, "登录已过期，请重新登录"))
+			fail(w, problem(401, "登录过期，请重新登录"))
 			return
 		}
 		var u User
