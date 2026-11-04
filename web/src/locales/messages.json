@@ -2667,7 +2667,17 @@
     "成功回传": "Reported successfully",
     "回传失败": "Reporting failed",
     "未回传": "Not reported",
-    "机器人": "Bot"
+    "机器人": "Bot",
+    "管理员代登录": "Administrator support session",
+    "正在以 {0} 的身份操作": "Operating as {0}",
+    "正在返回…": "Returning…",
+    "返回管理员": "Return to administrator",
+    "进入 {0} 的后台": "Open {0}’s workspace",
+    "代登录已到期或会员不可用，请返回管理员": "The support session expired or the member is unavailable. Return to the administrator.",
+    "管理员会话已失效，请重新登录": "The administrator session is no longer valid. Sign in again.",
+    "请先返回管理员再进入其他会员后台": "Return to the administrator before opening another member’s workspace.",
+    "登录身份已变化，请刷新页面": "The signed-in account changed. Refresh the page.",
+    "只能进入正常会员的后台": "Only active member workspaces can be opened."
   },
   "pt": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Você pode solicitar reembolso da parte não utilizada, pelo valor nominal e pelo método de pagamento original. Contate o suporte ou a equipe comercial; verificaremos o saldo de uso restante antes de processar.",
@@ -5337,7 +5347,17 @@
     "成功回传": "Enviado com sucesso",
     "回传失败": "Falha no envio",
     "未回传": "Não enviado",
-    "机器人": "Robô"
+    "机器人": "Robô",
+    "管理员代登录": "Sessão de suporte do administrador",
+    "正在以 {0} 的身份操作": "Operando como {0}",
+    "正在返回…": "Voltando…",
+    "返回管理员": "Voltar ao administrador",
+    "进入 {0} 的后台": "Abrir o painel de {0}",
+    "代登录已到期或会员不可用，请返回管理员": "A sessão de suporte expirou ou o membro está indisponível. Volte ao administrador.",
+    "管理员会话已失效，请重新登录": "A sessão do administrador não é mais válida. Entre novamente.",
+    "请先返回管理员再进入其他会员后台": "Volte ao administrador antes de abrir o painel de outro membro.",
+    "登录身份已变化，请刷新页面": "A conta conectada mudou. Atualize a página.",
+    "只能进入正常会员的后台": "Somente painéis de membros ativos podem ser abertos."
   },
   "de": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Für den ungenutzten Anteil können Sie eine Erstattung zum Nennwert über den ursprünglichen Zahlungsweg beantragen. Kontaktieren Sie Support oder Vertrieb; wir prüfen die verbleibende Nutzung vor der Bearbeitung.",
@@ -8007,7 +8027,17 @@
     "成功回传": "Erfolgreich übermittelt",
     "回传失败": "Übermittlung fehlgeschlagen",
     "未回传": "Nicht übermittelt",
-    "机器人": "Bot"
+    "机器人": "Bot",
+    "管理员代登录": "Support-Sitzung des Administrators",
+    "正在以 {0} 的身份操作": "Sie arbeiten als {0}",
+    "正在返回…": "Rückkehr…",
+    "返回管理员": "Zum Administrator zurückkehren",
+    "进入 {0} 的后台": "Arbeitsbereich von {0} öffnen",
+    "代登录已到期或会员不可用，请返回管理员": "Die Support-Sitzung ist abgelaufen oder das Mitglied ist nicht verfügbar. Kehren Sie zum Administrator zurück.",
+    "管理员会话已失效，请重新登录": "Die Administratorsitzung ist ungültig. Melden Sie sich erneut an.",
+    "请先返回管理员再进入其他会员后台": "Kehren Sie zum Administrator zurück, bevor Sie einen anderen Mitgliedsbereich öffnen.",
+    "登录身份已变化，请刷新页面": "Das angemeldete Konto hat sich geändert. Laden Sie die Seite neu.",
+    "只能进入正常会员的后台": "Es können nur Arbeitsbereiche aktiver Mitglieder geöffnet werden."
   },
   "fr": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Vous pouvez demander le remboursement de la partie non utilisée, à sa valeur nominale et via le moyen de paiement d’origine. Contactez l’assistance ou le service commercial ; nous vérifierons l’utilisation restante avant traitement.",
@@ -10677,7 +10707,17 @@
     "成功回传": "Transmission réussie",
     "回传失败": "Échec de la transmission",
     "未回传": "Non transmis",
-    "机器人": "Robot"
+    "机器人": "Robot",
+    "管理员代登录": "Session d’assistance administrateur",
+    "正在以 {0} 的身份操作": "Vous agissez en tant que {0}",
+    "正在返回…": "Retour en cours…",
+    "返回管理员": "Revenir à l’administrateur",
+    "进入 {0} 的后台": "Ouvrir l’espace de {0}",
+    "代登录已到期或会员不可用，请返回管理员": "La session d’assistance a expiré ou le membre est indisponible. Revenez à l’administrateur.",
+    "管理员会话已失效，请重新登录": "La session administrateur n’est plus valide. Reconnectez-vous.",
+    "请先返回管理员再进入其他会员后台": "Revenez à l’administrateur avant d’ouvrir l’espace d’un autre membre.",
+    "登录身份已变化，请刷新页面": "Le compte connecté a changé. Actualisez la page.",
+    "只能进入正常会员的后台": "Seuls les espaces de membres actifs sont accessibles."
   },
   "ko": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "미사용 부분은 액면 금액 기준으로 원래 결제 수단을 통해 환불을 신청할 수 있습니다. 고객 지원 또는 영업팀에 문의하세요. 남은 사용량을 확인한 후 처리합니다.",
@@ -13347,7 +13387,17 @@
     "成功回传": "전송 성공",
     "回传失败": "전송 실패",
     "未回传": "미전송",
-    "机器人": "봇"
+    "机器人": "봇",
+    "管理员代登录": "관리자 지원 세션",
+    "正在以 {0} 的身份操作": "{0} 계정으로 작업 중",
+    "正在返回…": "돌아가는 중…",
+    "返回管理员": "관리자로 돌아가기",
+    "进入 {0} 的后台": "{0} 관리 화면 열기",
+    "代登录已到期或会员不可用，请返回管理员": "지원 세션이 만료되었거나 회원을 사용할 수 없습니다. 관리자로 돌아가세요.",
+    "管理员会话已失效，请重新登录": "관리자 세션이 유효하지 않습니다. 다시 로그인하세요.",
+    "请先返回管理员再进入其他会员后台": "다른 회원 화면을 열기 전에 관리자로 돌아가세요.",
+    "登录身份已变化，请刷新页面": "로그인 계정이 변경되었습니다. 페이지를 새로고침하세요.",
+    "只能进入正常会员的后台": "활성 회원의 관리 화면만 열 수 있습니다."
   },
   "ja": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用分は額面金額で元のお支払い方法への返金を申請できます。サポートまたは営業担当にご連絡ください。残りの利用量を確認してから手続きします。",
@@ -16017,7 +16067,17 @@
     "成功回传": "送信成功",
     "回传失败": "送信失敗",
     "未回传": "未送信",
-    "机器人": "ボット"
+    "机器人": "ボット",
+    "管理员代登录": "管理者サポートセッション",
+    "正在以 {0} 的身份操作": "{0} として操作中",
+    "正在返回…": "戻っています…",
+    "返回管理员": "管理者に戻る",
+    "进入 {0} 的后台": "{0} の管理画面を開く",
+    "代登录已到期或会员不可用，请返回管理员": "セッションの有効期限が切れたか、会員が利用できません。管理者に戻ってください。",
+    "管理员会话已失效，请重新登录": "管理者セッションが無効です。再度ログインしてください。",
+    "请先返回管理员再进入其他会员后台": "別の会員の管理画面を開く前に管理者に戻ってください。",
+    "登录身份已变化，请刷新页面": "ログイン中のアカウントが変わりました。ページを更新してください。",
+    "只能进入正常会员的后台": "有効な会員の管理画面のみ開けます。"
   },
   "zh-TW": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "未使用的部分可申請退款，按面額循原付款管道退回。請聯絡客服或商務處理，我們會核對剩餘用量後辦理。",
@@ -18687,7 +18747,17 @@
     "成功回传": "成功回傳",
     "回传失败": "回傳失敗",
     "未回传": "未回傳",
-    "机器人": "機器人"
+    "机器人": "機器人",
+    "管理员代登录": "管理員代登入",
+    "正在以 {0} 的身份操作": "正在以 {0} 的身分操作",
+    "正在返回…": "正在返回…",
+    "返回管理员": "返回管理員",
+    "进入 {0} 的后台": "進入 {0} 的後台",
+    "代登录已到期或会员不可用，请返回管理员": "代登入已到期或會員不可用，請返回管理員",
+    "管理员会话已失效，请重新登录": "管理員會話已失效，請重新登入",
+    "请先返回管理员再进入其他会员后台": "請先返回管理員再進入其他會員後台",
+    "登录身份已变化，请刷新页面": "登入身分已變化，請重新整理頁面",
+    "只能进入正常会员的后台": "只能進入正常會員的後台"
   },
   "ru": {
     "未消耗的部分可申请退款，按面额原路退回。请联系客服或商务处理，我们会核对剩余用量后办理。": "Можно запросить возврат неиспользованной части по номинальной стоимости исходным способом оплаты. Обратитесь в поддержку или отдел продаж; перед обработкой мы проверим оставшийся объём использования.",
@@ -21357,6 +21427,16 @@
     "成功回传": "Успешно отправлено",
     "回传失败": "Ошибка отправки",
     "未回传": "Не отправлено",
-    "机器人": "Бот"
+    "机器人": "Бот",
+    "管理员代登录": "Сеанс поддержки администратора",
+    "正在以 {0} 的身份操作": "Действия от имени {0}",
+    "正在返回…": "Возврат…",
+    "返回管理员": "Вернуться к администратору",
+    "进入 {0} 的后台": "Открыть панель {0}",
+    "代登录已到期或会员不可用，请返回管理员": "Сеанс поддержки истёк или участник недоступен. Вернитесь к администратору.",
+    "管理员会话已失效，请重新登录": "Сеанс администратора недействителен. Войдите снова.",
+    "请先返回管理员再进入其他会员后台": "Сначала вернитесь к администратору, затем откройте панель другого участника.",
+    "登录身份已变化，请刷新页面": "Учётная запись изменилась. Обновите страницу.",
+    "只能进入正常会员的后台": "Можно открыть только панель активного участника."
   }
 }

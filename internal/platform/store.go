@@ -72,6 +72,9 @@ func Migrate(db *gorm.DB) error {
 		if err := tx.AutoMigrate(&Migration{}); err != nil {
 			return err
 		}
+		if err := tx.AutoMigrate(&Session{}); err != nil {
+			return err
+		}
 		if err := migrateDownloadDomainRules(tx); err != nil {
 			return err
 		}

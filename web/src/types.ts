@@ -23,3 +23,5 @@ export type ReferralMember = { id: string; name: string; level: number; created_
 export type Referrals = { invite_code: string; invite_url: string; rates: [number, number, number]; total_reward_micros: number; withdrawal_available_micros?: number; withdrawal_pending_micros?: number; withdrawal_paid_micros?: number; withdrawal_minimum_micros?: number; withdrawal_reconciliation_required?: boolean; team_count: number; direct_count: number; level_counts: [number, number, number]; rewards: Page<ReferralReward>; members: Page<ReferralMember> };
 export type ReferralWithdrawalStatus = 'pending' | 'approved' | 'paid' | 'rejected';
 export type ReferralWithdrawal = { id: string; user_id: string; amount_micros: number; address: string; status: ReferralWithdrawalStatus; review_note: string; payout_reference: string | null; created_at: string; reviewed_at: string | null; paid_at: string | null; user_name?: string; user_email?: string };
+
+export type ImpersonationInfo = { administrator_id:string; administrator_name:string; member_id:string; member_name:string; expires_at:string|null; available:boolean };

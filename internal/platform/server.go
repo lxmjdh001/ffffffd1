@@ -111,6 +111,7 @@ type contextKey string
 
 const userKey contextKey = "user"
 const sessionKey contextKey = "session"
+const impersonationKey contextKey = "impersonation"
 const domainOwnerKey contextKey = "domain-owner"
 const downloadAudienceKey contextKey = "download-audience"
 
@@ -211,8 +212,9 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /api/auth/captcha", s.captcha)
 	m.HandleFunc("POST /api/auth/register", s.register)
 	m.HandleFunc("POST /api/auth/login", s.login)
-	m.Handle("POST /api/auth/logout", s.auth(s.logout))
-	m.Handle("GET /api/me", s.auth(s.me))
+	m.Handle("POST /api/auth/logout", s.authSession(s.logout, true))
+	m.Handle("POST /api/auth/impersonation/stop", s.authSession(s.stopImpersonation, true))
+	m.Handle("GET /api/me", s.authSession(s.me, true))
 	m.Handle("PATCH /api/me", s.auth(s.updateProfile))
 	m.Handle("POST /api/me/password", s.auth(s.changePassword))
 	m.Handle("GET /api/dashboard", s.auth(s.dashboard))
@@ -272,6 +274,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("POST /api/payments/futoon/notify", s.futoonNotify)
 	m.HandleFunc("GET /api/payments/futoon/return", s.futoonReturn)
 	m.Handle("GET /api/admin/users", s.admin(s.adminUsers))
+	m.Handle("POST /api/admin/users/{id}/impersonation", s.admin(s.startImpersonation))
 	m.Handle("PUT /api/admin/users/{id}/referral-rates", s.admin(s.saveUserReferralRates))
 	m.Handle("DELETE /api/admin/users/{id}/referral-rates", s.admin(s.clearUserReferralRates))
 	m.Handle("GET /api/admin/commission-settings", s.admin(s.getCommissionSettings))

@@ -1,0 +1,12 @@
+/* A persistent account-context strip keeps support actions visibly attributed. */
+.impersonation-banner{position:sticky;top:0;z-index:21;margin:16px 32px 0;padding:14px 18px;border:1px solid #e8d3a9;border-radius:10px;background:#fff8e9;color:#795b2e}
+.impersonation-banner-row{display:flex;align-items:center;gap:12px}
+.impersonation-banner-row>svg{flex-shrink:0}
+.impersonation-banner-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px;overflow-wrap:anywhere}
+.impersonation-banner-copy strong{font-size:13px;font-weight:600;line-height:1.6}
+.impersonation-banner-copy span{font-size:12px;line-height:1.6}
+.impersonation-banner .btn{flex-shrink:0}
+.member-session-link{display:inline;padding:0;border:0;background:transparent;color:var(--console-accent,#187f98);font:inherit;font-weight:600;text-align:left;cursor:pointer}
+.member-session-link:hover{text-decoration:underline;text-underline-offset:3px}
+.member-session-link:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:2px}
+@media(max-width:650px){.impersonation-banner{margin:12px 16px 0;padding:13px 14px}.impersonation-banner-row{flex-wrap:wrap;gap:10px}.impersonation-banner-copy{flex-basis:calc(100% - 34px)}.impersonation-banner .btn{margin-left:30px}}

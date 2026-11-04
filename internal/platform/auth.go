@@ -238,6 +238,12 @@ func (s *Server) establishSession(w http.ResponseWriter, r *http.Request, u User
 	jsonOut(w, 200, map[string]any{"user": u, "csrf_token": session.CSRF})
 }
 func (s *Server) auth(fn http.HandlerFunc) http.Handler {
+	return s.authSession(fn, false)
+}
+
+// Recovery endpoints retain the member identity but allow returning to the
+// administrator after the support scope expires or its member becomes unavailable.
+func (s *Server) authSession(fn http.HandlerFunc, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, e := r.Cookie(s.cookieName())
 		if e != nil || len(c.Value) != 64 {
@@ -260,6 +266,25 @@ func (s *Server) auth(fn http.HandlerFunc) http.Handler {
 		}
 		ctx := context.WithValue(r.Context(), userKey, u)
 		ctx = context.WithValue(ctx, sessionKey, session)
+		if session.ImpersonatedUserID != "" {
+			member, scope, err := s.impersonatedIdentity(session, u)
+			if err != nil {
+				fail(w, err)
+				return
+			}
+			if !scope.Available && !recovery {
+				fail(w, problem(403, "代登录已到期或会员不可用，请返回管理员"))
+				return
+			}
+			if r.Method != "GET" && r.Method != "HEAD" {
+				if err := s.auditImpersonationRequest(r, u.ID, member.ID); err != nil {
+					fail(w, err)
+					return
+				}
+			}
+			ctx = context.WithValue(ctx, userKey, member)
+			ctx = context.WithValue(ctx, impersonationKey, scope)
+		}
 		fn(w, r.WithContext(ctx))
 	})
 }
@@ -279,7 +304,11 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
-	jsonOut(w, 200, map[string]any{"user": u, "plan": p, "csrf_token": r.Context().Value(sessionKey).(Session).CSRF})
+	response := map[string]any{"user": u, "plan": p, "csrf_token": r.Context().Value(sessionKey).(Session).CSRF}
+	if scope, ok := r.Context().Value(impersonationKey).(impersonationInfo); ok {
+		response["impersonation"] = scope
+	}
+	jsonOut(w, 200, response)
 }
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	session := r.Context().Value(sessionKey).(Session)

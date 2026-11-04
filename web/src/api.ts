@@ -1,5 +1,5 @@
 import type { AuthProvider, DataProvider } from 'react-admin';
-import type { User, Plan } from './types';
+import type { User, Plan, ImpersonationInfo } from './types';
 
 let csrf = '';
 export class APIError extends Error { constructor(message: string, public status: number) { super(message); } }
@@ -18,13 +18,13 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 }
 export const send = <T>(path: string, body: unknown, method = 'POST', key?: string) => api<T>(path, { method, body: JSON.stringify(body), headers: key ? { 'Idempotency-Key': key } : {} });
 export const newKey = () => crypto.randomUUID().replaceAll('-', '');
-export const getMe = (options: { signal?: AbortSignal } = {}) => api<{ user: User; plan: Plan; csrf_token: string }>('/me', { signal: options.signal });
+export const getMe = (options: { signal?: AbortSignal } = {}) => api<{ user: User; plan: Plan; csrf_token: string; impersonation?: ImpersonationInfo }>('/me', { signal: options.signal });
 export const authProvider: AuthProvider = {
   login: async ({ action, ...params }) => send<{ user: User; csrf_token: string }>(action === 'register' ? '/auth/register' : '/auth/login', params),
   logout: async () => { try { await api('/auth/logout', { method: 'POST' }); } catch (e) { if (!(e instanceof APIError) || e.status !== 401) throw e; } finally { csrf = ''; } },
   checkAuth: async params => { await getMe(params); },
   checkError: async error => { if (error.status === 401) throw error; },
-  getIdentity: async params => { const { user } = await getMe(params); return { ...user, fullName: user.name }; },
+  getIdentity: async params => { const { user, impersonation } = await getMe(params); return { ...user, fullName: user.name, ...(impersonation?{impersonation}:{}) }; },
   getPermissions: async params => {
     try { return (await getMe(params)).user.role; }
     catch (error) {

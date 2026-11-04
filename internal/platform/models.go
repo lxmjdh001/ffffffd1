@@ -86,10 +86,12 @@ type Settings struct {
 	UpdatedAt              time.Time            `json:"updated_at"`
 }
 type Session struct {
-	Hash      string `gorm:"primaryKey;size:64"`
-	UserID    string `gorm:"index;size:32"`
-	CSRF      string
-	ExpiresAt time.Time `gorm:"index"`
+	ImpersonatedUserID     string `gorm:"size:32;not null;default:''"`
+	ImpersonationExpiresAt *time.Time
+	Hash                   string `gorm:"primaryKey;size:64"`
+	UserID                 string `gorm:"index;size:32"`
+	CSRF                   string
+	ExpiresAt              time.Time `gorm:"index"`
 }
 type Challenge struct {
 	ID        string `gorm:"primaryKey;size:32"`
