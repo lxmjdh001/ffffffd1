@@ -663,7 +663,7 @@ const getRuntimeApiBase = (apiBaseUrl?: string): string => {
 };
 
 const getRuntimeS3Domain = (s3PublicDomain?: string): string => {
-  return (s3PublicDomain || import.meta.env.VITE_S3_PUBLIC_DOMAIN || 'https://img.okkpwa.com').replace(/\/+$/, '');
+  return (s3PublicDomain || import.meta.env.VITE_S3_PUBLIC_DOMAIN || 'https://opopopa.adsh5.bio').replace(/\/+$/, '');
 };
 
 const getFullAssetUrl = (url: string, s3Domain: string) => {

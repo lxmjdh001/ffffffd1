@@ -407,7 +407,7 @@ const loadDataFromAPI = async (domain: string, language: string) => {
       .trim()
       .replace(/\/+$/, '')
       .replace(/\/api$/i, '');
-    const s3Domain = import.meta.env.VITE_S3_PUBLIC_DOMAIN || 'https://img.okkpwa.com';
+    const s3Domain = import.meta.env.VITE_S3_PUBLIC_DOMAIN || 'https://opopopa.adsh5.bio';
 
     console.log('Loading data from API:', { domain, language, apiUrl: apiBaseUrl, s3Domain });
 

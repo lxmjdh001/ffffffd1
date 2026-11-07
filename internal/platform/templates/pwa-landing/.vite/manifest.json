@@ -4,7 +4,7 @@
     "name": "_plugin-vue_export-helper"
   },
   "custom-app/src/main.ts": {
-    "file": "custom-COnmRNOe.js",
+    "file": "custom-XQJffZuN.js",
     "name": "custom",
     "src": "custom-app/src/main.ts",
     "isEntry": true,
@@ -12,11 +12,11 @@
       "_shared-DaTUpjeb.js"
     ],
     "css": [
-      "custom-C7F1ZAkp.css"
+      "custom-CLztXabr.css"
     ]
   },
   "google-play/src/main.ts": {
-    "file": "google_play-D_SdBLZT.js",
+    "file": "google_play-BJzCdVAa.js",
     "name": "google_play",
     "src": "google-play/src/main.ts",
     "isEntry": true,
@@ -24,7 +24,7 @@
       "_shared-DaTUpjeb.js"
     ],
     "css": [
-      "google_play-DIoedOGB.css"
+      "google_play-CfxEbEWQ.css"
     ]
   }
 }
