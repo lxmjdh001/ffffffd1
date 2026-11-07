@@ -28,6 +28,7 @@ type CloakDeviceRule struct {
 
 // Cloaks contain redirect rules only. Neither destination is fetched by D1.
 type Cloak struct {
+	BlockDatacenter    bool              `json:"block_datacenter" gorm:"not null;default:false"`
 	ID                 string            `json:"id" gorm:"primaryKey;size:32"`
 	UserID             string            `json:"-" gorm:"index;size:32;not null"`
 	Slug               string            `json:"slug" gorm:"uniqueIndex;size:16;not null"`
@@ -55,6 +56,7 @@ type Cloak struct {
 }
 
 type cloakInput struct {
+	BlockDatacenter    *bool             `json:"block_datacenter"`
 	Name               string            `json:"name"`
 	Enabled            bool              `json:"enabled"`
 	Status             string            `json:"status"`
@@ -133,6 +135,9 @@ func (s *Server) saveCloak(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 			c.ID, c.Slug, c.CreatedAt = old.ID, old.Slug, old.CreatedAt
+			if in.BlockDatacenter == nil {
+				c.BlockDatacenter = old.BlockDatacenter
+			}
 			// Older clients cannot edit or accidentally clear the new allowlist.
 			if in.AllowedCountries == nil {
 				c.AllowedCountries = old.AllowedCountries
@@ -226,6 +231,9 @@ var cloakSystems = map[string]map[string]bool{
 
 func normalizeCloak(in cloakInput) (Cloak, error) {
 	c := Cloak{Name: strings.TrimSpace(in.Name), Enabled: in.Enabled, TargetType: in.TargetType, TargetURL: strings.TrimSpace(in.TargetURL), TrafficPoolSlug: strings.TrimSpace(in.TrafficPoolSlug), SafeURL: strings.TrimSpace(in.SafeURL), BlockEmptyLanguage: in.BlockEmptyLanguage}
+	if in.BlockDatacenter != nil {
+		c.BlockDatacenter = *in.BlockDatacenter
+	}
 	c.Status = in.Status
 	if c.Status == "" {
 		c.Status = effectiveCloakStatus(c)
@@ -500,6 +508,15 @@ func (s *Server) routeCloak(w http.ResponseWriter, r *http.Request) {
 	status := effectiveCloakStatus(c)
 	blocked := status == "blocked" || (status == "rules" && cloakIPMatches(c.BlockedIPs, ip))
 	ipAllowed := status == "rules" && !blocked && cloakIPMatches(c.AllowedIPs, ip)
+	if status == "rules" && c.BlockDatacenter && !blocked && !ipAllowed {
+		matched, err := s.datacenterIPBlocked(r.Context(), ip)
+		if err != nil {
+			outcome = "unavailable"
+			fail(w, problem(503, "机房名单暂时不可用，请稍后重试"))
+			return
+		}
+		blocked = matched
+	}
 	if !blocked && s.rejectBlockedUA(w, r, c.UserID, r.UserAgent()) {
 		return
 	}

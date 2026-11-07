@@ -45,7 +45,8 @@ type Server struct {
 	downloadAdOverflows atomic.Uint64
 	// Set before serving requests by StartVisitWriter; tests may retain the
 	// synchronous writer for deterministic fixture assertions.
-	visitWriter *visitWriter
+	visitWriter        *visitWriter
+	datacenterNetworks datacenterNetworkCache
 	// Push delivery uses a separate restricted client; tests may replace its
 	// transport without changing payment, DNS, or advertisement HTTP traffic.
 	pwaPushHTTP *http.Client
@@ -274,6 +275,12 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /api/payments/futoon/notify", s.futoonNotify)
 	m.HandleFunc("POST /api/payments/futoon/notify", s.futoonNotify)
 	m.HandleFunc("GET /api/payments/futoon/return", s.futoonReturn)
+	m.Handle("GET /api/admin/datacenter-networks", s.admin(s.adminDatacenterNetworks))
+	m.Handle("POST /api/admin/datacenter-networks", s.admin(s.saveDatacenterNetwork))
+	m.Handle("PUT /api/admin/datacenter-networks/{id}", s.admin(s.saveDatacenterNetwork))
+	m.Handle("PATCH /api/admin/datacenter-networks/{id}", s.admin(s.saveDatacenterNetwork))
+	m.Handle("DELETE /api/admin/datacenter-networks/{id}", s.admin(s.deleteDatacenterNetwork))
+	m.Handle("POST /api/admin/datacenter-networks/import", s.admin(s.importDatacenterNetworks))
 	m.Handle("GET /api/admin/users", s.admin(s.adminUsers))
 	m.Handle("POST /api/admin/users/{id}/impersonation", s.admin(s.startImpersonation))
 	m.Handle("PUT /api/admin/users/{id}/referral-rates", s.admin(s.saveUserReferralRates))

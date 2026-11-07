@@ -6,8 +6,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloaksPage, type Cloak, type CloakDraft } from '../src/cloaks';
 
-const editableKeys = ['name', 'status', 'enabled', 'target_type', 'target_url', 'traffic_pool_slug', 'target_id', 'app_target_mode', 'safe_url', 'allowed_ips', 'blocked_ips', 'blocked_languages', 'block_empty_language', 'blocked_browsers', 'blocked_uas', 'allowed_countries', 'blocked_countries', 'allowed_platforms', 'blocked_devices'].sort();
+const editableKeys = ['block_datacenter', 'name', 'status', 'enabled', 'target_type', 'target_url', 'traffic_pool_slug', 'target_id', 'app_target_mode', 'safe_url', 'allowed_ips', 'blocked_ips', 'blocked_languages', 'block_empty_language', 'blocked_browsers', 'blocked_uas', 'allowed_countries', 'blocked_countries', 'allowed_platforms', 'blocked_devices'].sort();
 const baseDraft: CloakDraft = {
+  block_datacenter:false,
   name: '海外应用推广', status: 'rules', enabled: true, target_type: 'url', target_url: 'https://download.example/app.apk', traffic_pool_slug: '', target_id: '', app_target_mode: '', safe_url: 'https://brand.example/help',
   allowed_ips: [], blocked_ips: [], blocked_languages: [], block_empty_language: false, blocked_browsers: [], blocked_uas: [], allowed_countries: [], blocked_countries: [], allowed_platforms: [], blocked_devices: [],
 };
@@ -85,6 +86,12 @@ async function saveNew(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('cloak editor API integration', () => {
+  it('keeps the datacenter opt-in editable and saves an explicit disable', async () => {
+    rows=[fixture({block_datacenter:true})];const user=await showPage();
+    await user.click(screen.getByRole('button',{name:'编辑',exact:true}));
+    await openTab(user,'IP 名单');const toggle=screen.getByRole('checkbox',{name:/机房拦截/});expect((toggle as HTMLInputElement).checked).toBe(true);
+    await user.click(toggle);await user.click(screen.getByRole('button',{name:'保存修改'}));await screen.findByText('斗篷已保存，入口可以使用了');expect(mutations[0].body?.block_datacenter).toBe(false);
+  });
   it('hides manual URL entry, creates app details and PWA targets, and preserves legacy URLs read-only', async () => {
     const user = await showPage();
     await newEditor(user);
